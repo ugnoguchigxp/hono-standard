@@ -1,0 +1,153 @@
+# Hono Standard テンプレート
+
+Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅牢、かつ型安全なフルスタック・モノリス ウェブアプリケーションのテンプレートです。
+
+## 目次
+- [技術スタック](#技術スタック)
+- [クイックスタート](#クイックスタート)
+- [主要コマンド](#主要コマンド)
+- [主な機能](#主な機能)
+- [アーキテクチャ・プロジェクト構成](#アーキテクチャプロジェクト構成)
+- [セキュリティ](#セキュリティ)
+- [ライセンス](#ライセンス)
+
+---
+
+## 技術スタック
+
+### バックエンド
+- **コア**: [Hono](https://hono.dev/) (Node.js adapter), TypeScript
+- **API ドキュメント**: [@hono/zod-openapi](https://github.com/honojs/middleware/tree/main/packages/zod-openapi) (Swagger UI 同梱)
+- **ミドルウェア**: CORS, Secure Headers, Timing, logger, rateLimiter, CSRF
+
+### データベース
+- **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
+- **DB**: PostgreSQL (postgres.js)
+
+### フロントエンド
+- **フレームワーク**: React 19, Vite
+- **ルーティング**: [TanStack Router](https://tanstack.com/router)
+- **状態管理/データ取得**: [TanStack Query](https://tanstack.com/query)
+- **UI コンポーネント**: Vanilla CSS (Tailwind なし)
+
+### テスト・品質管理
+- **ユニット/統合テスト**: [Vitest](https://vitest.dev/)
+- **E2E テスト**: [Playwright](https://playwright.dev/)
+- **静的解析・整形**: [Biome](https://biomejs.dev/)
+
+---
+
+## クイックスタート
+
+### 前提条件
+- Node.js (v18+)
+- pnpm
+- Docker / Docker Compose
+
+### セットアップ手順
+
+1. **依存関係のインストール**
+   ```bash
+   pnpm install
+   ```
+
+2. **環境変数の設定**
+   ```bash
+   cp .env.example .env
+   # .env 内の変数を環境に合わせて更新
+   ```
+   `VITE_ENABLE_MSW=true` を設定すると、開発時に MSW モックを有効化できます（デフォルトは `false`）。
+
+3. **データベースの起動**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **データベースの初期化**
+   ```bash
+   pnpm db:push   # スキーマを直接反映
+   pnpm db:seed   # テストデータの投入
+   ```
+
+5. **開発サーバーの起動**
+   ```bash
+   pnpm dev
+   ```
+
+アプリケーション、API、ドキュメントはすべて `http://localhost:5173` 経由でアクセス可能です。
+
+---
+
+## 主要コマンド
+
+| コマンド | 説明 |
+|---|---|
+| `pnpm dev` | 開発サーバーの起動 |
+| `pnpm build` | プロダクションビルド (FE & BE) |
+| `pnpm start` | コンパイル済みバックエンドの実行 |
+| `pnpm test` | Vitest によるテスト実行 |
+| `pnpm test:e2e` | Playwright による E2E テスト実行 |
+| `pnpm lint` | Biome によるコードチェック |
+| `pnpm db:push` | スキーマを直接 DB に反映 |
+| `pnpm db:studio` | Drizzle Studio の起動 |
+| `pnpm db:seed` | シードデータの投入 |
+
+---
+
+## 主な機能
+
+- **型安全な API (Hono RPC)**: バックエンドの型定義をフロントエンドで共有。
+- **OpenAPI ドキュメント**: `/api/doc` (JSON) と `/api/ui` (Swagger UI) を自動生成。
+- **認証システム**: JWT (Access/Refresh) と OAuth 2.0 (Google/GitHub) に対応。
+- **BBS 機能**: スレッド作成、詳細閲覧、コメント投稿の実装サンプル。
+- **高度な死活監視**: DB 接続確認を含むヘルスチェック (`/api/health`)。
+- **パフォーマンスプロファイリング**: `Server-Timing` ヘッダーによる処理時間の可視化。
+
+---
+
+## アーキテクチャ・プロジェクト構成
+
+本プロジェクトはフロントエンドとバックエンドを統合した「モジュラー・モノリス」構造を採用し、ドメインベースでコードを凝集させることでメンテナンス性を高めています。エンドツーエンドの型安全性を実現するため、Hono RPC と Zod スキーマを共有しています。
+
+### ディレクトリ構成
+
+- **`api/` (バックエンド)**
+  - `modules/`: 機能ドメインごとのコード層。各ドメインは以下の3層アーキテクチャで構成。
+    - `*.routes.ts`: ルーティング、リクエストバリデーション、レスポンスの返却。
+    - `*.service.ts`: ビジネスロジック。
+    - `*.repository.ts`: Drizzle ORM を用いたデータベースアクセス処理。
+  - `db/`, `middleware/`: DB接続設定や、認証・セキュリティ・ロギング等の共通ミドルウェア。
+
+- **`src/` (フロントエンド)**
+  - `modules/`: 機能ドメインごとのコード層。UIとロジックを近接して管理します。
+    - `components/`: ドメイン固有のUIコンポーネント。
+    - `hooks/`: 状態管理やUIの副作用を切り出したカスタムフック。
+    - `repositories/`: バックエンドAPIを呼び出すデータフェッチ層 (TanStack Query等の処理)。
+    - `services/`: フロントエンド側の複雑なロジックやデータ加工処理。
+  - `routes/`: TanStack Router によるファイルベースのルーティング。
+  - `lib/api.ts`: Hono RPCによる型安全な API クライアント (`client`) を定義。アクセストークン付与や自動リフレッシュのロジックをカプセル化。
+
+- **`shared/` (共有コード)**
+  - `schemas/`: Zod によるバリデーションスキーマ群。フロントエンドの入力検証と、バックエンドの引数検証で全く同じスキーマを再利用することで DRY な設計を実現。
+
+- **`drizzle/`**
+  - DBのマイグレーション設定およびシードデータ生成スクリプト。
+
+---
+
+## セキュリティ
+
+### トークン管理
+デフォルトでは JWT を `localStorage` に保存します。
+- **メリット**: 実装の容易さと、Hono RPC との親和性が高い。
+- **注意点**: XSS に対する脆弱性。本番環境でより高いセキュリティ要件が求められる場合は `httpOnly Cookie` への移行を推奨します。
+
+### セキュリティミドルウェア
+- **CSRF**: Hono 標準の `csrf()` による Origin/Referer チェック。
+- **セキュリティヘッダー**: `Secure Headers` による CSP、HSTS 等の設定。
+- **レート制限**: ブルートフォース攻撃を防ぐための `rateLimiter` (メモリベース) を全 API に適用。
+
+---
+
+## ライセンス
+MIT
