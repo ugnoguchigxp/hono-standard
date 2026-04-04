@@ -7,6 +7,8 @@
 - **`pencilSchema.ts`**: Pencil.dev (v2.9) の公式TypeScript型定義。
 - **`designSystem.pen`**: デザインシステム全体の視覚的定義ファイル。Pencilエディタで直接閲覧・編集可能です。
 - **`index.tsx`**: 全コンポーネントを包括したプレビュー用カタログ。`DesignSystemPreview` をエクスポートします。
+- **`generatedVariants.ts`**: `.pen` から自動生成されるバリアント一覧（手編集禁止）。
+- **`scripts/sync-variants.mjs`**: `.pen` から `generatedVariants.ts` を生成するスクリプト。
 
 ## 2. `.pen` ファイルの基本構造 (Version 2.9)
 
@@ -52,6 +54,16 @@
 
 - **JSONコメント禁止**: `.pen` ファイル (JSON) 内に `//` や `/* */` を含めると読み込みエラーになります。
 - **座標指定**: `layout` が `none` の場合、`x`, `y` 座標を適切に設定しないと要素が重なります。
+
+## 6. バリアント一覧のメンテナンス
+
+`.pen` に変更を入れたら、以下のコマンドでバリアント一覧を再生成してください。
+
+```bash
+pnpm -C designSystem pencil:variants
+```
+
+`designSystem` の build ではこの生成処理が自動実行されます。
 
 ---
 

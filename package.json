@@ -12,6 +12,7 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check .",
+    "design-system:variants": "pnpm -C designSystem pencil:variants",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
