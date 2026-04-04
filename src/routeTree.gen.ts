@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BbsIndexRouteImport } from './routes/bbs/index'
 import { Route as OauthCallbackRouteImport } from './routes/oauth.callback'
@@ -18,6 +19,11 @@ import { Route as BbsIdRouteImport } from './routes/bbs/$id'
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesignSystemRoute = DesignSystemRouteImport.update({
+  id: '/design-system',
+  path: '/design-system',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +49,7 @@ const BbsIdRoute = BbsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
@@ -65,14 +74,34 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/bbs/$id' | '/oauth/callback' | '/bbs/'
+  fullPaths:
+    | '/'
+    | '/design-system'
+    | '/login'
+    | '/bbs/$id'
+    | '/oauth/callback'
+    | '/bbs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/bbs/$id' | '/oauth/callback' | '/bbs'
-  id: '__root__' | '/' | '/login' | '/bbs/$id' | '/oauth/callback' | '/bbs/'
+  to:
+    | '/'
+    | '/design-system'
+    | '/login'
+    | '/bbs/$id'
+    | '/oauth/callback'
+    | '/bbs'
+  id:
+    | '__root__'
+    | '/'
+    | '/design-system'
+    | '/login'
+    | '/bbs/$id'
+    | '/oauth/callback'
+    | '/bbs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   BbsIdRoute: typeof BbsIdRoute
   OauthCallbackRoute: typeof OauthCallbackRoute
@@ -86,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/design-system': {
+      id: '/design-system'
+      path: '/design-system'
+      fullPath: '/design-system'
+      preLoaderRoute: typeof DesignSystemRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -121,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   BbsIdRoute: BbsIdRoute,
   OauthCallbackRoute: OauthCallbackRoute,

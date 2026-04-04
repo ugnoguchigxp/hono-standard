@@ -11,7 +11,10 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@api/*": ["./api/*"]
+      "@api/*": ["./api/*"],
+      "@repo/design-system": ["./designSystem/src"],
+      "@repo/design-system/*": ["./designSystem/src/*"],
+      "@repo/design-system/pencil": ["./designSystem/pencil"]
     },
     "types": ["node", "vite/client"]
   },

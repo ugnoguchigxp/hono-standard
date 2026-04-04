@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { Button } from '@repo/design-system';
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -6,9 +7,10 @@ export const Route = createFileRoute('/')({
 
 function Index() {
   return (
-    <div>
+    <div className="p-8">
       <h1>Welcome to Hono Standard</h1>
-      <p>A simple Monolithic API + Frontend template.</p>
+      <p className="mb-4">A simple Monolithic API + Frontend template.</p>
+      <Button>Design System Button</Button>
     </div>
   );
 }
