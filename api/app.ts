@@ -56,9 +56,15 @@ app.use(
 app.use('*', loggerMiddleware());
 app.onError(errorHandler);
 
-app.use('/api/*', rateLimiter({ windowMs: 60 * 1000, limit: 100 }));
-app.use('/api/auth/login', rateLimiter({ windowMs: 60 * 1000, limit: 5 }));
-app.use('/api/auth/register', rateLimiter({ windowMs: 60 * 1000, limit: 5 }));
+app.use('/api/*', rateLimiter({ windowMs: 60 * 1000, limit: 100, trustProxy: config.TRUST_PROXY }));
+app.use(
+  '/api/auth/login',
+  rateLimiter({ windowMs: 60 * 1000, limit: 5, trustProxy: config.TRUST_PROXY })
+);
+app.use(
+  '/api/auth/register',
+  rateLimiter({ windowMs: 60 * 1000, limit: 5, trustProxy: config.TRUST_PROXY })
+);
 
 app.use('/api/*', csrf());
 

@@ -9,6 +9,8 @@ import { GitHubOAuthClient } from '../services/oauth/github';
 import { GoogleOAuthClient } from '../services/oauth/google';
 
 const providers = new Map<string, OAuthProvider>();
+const isSecureCookie =
+  config.NODE_ENV === 'production' || Boolean(config.APP_URL?.startsWith('https://'));
 if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
   const fallback = `http://localhost:${config.PORT}`;
   const redirectUrl = `${config.APP_URL || fallback}/api/auth/oauth/google/callback`;
@@ -68,7 +70,13 @@ export const oauthRouter = new OpenAPIHono<AppEnv>()
     if (!provider) throw new ValidationError('Invalid or disabled OAuth provider');
 
     const state = crypto.randomUUID();
-    setCookie(c, 'oauth_state', state, { httpOnly: true, maxAge: 60 * 10, path: '/' });
+    setCookie(c, 'oauth_state', state, {
+      httpOnly: true,
+      secure: isSecureCookie,
+      sameSite: 'Lax',
+      maxAge: 60 * 10,
+      path: '/',
+    });
 
     const url = provider.getAuthorizationUrl(state);
     return c.redirect(url);
@@ -86,7 +94,13 @@ export const oauthRouter = new OpenAPIHono<AppEnv>()
       throw new AuthError('Invalid state or code');
     }
 
-    setCookie(c, 'oauth_state', '', { httpOnly: true, maxAge: 0, path: '/' });
+    setCookie(c, 'oauth_state', '', {
+      httpOnly: true,
+      secure: isSecureCookie,
+      sameSite: 'Lax',
+      maxAge: 0,
+      path: '/',
+    });
 
     const { user: oauthUser } = await provider.exchangeCode(code);
 

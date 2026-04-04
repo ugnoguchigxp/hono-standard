@@ -10,7 +10,8 @@
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
+        "noUnknownAtRules": "off"
       }
     }
   },
@@ -28,6 +29,7 @@
       "!**/dist-api/**",
       "!**/drizzle/**",
       "!**/playwright-report/**",
+      "!**/coverage/**",
       "!**/public/mockServiceWorker.js",
       "!**/test-results/**",
       "!**/routeTree.gen.ts"
@@ -41,6 +43,11 @@
       "trailingCommas": "es5"
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "files": {
     "includes": [
       "**",
@@ -49,6 +56,7 @@
       "!**/dist-api",
       "!**/drizzle",
       "!**/playwright-report",
+      "!**/coverage",
       "!**/public/mockServiceWorker.js",
       "!**/test-results",
       "!**/.git",

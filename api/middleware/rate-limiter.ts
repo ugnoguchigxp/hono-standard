@@ -5,35 +5,55 @@ type RateLimiterOptions = {
   limit: number;
   message?: string;
   keyGenerator?: (c: Context) => string;
+  trustProxy?: boolean;
 };
 
-// In-memory store for rate limiting
-const store = new Map<string, { count: number; resetTime: number }>();
-
-// Simple cleanup interval (runs every 5 mins to prevent memory leaks)
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [key, record] of store.entries()) {
-      if (now > record.resetTime) {
-        store.delete(key);
-      }
-    }
-  },
-  5 * 60 * 1000
-).unref?.();
-
 export const rateLimiter = (options: RateLimiterOptions) => {
+  // Keep store scoped to each limiter instance to avoid cross-route side effects.
+  const store = new Map<string, { count: number; resetTime: number }>();
+
+  // Simple cleanup interval (runs every 5 mins to prevent memory leaks)
+  setInterval(
+    () => {
+      const now = Date.now();
+      for (const [key, record] of store.entries()) {
+        if (now > record.resetTime) {
+          store.delete(key);
+        }
+      }
+    },
+    5 * 60 * 1000
+  ).unref?.();
+
+  const readClientIp = (c: Context) => {
+    if (!options.trustProxy) return null;
+
+    const cfConnectingIp = c.req.header('cf-connecting-ip');
+    if (cfConnectingIp) return cfConnectingIp.trim();
+
+    const xForwardedFor = c.req.header('x-forwarded-for');
+    if (xForwardedFor) {
+      const firstIp = xForwardedFor.split(',')[0]?.trim();
+      if (firstIp) return firstIp;
+    }
+
+    const xRealIp = c.req.header('x-real-ip');
+    if (xRealIp) return xRealIp.trim();
+
+    return null;
+  };
+
+  const defaultKeyGenerator = (c: Context) => {
+    const ip = readClientIp(c);
+    if (ip) return `ip:${ip}`;
+
+    // Avoid using attacker-controlled headers as identity when proxy headers are untrusted.
+    // This intentionally uses one coarse bucket.
+    return 'global';
+  };
+
   return async (c: Context, next: () => Promise<void>) => {
-    /**
-     * NOTE: When running behind a reverse proxy (e.g., Nginx, Cloudflare),
-     * you should use a trusted header like 'x-forwarded-for' or 'cf-connecting-ip'.
-     * Make sure your proxy is configured to set these headers correctly and
-     * that you only trust headers from known proxies to prevent IP spoofing.
-     */
-    const key = options.keyGenerator
-      ? options.keyGenerator(c)
-      : c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || '127.0.0.1';
+    const key = options.keyGenerator ? options.keyGenerator(c) : defaultKeyGenerator(c);
     const now = Date.now();
     const record = store.get(key);
 

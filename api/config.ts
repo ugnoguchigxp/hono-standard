@@ -17,6 +17,10 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   APP_URL: z.string().optional(),
   CORS_ORIGIN: z.string().default('*'),
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
   LOG_LEVEL: z.string().default('info'),
 });
 
