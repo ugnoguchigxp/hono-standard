@@ -24,4 +24,25 @@ describe('Separator', () => {
     const separator = container.firstChild as HTMLElement;
     expect(separator).toHaveClass('custom-class');
   });
+
+  it('renders with different variants', () => {
+    const { container: strong } = render(<Separator variant="strong" />);
+    expect(strong.firstChild).toHaveClass('bg-foreground/30');
+
+    const { container: accent } = render(<Separator variant="accent" />);
+    expect(accent.firstChild).toHaveClass('bg-primary/40');
+  });
+
+  it('renders with different thickness', () => {
+    const { container: thick } = render(<Separator thickness="2" />);
+    expect(thick.firstChild).toHaveClass('h-[2px]');
+  });
+
+  it('renders with gradient style', () => {
+    const { container } = render(<Separator gradient />);
+    expect(container.firstChild).toHaveClass('bg-gradient-to-r');
+    expect(container.firstChild).toHaveClass('from-transparent');
+    expect(container.firstChild).toHaveClass('via-border');
+    expect(container.firstChild).toHaveClass('to-transparent');
+  });
 });

@@ -27,10 +27,12 @@ ENV PORT=3000
 
 COPY --from=builder /app/package.json ./
 # Only production dependencies needed
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist-api ./dist-api
-COPY --from=builder /app/dist ./dist
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/dist-api ./dist-api
+COPY --from=builder --chown=node:node /app/dist ./dist
 
 EXPOSE 3000
+
+USER node
 
 CMD ["node", "dist-api/index.js"]

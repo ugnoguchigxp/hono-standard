@@ -62,9 +62,6 @@ export const refresh = async (token: string) => {
   return db.transaction(async (tx) => {
     const payload = await verifyRefreshToken(token, tx);
 
-    // Revoke old token
-    await revokeRefreshToken(token, tx);
-
     // Verify user still exists and active
     const user = await findById(payload.userId, tx);
     if (!user?.isActive) {
@@ -75,7 +72,7 @@ export const refresh = async (token: string) => {
   });
 };
 
-export const logout = async (token: string) => {
+export const logout = async (token?: string) => {
   if (token) {
     await revokeRefreshToken(token);
   }

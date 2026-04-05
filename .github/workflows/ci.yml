@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: hono_standard
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      APP_URL: http://localhost:5173
+      CORS_ORIGIN: http://localhost:5173
+      COOKIE_SAME_SITE: lax
+      TRUST_PROXY: false
+      LOG_LEVEL: info
+      AUTH_MODE: both
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hono_standard
+      JWT_SECRET: ci-test-secret-key-change-me-1234567890
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare database schema
+        run: pnpm db:push
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test -- --run
+
+      - name: Dependency audit (high+)
+        run: pnpm audit --audit-level=high
+
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    needs: test-and-lint
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      APP_URL: http://localhost:5173
+      CORS_ORIGIN: http://localhost:5173
+      COOKIE_SAME_SITE: lax
+      TRUST_PROXY: false
+      LOG_LEVEL: info
+      AUTH_MODE: both
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hono_standard
+      JWT_SECRET: ci-test-secret-key-change-me-1234567890
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E smoke
+        run: pnpm test:e2e:smoke

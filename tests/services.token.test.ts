@@ -5,23 +5,19 @@ import { AuthError } from '../api/lib/errors';
 
 const mocks = vi.hoisted(() => {
   const eq = vi.fn(() => 'eq-condition');
-  const whereSelect = vi.fn();
-  const fromSelect = vi.fn(() => ({ where: whereSelect }));
-  const select = vi.fn(() => ({ from: fromSelect }));
 
   const insertValues = vi.fn();
   const insert = vi.fn(() => ({ values: insertValues }));
 
-  const whereDelete = vi.fn();
+  const returningDelete = vi.fn();
+  const whereDelete = vi.fn(() => ({ returning: returningDelete }));
   const deleteFn = vi.fn(() => ({ where: whereDelete }));
 
   return {
     eq,
-    whereSelect,
-    fromSelect,
-    select,
     insertValues,
     insert,
+    returningDelete,
     whereDelete,
     deleteFn,
   };
@@ -33,7 +29,6 @@ vi.mock('drizzle-orm', () => ({
 
 vi.mock('../api/db/client', () => ({
   db: {
-    select: mocks.select,
     insert: mocks.insert,
     delete: mocks.deleteFn,
   },
@@ -114,7 +109,7 @@ describe('token.service', () => {
 
   it('verifies refresh token when persisted and not expired', async () => {
     const refreshToken = await createRefreshJwt();
-    mocks.whereSelect.mockResolvedValueOnce([
+    mocks.returningDelete.mockResolvedValueOnce([
       {
         expiresAt: new Date(Date.now() + 60_000),
       },
@@ -127,39 +122,54 @@ describe('token.service', () => {
 
   it('rejects refresh token when no persisted token exists', async () => {
     const refreshToken = await createRefreshJwt();
-    mocks.whereSelect.mockResolvedValueOnce([]);
+    mocks.returningDelete.mockResolvedValueOnce([]);
 
+    await expect(verifyRefreshToken(refreshToken)).rejects.toThrow('Invalid refresh token');
+  });
+
+  it('allows refresh token only once', async () => {
+    const refreshToken = await createRefreshJwt();
+    mocks.returningDelete
+      .mockResolvedValueOnce([
+        {
+          expiresAt: new Date(Date.now() + 60_000),
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    await expect(verifyRefreshToken(refreshToken)).resolves.toMatchObject({
+      type: 'refresh',
+      userId: 'user-1',
+    });
     await expect(verifyRefreshToken(refreshToken)).rejects.toThrow('Invalid refresh token');
   });
 
   it('revokes and rejects expired refresh token', async () => {
     const refreshToken = await createRefreshJwt();
-    mocks.whereSelect.mockResolvedValueOnce([
+    mocks.returningDelete.mockResolvedValueOnce([
       {
         expiresAt: new Date(Date.now() - 60_000),
       },
     ]);
-    mocks.whereDelete.mockResolvedValueOnce(undefined);
 
     await expect(verifyRefreshToken(refreshToken)).rejects.toThrow('Refresh token expired');
     expect(mocks.deleteFn).toHaveBeenCalledTimes(1);
-    expect(mocks.whereDelete).toHaveBeenCalledTimes(1);
+    expect(mocks.returningDelete).toHaveBeenCalledTimes(1);
   });
 
-  it('revokes malformed refresh token when persisted record exists', async () => {
-    mocks.whereSelect.mockResolvedValueOnce([
+  it('consumes malformed refresh token when persisted record exists', async () => {
+    mocks.returningDelete.mockResolvedValueOnce([
       {
         expiresAt: new Date(Date.now() + 60_000),
       },
     ]);
-    mocks.whereDelete.mockResolvedValueOnce(undefined);
 
     await expect(verifyRefreshToken('not-a-jwt')).rejects.toThrow('Invalid refresh token');
     expect(mocks.deleteFn).toHaveBeenCalledTimes(1);
+    expect(mocks.returningDelete).toHaveBeenCalledTimes(1);
   });
 
   it('revokeRefreshToken deletes hashed token record', async () => {
-    mocks.whereDelete.mockResolvedValueOnce(undefined);
     await revokeRefreshToken('refresh-token');
     expect(mocks.deleteFn).toHaveBeenCalledTimes(1);
     expect(mocks.whereDelete).toHaveBeenCalledTimes(1);

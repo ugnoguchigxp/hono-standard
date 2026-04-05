@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { defaultUser, mockAuthMe, mockAuthMeUnauthorized } from './helpers';
+import { defaultUser, mockAuthMeUnauthorized } from './helpers';
 
 test.describe('Authentication Flows @regression', () => {
   test('logs in successfully with email/password @smoke', async ({ page }) => {
@@ -8,8 +8,6 @@ test.describe('Authentication Flows @regression', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
           user: {
             id: defaultUser.id,
             email: defaultUser.email,
@@ -46,15 +44,12 @@ test.describe('Authentication Flows @regression', () => {
     await expect(page.getByText('Login failed')).toBeVisible();
   });
 
-  test('logs out and clears local storage @smoke', async ({ page }) => {
-    await mockAuthMe(page, defaultUser);
+  test('logs out and clears session @smoke', async ({ page }) => {
     await page.route('**/api/auth/login', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
           user: {
             id: defaultUser.id,
             email: defaultUser.email,
@@ -78,25 +73,11 @@ test.describe('Authentication Flows @regression', () => {
 
     await page.getByRole('button', { name: 'Logout' }).click();
 
-    await expect
-      .poll(async () =>
-        page.evaluate(() => ({
-          access: localStorage.getItem('access_token'),
-          refresh: localStorage.getItem('refresh_token'),
-          user: localStorage.getItem('user'),
-        }))
-      )
-      .toEqual({
-        access: null,
-        refresh: null,
-        user: null,
-      });
-
     await page.reload();
     await expect(page.getByRole('link', { name: 'Login' })).toBeVisible();
   });
 
-  test('handles OAuth callback token exchange and redirects to home', async ({ page }) => {
+  test('handles OAuth callback and redirects to home', async ({ page }) => {
     await page.route('**/api/auth/me', async (route) => {
       await route.fulfill({
         status: 200,
@@ -108,12 +89,12 @@ test.describe('Authentication Flows @regression', () => {
       });
     });
 
-    await page.goto('/oauth/callback#access_token=oauth-access&refresh_token=oauth-refresh');
+    await page.goto('/oauth/callback');
     await expect(page).toHaveURL('/');
     await expect(page.getByText(defaultUser.email)).toBeVisible();
   });
 
-  test('redirects OAuth callback to login when tokens are missing', async ({ page }) => {
+  test('redirects OAuth callback to login when session is missing', async ({ page }) => {
     await mockAuthMeUnauthorized(page);
     await page.goto('/oauth/callback');
     await expect(page).toHaveURL('/login');

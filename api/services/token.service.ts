@@ -62,17 +62,19 @@ export const verifyRefreshToken = async (
 ): Promise<JWTPayload> => {
   const tokenHash = hashToken(token);
   const d = tx || db;
+  // Delete first to guarantee one-time use even under concurrent refresh requests.
   const [storedToken] = await d
-    .select()
-    .from(refreshTokens)
-    .where(eq(refreshTokens.token, tokenHash));
+    .delete(refreshTokens)
+    .where(eq(refreshTokens.token, tokenHash))
+    .returning({
+      expiresAt: refreshTokens.expiresAt,
+    });
 
   if (!storedToken) {
     throw new AuthError('Invalid refresh token');
   }
 
   if (new Date() > storedToken.expiresAt) {
-    await revokeRefreshToken(token, tx);
     throw new AuthError('Refresh token expired');
   }
 
@@ -81,7 +83,6 @@ export const verifyRefreshToken = async (
     if (payload.type !== 'refresh') throw new Error('Invalid token type');
     return jwtPayloadSchema.parse(payload);
   } catch {
-    await revokeRefreshToken(token, tx);
     throw new AuthError('Invalid refresh token');
   }
 };

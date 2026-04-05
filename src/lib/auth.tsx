@@ -9,7 +9,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (accessToken: string, refreshToken: string, user: User) => void;
+  login: (user: User) => void;
   logout: () => void;
 }
 
@@ -21,19 +21,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        try {
-          const res = await client.auth.me.$get({});
-          if (res.ok) {
-            const data = (await res.json()) as { userId: string; email: string };
-            setUser({ id: data.userId, email: data.email });
-          } else {
-            setUser(null);
-          }
-        } catch {
+      try {
+        const res = await client.auth.me.$get({});
+        if (res.ok) {
+          const data = (await res.json()) as { userId: string; email: string };
+          setUser({ id: data.userId, email: data.email });
+        } else {
           setUser(null);
         }
+      } catch {
+        setUser(null);
       }
       setIsLoading(false);
     };
@@ -41,25 +38,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []);
 
-  const login = (accessToken: string, refreshToken: string, user: User) => {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
-    localStorage.setItem('user', JSON.stringify(user));
+  const login = (user: User) => {
     setUser(user);
   };
 
   const logout = async () => {
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (refreshToken) {
-      try {
-        await client.auth.logout.$post({ json: { refreshToken } });
-      } catch {
-        // ignore network error on logout
-      }
+    try {
+      await client.auth.logout.$post({});
+    } catch {
+      // ignore network error on logout
     }
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
     setUser(null);
   };
 

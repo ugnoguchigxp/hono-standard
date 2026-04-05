@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { defaultUser, installAuthStorage, mockAuthMe } from './helpers';
+import { defaultUser, mockAuthMe } from './helpers';
 
 test.describe('BBS Flows @regression', () => {
   test('renders thread list from API @smoke', async ({ page }) => {
@@ -83,7 +83,6 @@ test.describe('BBS Flows @regression', () => {
   });
 
   test('creates new thread when authenticated', async ({ page }) => {
-    await installAuthStorage(page);
     await mockAuthMe(page, defaultUser);
 
     const threads = [
@@ -139,7 +138,6 @@ test.describe('BBS Flows @regression', () => {
   });
 
   test('retries protected BBS request via refresh token on 401', async ({ page }) => {
-    await installAuthStorage(page, { accessToken: 'expired-token', refreshToken: 'refresh-token' });
     await mockAuthMe(page, defaultUser);
 
     const threads = [
@@ -202,8 +200,6 @@ test.describe('BBS Flows @regression', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          accessToken: 'new-access-token',
-          refreshToken: 'new-refresh-token',
           user: {
             id: defaultUser.id,
             email: defaultUser.email,
@@ -222,7 +218,6 @@ test.describe('BBS Flows @regression', () => {
   });
 
   test('creates comment on thread detail when authenticated', async ({ page }) => {
-    await installAuthStorage(page);
     await mockAuthMe(page, defaultUser);
 
     const comments = [

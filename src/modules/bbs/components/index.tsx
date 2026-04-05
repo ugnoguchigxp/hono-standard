@@ -39,15 +39,12 @@ export const ThreadList = ({ threads }: { threads: Thread[] | undefined }) => {
   });
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <table className="w-full border-collapse">
       <thead>
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
-              <th
-                key={header.id}
-                style={{ borderBottom: '2px solid #555', padding: '12px', textAlign: 'left' }}
-              >
+              <th key={header.id} className="border-b-2 border-border p-3 text-left">
                 {header.isPlaceholder
                   ? null
                   : flexRender(header.column.columnDef.header, header.getContext())}
@@ -60,7 +57,7 @@ export const ThreadList = ({ threads }: { threads: Thread[] | undefined }) => {
         {table.getRowModel().rows.map((row) => (
           <tr key={row.id}>
             {row.getVisibleCells().map((cell) => (
-              <td key={cell.id} style={{ borderBottom: '1px solid #444', padding: '12px' }}>
+              <td key={cell.id} className="border-b border-border p-3">
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </td>
             ))}
@@ -92,51 +89,28 @@ export const CreateThreadForm = ({
   };
 
   return (
-    <section
-      style={{
-        marginBottom: '3rem',
-        padding: '1.5rem',
-        background: '#333',
-        borderRadius: '12px',
-      }}
-    >
+    <section className="mb-12 rounded-xl border border-border bg-muted/30 p-6">
       <h3>Create New Thread</h3>
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-      >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Thread Title"
           required
-          style={{
-            padding: '0.8rem',
-            background: '#222',
-            color: '#fff',
-            border: '1px solid #555',
-            borderRadius: '4px',
-          }}
+          className="rounded border border-border bg-background px-3 py-3"
         />
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="What's on your mind?"
           required
-          style={{
-            padding: '0.8rem',
-            minHeight: 100,
-            background: '#222',
-            color: '#fff',
-            border: '1px solid #555',
-            borderRadius: '4px',
-          }}
+          className="min-h-[100px] rounded border border-border bg-background px-3 py-3"
         />
         <button
           type="submit"
           disabled={isPending}
-          style={{ padding: '0.8rem 2rem', fontWeight: 'bold' }}
+          className="rounded border border-border px-8 py-3 font-bold"
         >
           {isPending ? 'Creating...' : 'Create Thread'}
         </button>
@@ -164,24 +138,19 @@ export const CommentForm = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-    >
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="Write a comment..."
         required
-        style={{
-          padding: '0.5rem',
-          minHeight: 80,
-          background: '#222',
-          color: '#fff',
-          border: '1px solid #555',
-        }}
+        className="min-h-20 rounded border border-border bg-background px-2 py-2"
       />
-      <button type="submit" disabled={isPending} style={{ alignSelf: 'flex-end' }}>
+      <button
+        type="submit"
+        disabled={isPending}
+        className="self-end rounded border border-border px-3 py-2"
+      >
         {isPending ? 'Posting...' : 'Post Comment'}
       </button>
     </form>
@@ -191,11 +160,9 @@ export const CommentForm = ({
 // --- Thread Detail View ---
 export const ThreadDetailView = ({ thread }: { thread: Thread }) => {
   return (
-    <article
-      style={{ borderBottom: '2px solid #555', marginBottom: '2rem', paddingBottom: '1rem' }}
-    >
+    <article className="mb-8 border-b-2 border-border pb-4">
       <h1>{thread.title}</h1>
-      <p style={{ whiteSpace: 'pre-wrap' }}>{thread.content}</p>
+      <p className="whitespace-pre-wrap">{thread.content}</p>
       <small>
         Posted by: {thread.authorId} at {new Date(thread.createdAt).toLocaleString()}
       </small>
@@ -208,13 +175,10 @@ export const CommentList = ({ comments }: { comments: Comment[] | undefined }) =
   return (
     <section>
       <h3>Comments ({comments?.length || 0})</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="mb-8 flex flex-col gap-4">
         {comments?.map((comment) => (
-          <div
-            key={comment.id}
-            style={{ padding: '1rem', background: '#333', borderRadius: '8px' }}
-          >
-            <p style={{ margin: '0 0 0.5rem 0' }}>{comment.content}</p>
+          <div key={comment.id} className="rounded-lg border border-border bg-muted/30 p-4">
+            <p className="mb-2">{comment.content}</p>
             <small>
               By: {comment.authorId} at {new Date(comment.createdAt).toLocaleString()}
             </small>

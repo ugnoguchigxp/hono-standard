@@ -19,8 +19,11 @@ export const Default: Story = {
 export const Variants: Story = {
   render: () => (
     <div className="flex flex-wrap items-center gap-2">
-      <Button>Default</Button>
+      <Button variant="default">Default</Button>
       <Button variant="secondary">Secondary</Button>
+      <Button variant="success">Success</Button>
+      <Button variant="warning">Warning</Button>
+      <Button variant="info">Info</Button>
       <Button variant="outline">Outline</Button>
       <Button variant="destructive">Destructive</Button>
       <Button variant="ghost">Ghost</Button>

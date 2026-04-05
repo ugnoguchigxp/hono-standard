@@ -8,17 +8,29 @@ describe('Button', () => {
     render(<Button>Click me</Button>);
     const button = screen.getByRole('button', { name: /click me/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass('bg-primary');
+    expect(button.className).toContain('bg-primary');
   });
 
   it('renders with different variants', () => {
     const { rerender } = render(<Button variant="destructive">Delete</Button>);
     let button = screen.getByRole('button', { name: /delete/i });
-    expect(button).toHaveClass('bg-destructive');
+    expect(button.className).toContain('bg-destructive');
+
+    rerender(<Button variant="success">Success</Button>);
+    button = screen.getByRole('button', { name: /success/i });
+    expect(button.className).toContain('bg-success');
+
+    rerender(<Button variant="warning">Warning</Button>);
+    button = screen.getByRole('button', { name: /warning/i });
+    expect(button.className).toContain('bg-warning');
+
+    rerender(<Button variant="info">Info</Button>);
+    button = screen.getByRole('button', { name: /info/i });
+    expect(button.className).toContain('bg-info');
 
     rerender(<Button variant="outline">Outline</Button>);
     button = screen.getByRole('button', { name: /outline/i });
-    expect(button).toHaveClass('border-border');
+    expect(button.className).toContain('border-border');
   });
 
   it('renders with different sizes', () => {

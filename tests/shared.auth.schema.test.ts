@@ -30,11 +30,9 @@ describe('shared auth schemas', () => {
 
   it('validates auth response schema', () => {
     const parsed = authResponseSchema.parse({
-      accessToken: 'token',
       user: {
         id: 'user-1',
         email: 'user@example.com',
-        name: 'John',
       },
     });
     expect(parsed.user.email).toBe('user@example.com');

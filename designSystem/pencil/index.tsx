@@ -2,6 +2,16 @@ import React, { useState } from 'react';
 import { Badge } from '../src/components/ui/badge';
 import { Button } from '../src/components/ui/button';
 import {
+  ChevronRight,
+  Command,
+  Moon,
+  Plus,
+  Search,
+  Settings,
+  Sun,
+  User,
+} from 'lucide-react';
+import {
   Card,
   CardContent,
   CardDescription,
@@ -288,6 +298,100 @@ export const DesignSystemPreview = () => {
           </Card>
         </section>
 
+        {/* ====== Pencil Button Gallery ====== */}
+        <section>
+          <div className="flex items-baseline justify-between mb-6">
+            <h2
+              className="font-bold tracking-tight"
+              style={{ fontSize: 'var(--font-size-2xl)' }}
+            >
+              Pencil Design System: Buttons
+            </h2>
+          </div>
+          <Card className="shadow-none border-zinc-200">
+            <CardContent className="p-12 space-y-12">
+              {/* Reference Grid */}
+              <div className="grid grid-cols-4 gap-8 items-start">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Button variant="default">
+                      <Plus className="mr-2 h-4 w-4" /> Button
+                    </Button>
+                    <Button variant="default" size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-mono">variant="default"</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Button variant="secondary">
+                      <Plus className="mr-2 h-4 w-4" /> Button
+                    </Button>
+                    <Button variant="secondary" size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-mono">variant="secondary"</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Button variant="destructive">
+                      <Plus className="mr-2 h-4 w-4" /> Button
+                    </Button>
+                    <Button variant="destructive" size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-mono">variant="destructive"</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-8 items-start">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Button variant="outline">
+                      <Plus className="mr-2 h-4 w-4" /> Button
+                    </Button>
+                    <Button variant="outline" size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-mono">variant="outline"</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Button variant="ghost">
+                      <Plus className="mr-2 h-4 w-4" /> Button
+                    </Button>
+                    <Button variant="ghost" size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-mono">variant="ghost"</p>
+                </div>
+              </div>
+
+              <Separator className="opacity-50" />
+
+              {/* Semantic Extensions */}
+              <div className="space-y-6">
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                  Semantic Extensions
+                </h3>
+                <div className="flex flex-wrap items-center gap-6">
+                  <Button variant="success">Success / OK</Button>
+                  <Button variant="warning">Warning / Alert</Button>
+                  <Button variant="info">Info / Notice</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
         {/* ====== Badge ====== */}
         <section>
           <h2
@@ -442,20 +546,81 @@ export const DesignSystemPreview = () => {
             Separator
           </h2>
           <Card className="shadow-[var(--shadow-md)]">
-            <CardContent className="pt-8 space-y-[var(--spacing-xl)]">
-              <div className="space-y-[var(--spacing-md)]">
-                <p style={{ fontSize: 'var(--font-size-sm)' }} className="font-medium">
-                  Above the separator
-                </p>
-                <Separator />
-                <p style={{ fontSize: 'var(--font-size-sm)' }} className="text-muted-foreground">
-                  Below the separator
-                </p>
-              </div>
-              <div className="flex items-center h-8 gap-[var(--spacing-md)]">
-                <span style={{ fontSize: 'var(--font-size-sm)' }}>Left content</span>
-                <Separator orientation="vertical" />
-                <span style={{ fontSize: 'var(--font-size-sm)' }}>Right content</span>
+            <CardHeader>
+              <CardTitle>Variants & Thickness</CardTitle>
+              <CardDescription>
+                情報の重要度や階層に応じて、厚みや色を自由に組み合わせて使用できます。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <div className="grid gap-6">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Default & Thickness</p>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground">thickness: 1 (default)</p>
+                      <Separator />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground">thickness: 2</p>
+                      <Separator thickness="2" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground">thickness: 4</p>
+                      <Separator thickness="4" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Color Variants</p>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground">variant: default</p>
+                      <Separator />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground">variant: muted</p>
+                      <Separator variant="muted" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground">variant: strong</p>
+                      <Separator variant="strong" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground">variant: accent</p>
+                      <Separator variant="accent" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Decorative (Gradient)</p>
+                  <p className="text-xs text-muted-foreground">端をフェードさせることで、より洗練された印象を与えます。</p>
+                  <div className="space-y-4 pt-2">
+                    <Separator gradient />
+                    <Separator gradient variant="accent" thickness="2" />
+                    <Separator gradient variant="strong" />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Vertical Orientation</p>
+                  <div className="flex items-center h-12 gap-6 bg-muted/30 p-4 rounded-md">
+                    <div className="flex items-center h-full gap-3">
+                      <span className="text-xs">Normal</span>
+                      <Separator orientation="vertical" />
+                    </div>
+                    <div className="flex items-center h-full gap-3">
+                      <span className="text-xs">Thick</span>
+                      <Separator orientation="vertical" thickness="2" variant="strong" />
+                    </div>
+                    <div className="flex items-center h-full gap-3">
+                      <span className="text-xs">Gradient</span>
+                      <Separator orientation="vertical" gradient variant="accent" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

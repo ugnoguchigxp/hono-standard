@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -54,7 +55,10 @@ export const userExternalAccounts = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => ({
-    providerExternalIdIdx: index('uex_provider_ext_idx').on(table.provider, table.externalId),
+    providerExternalIdUniqueIdx: uniqueIndex('uex_provider_ext_uidx').on(
+      table.provider,
+      table.externalId
+    ),
     userIdIdx: index('uex_user_id_idx').on(table.userId),
   })
 );

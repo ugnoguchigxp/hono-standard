@@ -16,20 +16,6 @@ export const loginSchema = z
   })
   .openapi('LoginInput');
 
-export const refreshSchema = z
-  .object({
-    refreshToken: z.string().openapi({ example: 'some-refresh-token' }),
-  })
-  .openapi('RefreshInput');
-
-export const logoutSchema = z
-  .object({
-    refreshToken: z.string().openapi({ example: 'some-refresh-token' }),
-  })
-  .openapi('LogoutInput');
-
 // Infer types
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
-export type RefreshInput = z.infer<typeof refreshSchema>;
-export type LogoutInput = z.infer<typeof logoutSchema>;

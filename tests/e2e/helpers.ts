@@ -10,22 +10,6 @@ export const defaultUser: TestUser = {
   email: 'user@example.com',
 };
 
-export const installAuthStorage = async (
-  page: Page,
-  tokens: { accessToken?: string; refreshToken?: string } = {}
-) => {
-  const accessToken = tokens.accessToken ?? 'access-token';
-  const refreshToken = tokens.refreshToken ?? 'refresh-token';
-
-  await page.addInitScript(
-    ({ a, r }) => {
-      localStorage.setItem('access_token', a);
-      localStorage.setItem('refresh_token', r);
-    },
-    { a: accessToken, r: refreshToken }
-  );
-};
-
 export const mockAuthMe = async (page: Page, user: TestUser = defaultUser) => {
   await page.route('**/api/auth/me', async (route) => {
     await route.fulfill({

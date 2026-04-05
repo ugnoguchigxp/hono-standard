@@ -13,14 +13,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
     return (
       <div>
-        <nav
-          style={{ padding: '1rem', borderBottom: '1px solid #444', display: 'flex', gap: '1rem' }}
-        >
-          <Link to="/" style={{ fontWeight: 'bold' }}>
+        <nav className="flex gap-4 border-b border-border p-4">
+          <Link to="/" className="font-bold">
             Home
           </Link>
           <Link to="/bbs">BBS</Link>
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           {auth.user ? (
             <>
               <span>{auth.user.email}</span>
@@ -32,7 +30,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
             <Link to="/login">Login</Link>
           )}
         </nav>
-        <main style={{ padding: '1rem' }}>
+        <main className="p-4">
           <Outlet />
         </main>
       </div>

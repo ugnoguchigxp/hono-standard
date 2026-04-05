@@ -22,6 +22,7 @@ const apiRoutes = new OpenAPIHono<AppEnv>()
   .route('/bbs', bbsRouter);
 
 const app = new OpenAPIHono<AppEnv>();
+const isProduction = config.NODE_ENV === 'production';
 
 // Middleware
 app.use('*', timing());
@@ -29,11 +30,12 @@ app.use(
   '*',
   cors({
     origin: (origin) => {
-      if (config.CORS_ORIGIN === '*') return origin || '';
-      if (origin && config.CORS_ORIGIN.split(',').includes(origin)) return origin;
+      if (origin && config.CORS_ORIGINS.includes(origin)) return origin;
       return null;
     },
     credentials: true,
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
@@ -42,13 +44,14 @@ app.use(
   secureHeaders({
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: [
-        "'self'",
-        ...(config.CORS_ORIGIN === '*' ? ['*'] : config.CORS_ORIGIN.split(',')),
-      ],
+      connectSrc: ["'self'", ...config.CORS_ORIGINS, ...(isProduction ? [] : ['ws:', 'wss:'])],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
     },
   })
 );

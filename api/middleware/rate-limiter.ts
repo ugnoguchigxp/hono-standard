@@ -25,8 +25,18 @@ export const rateLimiter = (options: RateLimiterOptions) => {
     5 * 60 * 1000
   ).unref?.();
 
+  const readDirectRemoteIp = (c: Context) => {
+    const env = (c as { env?: { incoming?: { socket?: { remoteAddress?: string } } } }).env;
+    const incoming = env?.incoming;
+    const remoteAddress = incoming?.socket?.remoteAddress;
+    if (typeof remoteAddress === 'string' && remoteAddress.length > 0) {
+      return remoteAddress;
+    }
+    return null;
+  };
+
   const readClientIp = (c: Context) => {
-    if (!options.trustProxy) return null;
+    if (!options.trustProxy) return readDirectRemoteIp(c);
 
     const cfConnectingIp = c.req.header('cf-connecting-ip');
     if (cfConnectingIp) return cfConnectingIp.trim();

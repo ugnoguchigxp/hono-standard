@@ -16,7 +16,7 @@ function BBSDetail() {
   if (error || !thread) return <p>Error: {(error as Error)?.message || 'Not found'}</p>;
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+    <div className="mx-auto max-w-4xl">
       <ThreadDetailView thread={thread} />
 
       <section>

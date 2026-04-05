@@ -3,13 +3,13 @@ import { hc } from 'hono/client';
 
 let isRefreshing = false;
 let refreshSubscribers: {
-  resolve: (token: string) => void;
+  resolve: () => void;
   reject: (error: Error) => void;
 }[] = [];
 
-const onRefreshed = (token: string) => {
+const onRefreshed = () => {
   refreshSubscribers.forEach(({ resolve }) => {
-    resolve(token);
+    resolve();
   });
   refreshSubscribers = [];
 };
@@ -22,16 +22,10 @@ const onRefreshFailed = (error: Error) => {
 };
 
 const addRefreshSubscriber = (subscriber: {
-  resolve: (token: string) => void;
+  resolve: () => void;
   reject: (error: Error) => void;
 }) => {
   refreshSubscribers.push(subscriber);
-};
-
-const clearAuthState = () => {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user');
 };
 
 const redirectToLoginIfNeeded = () => {
@@ -43,93 +37,61 @@ const redirectToLoginIfNeeded = () => {
 const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const newInit: RequestInit = {
     ...init,
+    credentials: 'include',
     headers: {
       ...init?.headers,
     },
   };
 
-  const headers = newInit.headers as Record<string, string>;
-
-  // 1. Attach tokens
-  const accessToken = localStorage.getItem('access_token');
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
-  }
-
-  // 2. Make original request
   let response = await fetch(input, newInit);
 
-  // 3. Handle 401 Unauthorized via Token Refresh
   const urlString = input.toString();
+  const isRefreshEndpoint = urlString.includes('/auth/refresh');
+  const isLoginEndpoint = urlString.includes('/auth/login');
+  const isRegisterEndpoint = urlString.includes('/auth/register');
+  const isLogoutEndpoint = urlString.includes('/auth/logout');
+  const isMeEndpoint = urlString.includes('/auth/me');
+
   if (
     response.status === 401 &&
-    !urlString.includes('/auth/refresh') &&
-    !urlString.includes('/auth/login')
+    !isRefreshEndpoint &&
+    !isLoginEndpoint &&
+    !isRegisterEndpoint &&
+    !isLogoutEndpoint &&
+    !isMeEndpoint
   ) {
     if (!isRefreshing) {
       isRefreshing = true;
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        try {
-          const refreshRes = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ refreshToken }),
-          });
+      try {
+        const refreshRes = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
+        });
 
-          if (refreshRes.ok) {
-            const data = (await refreshRes.json()) as {
-              accessToken: string;
-              refreshToken: string;
-              user: { id: string; email: string };
-            };
-            localStorage.setItem('access_token', data.accessToken);
-            localStorage.setItem('refresh_token', data.refreshToken);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            onRefreshed(data.accessToken);
-
-            headers.Authorization = `Bearer ${data.accessToken}`;
-            response = await fetch(input, newInit);
-          } else {
-            const error = new Error('Failed to refresh token');
-            clearAuthState();
-            onRefreshFailed(error);
-            redirectToLoginIfNeeded();
-          }
-        } catch (error) {
-          clearAuthState();
-          onRefreshFailed(error instanceof Error ? error : new Error('Failed to refresh token'));
+        if (refreshRes.ok) {
+          onRefreshed();
+          response = await fetch(input, newInit);
+        } else {
+          const error = new Error('Failed to refresh session');
+          onRefreshFailed(error);
           redirectToLoginIfNeeded();
-        } finally {
-          isRefreshing = false;
         }
-      } else {
-        const error = new Error('No refresh token available');
-        clearAuthState();
-        onRefreshFailed(error);
+      } catch (error) {
+        onRefreshFailed(error instanceof Error ? error : new Error('Failed to refresh session'));
         redirectToLoginIfNeeded();
+      } finally {
         isRefreshing = false;
       }
     } else {
-      // Wait until the current refresh is done, then retry
       return new Promise((resolve, reject) => {
         addRefreshSubscriber({
-          resolve: (newToken) => {
-            headers.Authorization = `Bearer ${newToken}`;
+          resolve: () => {
             resolve(fetch(input, newInit));
           },
           reject,
         });
       });
     }
-  }
-
-  // 5. Optionally handle globally 429 Too Many Requests (Rate limit)
-  if (response.status === 429) {
-    // console.warn('Rate limit exceeded');
-    // You could present a global toast here if configured
   }
 
   return response;

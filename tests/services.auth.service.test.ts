@@ -188,7 +188,7 @@ describe('auth.service', () => {
     const result = await refresh('old-refresh-token');
 
     expect(mocks.verifyRefreshToken).toHaveBeenCalledWith('old-refresh-token', tx);
-    expect(mocks.revokeRefreshToken).toHaveBeenCalledWith('old-refresh-token', tx);
+    expect(mocks.revokeRefreshToken).not.toHaveBeenCalled();
     expect(result).toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
@@ -221,8 +221,8 @@ describe('auth.service', () => {
     expect(mocks.revokeRefreshToken).toHaveBeenCalledWith('refresh-token');
   });
 
-  it('logout does nothing when token is empty', async () => {
-    await logout('');
+  it('logout does nothing when token is missing', async () => {
+    await logout();
     expect(mocks.revokeRefreshToken).not.toHaveBeenCalled();
   });
 

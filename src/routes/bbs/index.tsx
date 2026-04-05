@@ -15,14 +15,14 @@ function BBSList() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="flex items-center justify-between">
         <h1>BBS</h1>
       </div>
 
       {user ? (
         <CreateThreadForm onSubmit={createThread} isPending={isCreating} />
       ) : (
-        <p style={{ marginBottom: '2rem' }}>Please login to create a new thread.</p>
+        <p className="mb-8">Please login to create a new thread.</p>
       )}
 
       <ThreadList threads={threads} />

@@ -22,17 +22,16 @@ function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     try {
       const res = await client.auth.login.$post({ json: { email, password } });
       if (!res.ok) {
         throw new Error('Login failed');
       }
       const data = (await res.json()) as {
-        accessToken: string;
-        refreshToken: string;
         user: { id: string; email: string };
       };
-      login(data.accessToken, data.refreshToken, data.user);
+      login(data.user);
       navigate({ to: '/' });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -40,20 +39,17 @@ function Login() {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: '0 auto' }}>
+    <div className="mx-auto max-w-md">
       <h1>Login</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form
-        onSubmit={handleLogin}
-        style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-      >
+      {error && <p className="text-red-500">{error}</p>}
+      <form onSubmit={handleLogin} className="flex flex-col gap-4">
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={{ padding: '0.5rem' }}
+          className="rounded border border-border bg-background px-2 py-2"
         />
         <input
           type="password"
@@ -61,19 +57,21 @@ function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          style={{ padding: '0.5rem' }}
+          className="rounded border border-border bg-background px-2 py-2"
         />
-        <button type="submit">Login</button>
+        <button type="submit" className="rounded border border-border px-3 py-2">
+          Login
+        </button>
       </form>
-      <hr style={{ margin: '2rem 0' }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <hr className="my-8 border-border" />
+      <div className="flex flex-col gap-4">
         <a href="/api/auth/oauth/google">
-          <button type="button" style={{ width: '100%' }}>
+          <button type="button" className="w-full rounded border border-border px-3 py-2">
             Login with Google
           </button>
         </a>
         <a href="/api/auth/oauth/github">
-          <button type="button" style={{ width: '100%' }}>
+          <button type="button" className="w-full rounded border border-border px-3 py-2">
             Login with GitHub
           </button>
         </a>

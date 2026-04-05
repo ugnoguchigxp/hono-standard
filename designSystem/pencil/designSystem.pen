@@ -5068,6 +5068,540 @@
               }
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "aoterx",
+          "x": 422,
+          "y": 1656,
+          "name": "Button/Success",
+          "reusable": true,
+          "fill": "$--success",
+          "cornerRadius": 6,
+          "gap": 6,
+          "padding": [
+            8,
+            16
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "8jVfJ",
+              "name": "plus",
+              "width": 20,
+              "height": 20,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "WNalu",
+                  "x": 2,
+                  "y": 2,
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "plus",
+                  "iconFontFamily": "lucide",
+                  "fill": "$--primary-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "8tnXG",
+              "name": "Button",
+              "fill": "$--primary-foreground",
+              "content": "Button",
+              "lineHeight": 1.4285714285714286,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "u49z2f",
+          "x": 422,
+          "y": 1656,
+          "name": "Button/Warning",
+          "reusable": true,
+          "fill": "$--warning",
+          "cornerRadius": 6,
+          "gap": 6,
+          "padding": [
+            8,
+            16
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "8jVfJ",
+              "name": "plus",
+              "width": 20,
+              "height": 20,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "WNalu",
+                  "x": 2,
+                  "y": 2,
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "plus",
+                  "iconFontFamily": "lucide",
+                  "fill": "$--primary-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "8tnXG",
+              "name": "Button",
+              "fill": "$--primary-foreground",
+              "content": "Button",
+              "lineHeight": 1.4285714285714286,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "xucpmu",
+          "x": 422,
+          "y": 1656,
+          "name": "Button/Info",
+          "reusable": true,
+          "fill": "$--info",
+          "cornerRadius": 6,
+          "gap": 6,
+          "padding": [
+            8,
+            16
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "8jVfJ",
+              "name": "plus",
+              "width": 20,
+              "height": 20,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "WNalu",
+                  "x": 2,
+                  "y": 2,
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "plus",
+                  "iconFontFamily": "lucide",
+                  "fill": "$--primary-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "8tnXG",
+              "name": "Button",
+              "fill": "$--primary-foreground",
+              "content": "Button",
+              "lineHeight": 1.4285714285714286,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "01q0x",
+          "x": 200,
+          "y": 1236,
+          "name": "Badge/Success",
+          "reusable": true,
+          "fill": "$--success",
+          "cornerRadius": 16,
+          "gap": 8,
+          "padding": [
+            2,
+            8
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "zHpCv",
+              "name": "Badge",
+              "fill": "$--primary-foreground",
+              "content": "Badge",
+              "lineHeight": 1.3333333333333333,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wexijq",
+          "x": 200,
+          "y": 1236,
+          "name": "Badge/Warning",
+          "reusable": true,
+          "fill": "$--warning",
+          "cornerRadius": 16,
+          "gap": 8,
+          "padding": [
+            2,
+            8
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "zHpCv",
+              "name": "Badge",
+              "fill": "$--primary-foreground",
+              "content": "Badge",
+              "lineHeight": 1.3333333333333333,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "8u1iht",
+          "x": 200,
+          "y": 1236,
+          "name": "Badge/Info",
+          "reusable": true,
+          "fill": "$--info",
+          "cornerRadius": 16,
+          "gap": 8,
+          "padding": [
+            2,
+            8
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "zHpCv",
+              "name": "Badge",
+              "fill": "$--primary-foreground",
+              "content": "Badge",
+              "lineHeight": 1.3333333333333333,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "dw1hov",
+          "x": 422,
+          "y": 1656,
+          "name": "Button/Success",
+          "reusable": true,
+          "fill": "$--success",
+          "cornerRadius": 6,
+          "gap": 6,
+          "padding": [
+            8,
+            16
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "8jVfJ",
+              "name": "plus",
+              "width": 20,
+              "height": 20,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "WNalu",
+                  "x": 2,
+                  "y": 2,
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "plus",
+                  "iconFontFamily": "lucide",
+                  "fill": "$--primary-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "8tnXG",
+              "name": "Button",
+              "fill": "$--primary-foreground",
+              "content": "Button",
+              "lineHeight": 1.4285714285714286,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bgoufg",
+          "x": 422,
+          "y": 1656,
+          "name": "Button/Warning",
+          "reusable": true,
+          "fill": "$--warning",
+          "cornerRadius": 6,
+          "gap": 6,
+          "padding": [
+            8,
+            16
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "8jVfJ",
+              "name": "plus",
+              "width": 20,
+              "height": 20,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "WNalu",
+                  "x": 2,
+                  "y": 2,
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "plus",
+                  "iconFontFamily": "lucide",
+                  "fill": "$--primary-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "8tnXG",
+              "name": "Button",
+              "fill": "$--primary-foreground",
+              "content": "Button",
+              "lineHeight": 1.4285714285714286,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "b0h8dn",
+          "x": 422,
+          "y": 1656,
+          "name": "Button/Info",
+          "reusable": true,
+          "fill": "$--info",
+          "cornerRadius": 6,
+          "gap": 6,
+          "padding": [
+            8,
+            16
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "8jVfJ",
+              "name": "plus",
+              "width": 20,
+              "height": 20,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "WNalu",
+                  "x": 2,
+                  "y": 2,
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "plus",
+                  "iconFontFamily": "lucide",
+                  "fill": "$--primary-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "8tnXG",
+              "name": "Button",
+              "fill": "$--primary-foreground",
+              "content": "Button",
+              "lineHeight": 1.4285714285714286,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "m7z9fd",
+          "x": 200,
+          "y": 1236,
+          "name": "Badge/Success",
+          "reusable": true,
+          "fill": "$--success",
+          "cornerRadius": 16,
+          "gap": 8,
+          "padding": [
+            2,
+            8
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "zHpCv",
+              "name": "Badge",
+              "fill": "$--primary-foreground",
+              "content": "Badge",
+              "lineHeight": 1.3333333333333333,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "cjoklc",
+          "x": 200,
+          "y": 1236,
+          "name": "Badge/Warning",
+          "reusable": true,
+          "fill": "$--warning",
+          "cornerRadius": 16,
+          "gap": 8,
+          "padding": [
+            2,
+            8
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "zHpCv",
+              "name": "Badge",
+              "fill": "$--primary-foreground",
+              "content": "Badge",
+              "lineHeight": 1.3333333333333333,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "izk9b",
+          "x": 200,
+          "y": 1236,
+          "name": "Badge/Info",
+          "reusable": true,
+          "fill": "$--info",
+          "cornerRadius": 16,
+          "gap": 8,
+          "padding": [
+            2,
+            8
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "zHpCv",
+              "name": "Badge",
+              "fill": "$--primary-foreground",
+              "content": "Badge",
+              "lineHeight": 1.3333333333333333,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
+          ]
         }
       ]
     },

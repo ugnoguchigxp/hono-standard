@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  loginSchema,
-  logoutSchema,
-  refreshSchema,
-  registerSchema,
-} from '../api/schemas/auth.schema';
+import { loginSchema, registerSchema } from '../api/schemas/auth.schema';
 
 describe('auth schemas', () => {
   it('validates and sanitizes register payload', () => {
@@ -28,7 +23,7 @@ describe('auth schemas', () => {
     ).toThrow();
   });
 
-  it('validates login/refresh/logout payloads', () => {
+  it('validates login payload', () => {
     expect(
       loginSchema.parse({
         email: 'user@example.com',
@@ -38,8 +33,5 @@ describe('auth schemas', () => {
       email: 'user@example.com',
       password: 'p',
     });
-
-    expect(refreshSchema.parse({ refreshToken: 'token' }).refreshToken).toBe('token');
-    expect(logoutSchema.parse({ refreshToken: 'token' }).refreshToken).toBe('token');
   });
 });

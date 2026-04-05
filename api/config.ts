@@ -16,7 +16,8 @@ const envSchema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   APP_URL: z.string().optional(),
-  CORS_ORIGIN: z.string().default('*'),
+  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   TRUST_PROXY: z
     .enum(['true', 'false'])
     .default('false')
@@ -31,4 +32,16 @@ if (!result.success) {
   process.exit(1);
 }
 
-export const config = result.data;
+const corsOrigins = result.data.CORS_ORIGIN.split(',')
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
+
+if (corsOrigins.length === 0 || corsOrigins.includes('*')) {
+  console.error('❌ Invalid CORS_ORIGIN: wildcard (*) is not allowed. Use explicit origin list.');
+  process.exit(1);
+}
+
+export const config = {
+  ...result.data,
+  CORS_ORIGINS: corsOrigins,
+};

@@ -1,6 +1,7 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { getCookie, setCookie } from 'hono/cookie';
 import { config } from '../config';
+import { setAuthCookies } from '../lib/auth-cookies';
 import { AuthError, ValidationError } from '../lib/errors';
 import type { AppEnv } from '../lib/types';
 import { generateTokens, handleExternalUser } from '../services/auth.service';
@@ -91,6 +92,13 @@ export const oauthRouter = new OpenAPIHono<AppEnv>()
     const savedState = getCookie(c, 'oauth_state');
 
     if (!code || !state || state !== savedState) {
+      setCookie(c, 'oauth_state', '', {
+        httpOnly: true,
+        secure: isSecureCookie,
+        sameSite: 'Lax',
+        maxAge: 0,
+        path: '/',
+      });
       throw new AuthError('Invalid state or code');
     }
 
@@ -115,14 +123,11 @@ export const oauthRouter = new OpenAPIHono<AppEnv>()
     }
 
     const tokens = await generateTokens(user);
+    setAuthCookies(c, tokens);
     const frontendUrl = new URL(
       '/oauth/callback',
       config.APP_URL || `http://localhost:${config.PORT}`
     );
-    frontendUrl.hash = new URLSearchParams({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
-    }).toString();
 
     return c.redirect(frontendUrl.toString());
   });

@@ -55,6 +55,31 @@ describe('authMiddleware', () => {
     });
   });
 
+  it('accepts access token from cookie when Authorization header is absent', async () => {
+    verifyAccessTokenMock.mockResolvedValue({
+      userId: 'cookie-user',
+      email: 'cookie@example.com',
+      type: 'access',
+    });
+
+    const app = new Hono();
+    app.use('/protected/*', authMiddleware());
+    app.get('/protected/me', (c) => c.json(c.get('user')));
+
+    const res = await app.request('/protected/me', {
+      headers: {
+        Cookie: 'access_token=cookie-token',
+      },
+    });
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      userId: 'cookie-user',
+      email: 'cookie@example.com',
+      type: 'access',
+    });
+  });
+
   it('returns 401 when token verification fails', async () => {
     verifyAccessTokenMock.mockRejectedValue(new Error('invalid'));
 
