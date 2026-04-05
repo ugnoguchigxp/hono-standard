@@ -18,7 +18,10 @@ const ListTitle = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('border-b border-border px-3 py-2 text-sm font-semibold', className)}
+      className={cn(
+        'border-b border-border px-[var(--control-px-md)] py-[var(--control-py-md)] text-[var(--font-size-sm)] font-semibold',
+        className
+      )}
       {...props}
     />
   )
@@ -30,7 +33,7 @@ const ListSearchBox = React.forwardRef<HTMLDivElement, React.ComponentProps<'div
     <div
       ref={ref}
       className={cn(
-        'flex items-center gap-2 border-b border-border px-3 py-2 text-sm text-muted-foreground',
+        'flex items-center gap-[var(--stack-gap-sm)] border-b border-border px-[var(--control-px-md)] py-[var(--control-py-md)] text-[var(--font-size-sm)] text-muted-foreground',
         className
       )}
       {...props}
@@ -45,7 +48,11 @@ ListSearchBox.displayName = 'ListSearchBox';
 
 const ListDivider = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('mx-3 h-px bg-border', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn('mx-[var(--control-px-md)] h-px bg-border', className)}
+      {...props}
+    />
   )
 );
 ListDivider.displayName = 'ListDivider';
@@ -58,12 +65,12 @@ const ListItem = React.forwardRef<
     ref={ref}
     type={type}
     className={cn(
-      'flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground',
+      'flex min-h-[var(--list-item-height)] w-full items-center justify-between gap-[var(--stack-gap-md)] px-[var(--control-px-md)] py-[var(--control-py-md)] text-left text-[var(--font-size-sm)] transition-colors hover:bg-accent hover:text-accent-foreground',
       className
     )}
     {...props}
   >
-    <span className="inline-flex min-w-0 items-center gap-2">
+    <span className="inline-flex min-w-0 items-center gap-[var(--stack-gap-sm)]">
       {checked ? <Check className="h-4 w-4 text-primary" /> : <span className="h-4 w-4" />}
       <span className="truncate">{children}</span>
     </span>

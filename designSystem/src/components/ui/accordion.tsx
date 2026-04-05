@@ -22,7 +22,7 @@ const AccordionTrigger = React.forwardRef<
     <BaseAccordion.Trigger
       ref={ref}
       className={cn(
-        'flex flex-1 items-center justify-between py-4 text-sm font-medium transition-colors hover:text-foreground/90 [&>svg]:transition-transform data-[open]:[&>svg]:rotate-180',
+        'flex flex-1 items-center justify-between py-[var(--panel-p-sm)] text-[var(--font-size-sm)] font-medium transition-colors hover:text-foreground/90 [&>svg]:transition-transform data-[open]:[&>svg]:rotate-180',
         className
       )}
       {...props}
@@ -38,8 +38,12 @@ const AccordionContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof BaseAccordion.Panel>
 >(({ className, children, ...props }, ref) => (
-  <BaseAccordion.Panel ref={ref} className={cn('overflow-hidden text-sm', className)} {...props}>
-    <div className="pb-4 pt-0">{children}</div>
+  <BaseAccordion.Panel
+    ref={ref}
+    className={cn('overflow-hidden text-[var(--font-size-sm)]', className)}
+    {...props}
+  >
+    <div className="pb-[var(--panel-p-sm)] pt-0">{children}</div>
   </BaseAccordion.Panel>
 ));
 AccordionContent.displayName = 'AccordionContent';

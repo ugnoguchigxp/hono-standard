@@ -7,7 +7,7 @@ describe('Textarea', () => {
     render(<Textarea placeholder="Type your message" />);
     const textarea = screen.getByPlaceholderText(/type your message/i);
     expect(textarea).toBeInTheDocument();
-    expect(textarea).toHaveClass('min-h-20');
+    expect(textarea).toHaveClass('min-h-[calc(var(--control-height-lg)*2)]');
   });
 
   it('is disabled when the disabled prop is true', () => {

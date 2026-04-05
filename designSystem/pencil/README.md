@@ -65,6 +65,17 @@ pnpm -C designSystem pencil:variants
 
 `designSystem` の build ではこの生成処理が自動実行されます。
 
+## 7. Storybook との併用運用
+
+`designSystem` では Storybook 10 系を利用します。`.pen` との同期を崩さないため、起動時に必ずバリアント同期を実行します。
+
+```bash
+pnpm -C designSystem storybook
+```
+
+- Storybook の Toolbar で `Theme / Font / Density / Radius / Shadow` を変更できます。
+- `.pen` と Storybook は `src/lib/design-tokens.ts` を共通参照し、トークン定義を一元管理します。
+
 ---
 
 この README に従うことで、ブラウザに頼らず「カジュアルにモジュールの見た目を確認・共有できる」環境を維持します。

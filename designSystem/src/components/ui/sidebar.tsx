@@ -18,21 +18,33 @@ Sidebar.displayName = 'Sidebar';
 
 const SidebarHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('border-b border-sidebar-border p-2', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn('border-b border-sidebar-border p-[var(--panel-p-sm)]', className)}
+      {...props}
+    />
   )
 );
 SidebarHeader.displayName = 'SidebarHeader';
 
 const SidebarContent = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('flex-1 overflow-auto p-2', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn('flex-1 overflow-auto p-[var(--panel-p-sm)]', className)}
+      {...props}
+    />
   )
 );
 SidebarContent.displayName = 'SidebarContent';
 
 const SidebarFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('border-t border-sidebar-border p-2', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn('border-t border-sidebar-border p-[var(--panel-p-sm)]', className)}
+      {...props}
+    />
   )
 );
 SidebarFooter.displayName = 'SidebarFooter';
@@ -42,7 +54,7 @@ const SidebarSectionTitle = React.forwardRef<HTMLDivElement, React.ComponentProp
     <div
       ref={ref}
       className={cn(
-        'px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+        'px-[var(--control-px-sm)] py-[var(--control-py-sm)] text-xs font-semibold uppercase tracking-wide text-muted-foreground',
         className
       )}
       {...props}
@@ -57,7 +69,7 @@ const SidebarItem = React.forwardRef<HTMLButtonElement, React.ComponentProps<'bu
       ref={ref}
       type={type}
       className={cn(
-        'flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-1 focus-visible:ring-sidebar-ring',
+        'flex w-full items-center gap-[var(--stack-gap-sm)] rounded-[var(--radius-md)] px-[var(--control-px-sm)] py-[var(--control-py-md)] text-[var(--font-size-sm)] outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-1 focus-visible:ring-sidebar-ring',
         className
       )}
       {...props}

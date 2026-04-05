@@ -55,7 +55,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ComponentProps<'t
     <th
       ref={ref}
       className={cn(
-        'h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+        'h-[var(--control-height-lg)] px-[var(--control-px-md)] text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground',
         className
       )}
       {...props}
@@ -66,14 +66,25 @@ TableHead.displayName = 'TableHead';
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.ComponentProps<'td'>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn('px-3 py-3 align-middle', className)} {...props} />
+    <td
+      ref={ref}
+      className={cn('px-[var(--control-px-md)] py-[var(--control-py-md)] align-middle', className)}
+      {...props}
+    />
   )
 );
 TableCell.displayName = 'TableCell';
 
 const TableCaption = React.forwardRef<HTMLTableCaptionElement, React.ComponentProps<'caption'>>(
   ({ className, ...props }, ref) => (
-    <caption ref={ref} className={cn('mt-4 text-sm text-muted-foreground', className)} {...props} />
+    <caption
+      ref={ref}
+      className={cn(
+        'mt-[var(--panel-p-md)] text-[var(--font-size-sm)] text-muted-foreground',
+        className
+      )}
+      {...props}
+    />
   )
 );
 TableCaption.displayName = 'TableCaption';

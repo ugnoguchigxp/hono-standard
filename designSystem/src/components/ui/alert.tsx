@@ -3,18 +3,21 @@ import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 
-const alertVariants = cva('relative w-full rounded-lg border p-4 text-sm', {
-  variants: {
-    variant: {
-      default: 'border-border bg-card text-card-foreground',
-      destructive:
-        'border-destructive/30 bg-destructive/5 text-destructive [&>svg]:text-destructive',
+const alertVariants = cva(
+  'relative w-full rounded-[var(--radius-lg)] border p-[var(--panel-p-md)] text-[var(--font-size-sm)]',
+  {
+    variants: {
+      variant: {
+        default: 'border-border bg-card text-card-foreground',
+        destructive:
+          'border-destructive/30 bg-destructive/5 text-destructive [&>svg]:text-destructive',
+      },
     },
-  },
-  defaultVariants: {
-    variant: 'default',
-  },
-});
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+);
 
 const Alert = React.forwardRef<
   HTMLDivElement,

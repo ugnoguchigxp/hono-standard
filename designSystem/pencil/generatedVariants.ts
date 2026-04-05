@@ -116,7 +116,6 @@ export const penVariantIndex: PenVariantIndex = {
 };
 
 export const penVariantMeta = {
-  generatedAt: "2026-04-04T14:15:17.774Z",
   sourceVersion: "2.10",
   totalComponents: 22,
   totalVariants: 61

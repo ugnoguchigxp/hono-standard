@@ -18,7 +18,7 @@ const DataTableHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<'d
     <div
       ref={ref}
       className={cn(
-        'flex items-center justify-between gap-4 border-b border-border p-4',
+        'flex items-center justify-between gap-[var(--stack-gap-lg)] border-b border-border p-[var(--panel-p-md)]',
         className
       )}
       {...props}
@@ -28,13 +28,19 @@ const DataTableHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<'d
 DataTableHeader.displayName = 'DataTableHeader';
 
 const DataTableContent = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('p-4', className)} {...props} />
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('p-[var(--panel-p-md)]', className)} {...props} />
+  )
 );
 DataTableContent.displayName = 'DataTableContent';
 
 const DataTableFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('border-t border-border p-4', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn('border-t border-border p-[var(--panel-p-md)]', className)}
+      {...props}
+    />
   )
 );
 DataTableFooter.displayName = 'DataTableFooter';

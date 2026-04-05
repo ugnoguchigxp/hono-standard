@@ -10,7 +10,7 @@ const TabsList = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof Ba
     <BaseTabs.List
       ref={ref}
       className={cn(
-        'inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground',
+        'inline-flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-md)] bg-muted p-[var(--control-py-sm)] text-muted-foreground',
         className
       )}
       {...props}
@@ -24,7 +24,7 @@ const TabsTrigger = React.forwardRef<HTMLElement, React.ComponentProps<typeof Ba
     <BaseTabs.Tab
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] px-[var(--control-px-sm)] py-[var(--control-py-sm)] text-[var(--font-size-sm)] font-medium transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className
       )}
       {...props}
@@ -37,7 +37,10 @@ const TabsContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof
   ({ className, ...props }, ref) => (
     <BaseTabs.Panel
       ref={ref}
-      className={cn('mt-2 rounded-md border border-border p-4 outline-none', className)}
+      className={cn(
+        'mt-[var(--stack-gap-sm)] rounded-[var(--radius-md)] border border-border p-[var(--panel-p-md)] outline-none',
+        className
+      )}
       {...props}
     />
   )

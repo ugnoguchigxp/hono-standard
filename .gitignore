@@ -8,6 +8,7 @@ dist/
 dist-api/
 build/
 .vite/
+storybook-static/
 
 # Logs
 logs/

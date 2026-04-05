@@ -15,7 +15,7 @@ const SelectTrigger = React.forwardRef<
   <BaseSelect.Trigger
     ref={ref}
     className={cn(
-      'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[placeholder]:text-muted-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
+      'flex h-[var(--control-height-lg)] w-full items-center justify-between rounded-[var(--radius-md)] border border-input bg-background px-[var(--control-px-md)] py-[var(--control-py-md)] text-[var(--font-size-sm)] leading-5 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[placeholder]:text-muted-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
       className
     )}
     {...props}
@@ -33,11 +33,11 @@ const SelectContent = React.forwardRef<
   React.ComponentProps<typeof BaseSelect.Popup>
 >(({ className, children, ...props }, ref) => (
   <BaseSelect.Portal>
-    <BaseSelect.Positioner sideOffset={6}>
+    <BaseSelect.Positioner side="bottom" align="start" sideOffset={6} alignItemWithTrigger={false}>
       <BaseSelect.Popup
         ref={ref}
         className={cn(
-          'z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md',
+          'z-50 min-w-[8rem] overflow-hidden rounded-[var(--radius-md)] border border-border bg-popover p-[var(--control-py-sm)] text-popover-foreground shadow-md',
           className
         )}
         {...props}
@@ -53,7 +53,10 @@ const SelectLabel = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof
   ({ className, ...props }, ref) => (
     <BaseSelect.Label
       ref={ref}
-      className={cn('px-2 py-1.5 text-xs font-semibold text-muted-foreground', className)}
+      className={cn(
+        'px-[var(--control-px-sm)] py-[var(--control-py-sm)] text-xs font-semibold text-muted-foreground',
+        className
+      )}
       {...props}
     />
   )
@@ -65,7 +68,7 @@ const SelectItem = React.forwardRef<HTMLElement, React.ComponentProps<typeof Bas
     <BaseSelect.Item
       ref={ref}
       className={cn(
-        'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'relative flex w-full cursor-default select-none items-center rounded-[var(--radius-sm)] py-[var(--control-py-md)] pl-8 pr-[var(--control-px-sm)] text-[var(--font-size-sm)] outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className
       )}
       {...props}
@@ -83,7 +86,14 @@ SelectItem.displayName = 'SelectItem';
 
 const SelectSeparator = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('-mx-1 my-1 h-px bg-border', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn(
+        '-mx-[var(--control-py-sm)] my-[var(--control-py-sm)] h-px bg-border',
+        className
+      )}
+      {...props}
+    />
   )
 );
 SelectSeparator.displayName = 'SelectSeparator';

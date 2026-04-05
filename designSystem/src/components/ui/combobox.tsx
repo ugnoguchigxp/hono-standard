@@ -14,7 +14,7 @@ const ComboboxInput = React.forwardRef<
   <BaseCombobox.Input
     ref={ref}
     className={cn(
-      'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+      'flex h-[var(--control-height-lg)] w-full rounded-[var(--radius-md)] border border-input bg-background px-[var(--control-px-md)] py-[var(--control-py-md)] text-[var(--font-size-sm)] leading-5 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
       className
     )}
     {...props}
@@ -29,7 +29,7 @@ const ComboboxTrigger = React.forwardRef<
   <BaseCombobox.Trigger
     ref={ref}
     className={cn(
-      'absolute right-0 top-0 inline-flex h-10 w-10 items-center justify-center text-muted-foreground',
+      'absolute right-0 top-0 inline-flex h-[var(--control-height-lg)] w-[var(--control-height-lg)] items-center justify-center text-muted-foreground',
       className
     )}
     {...props}
@@ -48,7 +48,7 @@ const ComboboxContent = React.forwardRef<
       <BaseCombobox.Popup
         ref={ref}
         className={cn(
-          'z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md',
+          'z-50 min-w-[8rem] overflow-hidden rounded-[var(--radius-md)] border border-border bg-popover p-[var(--control-py-sm)] text-popover-foreground shadow-md',
           className
         )}
         {...props}
@@ -67,7 +67,7 @@ const ComboboxItem = React.forwardRef<
   <BaseCombobox.Item
     ref={ref}
     className={cn(
-      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'relative flex w-full cursor-default select-none items-center rounded-[var(--radius-sm)] py-[var(--control-py-md)] pl-8 pr-[var(--control-px-sm)] text-[var(--font-size-sm)] outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className
     )}
     {...props}
@@ -88,7 +88,10 @@ const ComboboxEmpty = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <BaseCombobox.Empty
     ref={ref}
-    className={cn('py-3 text-center text-sm text-muted-foreground', className)}
+    className={cn(
+      'py-[var(--panel-p-sm)] text-center text-[var(--font-size-sm)] text-muted-foreground',
+      className
+    )}
     {...props}
   />
 ));
@@ -100,7 +103,10 @@ const ComboboxLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <BaseCombobox.Label
     ref={ref}
-    className={cn('px-2 py-1.5 text-xs font-semibold', className)}
+    className={cn(
+      'px-[var(--control-px-sm)] py-[var(--control-py-sm)] text-xs font-semibold',
+      className
+    )}
     {...props}
   />
 ));

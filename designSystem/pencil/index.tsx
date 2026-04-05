@@ -1,5 +1,6 @@
-import { Badge } from '@repo/design-system/components/ui/badge';
-import { Button } from '@repo/design-system/components/ui/button';
+import React, { useState } from 'react';
+import { Badge } from '../src/components/ui/badge';
+import { Button } from '../src/components/ui/button';
 import {
   Card,
   CardContent,
@@ -7,102 +8,26 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@repo/design-system/components/ui/card';
-import { Checkbox } from '@repo/design-system/components/ui/checkbox';
-import { Input } from '@repo/design-system/components/ui/input';
-import { Separator } from '@repo/design-system/components/ui/separator';
-import React, { useState } from 'react';
+} from '../src/components/ui/card';
+import { Checkbox } from '../src/components/ui/checkbox';
+import { Input } from '../src/components/ui/input';
+import { Separator } from '../src/components/ui/separator';
+import {
+  applyColorTheme,
+  applyDensityAndScaleTokens,
+  COLOR_THEME_PRESETS,
+  type ColorThemeKey,
+  DENSITY_PRESETS,
+  DESIGN_TOKEN_DEFAULTS,
+  type DensityKey,
+  FONT_SCALE_PRESETS,
+  type FontScaleKey,
+  RADIUS_PRESETS,
+  type RadiusKey,
+  SHADOW_PRESETS,
+  type ShadowKey,
+} from '../src/lib/design-tokens';
 import { penVariantIndex, penVariantMeta } from './generatedVariants';
-
-// ============================================================
-// Design Token Presets
-//
-// これらの値を CSS 変数として `:root` に注入することで
-// フォントサイズ / UI密度 / 角丸 / シャドウ が全コンポーネントに連動する。
-//
-// 実際のアプリでは localStorage や Context で管理してください。
-// ============================================================
-
-const FONT_SCALE_PRESETS = {
-  small: { label: 'Small', value: '0.875rem' },
-  default: { label: 'Default', value: '1rem' },
-  large: { label: 'Large', value: '1.125rem' },
-} as const;
-
-const DENSITY_PRESETS = {
-  compact: { label: 'Compact', value: '0.75' },
-  default: { label: 'Default', value: '1' },
-  comfortable: { label: 'Comfortable', value: '1.25' },
-} as const;
-
-const RADIUS_PRESETS = {
-  sharp: { label: 'Sharp', value: '0' },
-  default: { label: 'Default', value: '1' },
-  rounded: { label: 'Rounded', value: '2' },
-  pill: { label: 'Pill', value: '9999' },
-} as const;
-
-const SHADOW_PRESETS = {
-  none: { label: 'None', var: 'none' },
-  subtle: {
-    label: 'Subtle',
-    var: '0 1px 3px 0 rgb(0 0 0 / 0.10), 0 1px 2px -1px rgb(0 0 0 / 0.10)',
-  },
-  medium: {
-    label: 'Medium',
-    var: '0 4px 6px -1px rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.10)',
-  },
-  strong: {
-    label: 'Strong',
-    var: '0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.10)',
-  },
-} as const;
-
-type FontScaleKey = keyof typeof FONT_SCALE_PRESETS;
-type DensityKey = keyof typeof DENSITY_PRESETS;
-type RadiusKey = keyof typeof RADIUS_PRESETS;
-type ShadowKey = keyof typeof SHADOW_PRESETS;
-
-function applyTokens(
-  font: FontScaleKey,
-  density: DensityKey,
-  radius: RadiusKey,
-  shadow: ShadowKey
-) {
-  const root = document.documentElement;
-  root.style.setProperty('--font-size-base', FONT_SCALE_PRESETS[font].value);
-  root.style.setProperty('--spacing-unit', DENSITY_PRESETS[density].value);
-  root.style.setProperty('--radius-factor', RADIUS_PRESETS[radius].value);
-  // shadow は card や component の shadow クラスに使われるよう設定
-  root.style.setProperty('--shadow-md', SHADOW_PRESETS[shadow].var);
-}
-
-// ============================================================
-// Color Theme Presets
-//
-// 新しいテーマを追加する手順:
-//   1. src/index.css に html.theme-<name> { ... } ブロックを追加
-//   2. 下記に { label, className } を 1 行追加するだけ
-// ============================================================
-const COLOR_THEME_PRESETS = {
-  light: { label: '☀️ Light', className: 'theme-light' },
-  dark: { label: '🌙 Dark', className: 'theme-dark' },
-  'tokyo-night': { label: '🏙️ Tokyo Night', className: 'theme-tokyo-night' },
-  // 以下に追加予定 (index.css に対応ブロックも追加すること)
-  // ocean:  { label: '🌊 Ocean',  className: 'theme-ocean'  },
-  // rose:   { label: '🌹 Rose',   className: 'theme-rose'   },
-  // violet: { label: '💜 Violet', className: 'theme-violet' },
-  // amber:  { label: '🌟 Amber',  className: 'theme-amber'  },
-  // teal:   { label: '💧 Teal',   className: 'theme-teal'   },
-  // sepia:  { label: '🍂 Sepia',  className: 'theme-sepia'  },
-} as const;
-
-type ColorThemeKey = keyof typeof COLOR_THEME_PRESETS;
-
-function applyColorTheme(theme: ColorThemeKey) {
-  // html 要素のクラスを theme-<name> のみに差し替える
-  document.documentElement.className = COLOR_THEME_PRESETS[theme].className;
-}
 
 /** トークン値一覧を表示するセル */
 const TokenCell = ({ name, value }: { name: string; value: string }) => (
@@ -122,15 +47,20 @@ const TokenCell = ({ name, value }: { name: string; value: string }) => (
  * 全コンポーネントに変化が即時反映されます。
  */
 export const DesignSystemPreview = () => {
-  const [font, setFont] = useState<FontScaleKey>('default');
-  const [density, setDensity] = useState<DensityKey>('default');
-  const [radius, setRadius] = useState<RadiusKey>('default');
-  const [shadow, setShadow] = useState<ShadowKey>('subtle');
-  const [colorTheme, setColorTheme] = useState<ColorThemeKey>('light');
+  const [font, setFont] = useState<FontScaleKey>(DESIGN_TOKEN_DEFAULTS.fontScale);
+  const [density, setDensity] = useState<DensityKey>(DESIGN_TOKEN_DEFAULTS.density);
+  const [radius, setRadius] = useState<RadiusKey>(DESIGN_TOKEN_DEFAULTS.radius);
+  const [shadow, setShadow] = useState<ShadowKey>(DESIGN_TOKEN_DEFAULTS.shadow);
+  const [colorTheme, setColorTheme] = useState<ColorThemeKey>(DESIGN_TOKEN_DEFAULTS.colorTheme);
 
   // CSS 変数を即時適用
   React.useEffect(() => {
-    applyTokens(font, density, radius, shadow);
+    applyDensityAndScaleTokens({
+      fontScale: font,
+      density,
+      radius,
+      shadow,
+    });
   }, [font, density, radius, shadow]);
 
   // カラーテーマ: html クラスを切り替え

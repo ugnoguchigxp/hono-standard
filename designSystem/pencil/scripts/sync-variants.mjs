@@ -55,9 +55,7 @@ const index = Object.fromEntries(
 );
 
 const totalVariants = Object.values(index).reduce((sum, variants) => sum + variants.length, 0);
-const generatedAt = new Date().toISOString();
-
-const file = `/* eslint-disable */\n/**\n * AUTO-GENERATED FILE.\n * Source: ./designSystem.pen\n * Run: pnpm -C designSystem pencil:variants\n */\n\nexport type PenVariantIndex = Record<string, string[]>;\n\nexport const penVariantIndex: PenVariantIndex = ${JSON.stringify(index, null, 2)};\n\nexport const penVariantMeta = {\n  generatedAt: ${JSON.stringify(generatedAt)},\n  sourceVersion: ${JSON.stringify(String(pen.version ?? 'unknown'))},\n  totalComponents: ${Object.keys(index).length},\n  totalVariants: ${totalVariants}\n} as const;\n`;
+const file = `/* eslint-disable */\n/**\n * AUTO-GENERATED FILE.\n * Source: ./designSystem.pen\n * Run: pnpm -C designSystem pencil:variants\n */\n\nexport type PenVariantIndex = Record<string, string[]>;\n\nexport const penVariantIndex: PenVariantIndex = ${JSON.stringify(index, null, 2)};\n\nexport const penVariantMeta = {\n  sourceVersion: ${JSON.stringify(String(pen.version ?? 'unknown'))},\n  totalComponents: ${Object.keys(index).length},\n  totalVariants: ${totalVariants}\n} as const;\n`;
 
 fs.writeFileSync(outPath, file, 'utf8');
 console.log(`Generated: ${path.relative(process.cwd(), outPath)}`);

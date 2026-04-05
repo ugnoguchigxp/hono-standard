@@ -1,0 +1,247 @@
+@import "@fontsource-variable/geist";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: "Geist Variable", sans-serif;
+  }
+
+  /* ============================================
+   * Design Tokens
+   * ============================================
+   *
+   * フォントスケール: --font-size-base を変更すると全体のフォントサイズが連動します。
+   *   sm: 14px / md (default): 16px / lg: 18px
+   *
+   * UI密度: --spacing-unit を変更するとパディング・マージンが連動します。
+   *   compact: 0.75 / default: 1 / comfortable: 1.25
+   *
+   * Border Radius: --radius-factor を変更すると全体の角丸が連動します。
+   *   sharp: 0 / sm: 0.5 / md (default): 1 / lg: 2 / full: 9999
+   *
+   * Shadow: --shadow-* により 4段階のシャドウ強度を制御します。
+   *
+   * カラーテーマ: html 要素に .theme-<name> クラスを付与して切り替えます。
+   *   現在: theme-light / theme-dark
+   *   追加方法: 下記 "=== Theme: <name> ===" ブロックをコピーして色を定義するだけ
+   * ============================================ */
+
+  :root {
+    /* --- Font Scale --- */
+    --font-size-base: 1rem; /* default: 1rem (16px). sm=0.875rem, lg=1.125rem */
+    --font-size-sm: calc(var(--font-size-base) * 0.875);
+    --font-size-md: var(--font-size-base);
+    --font-size-lg: calc(var(--font-size-base) * 1.125);
+    --font-size-xl: calc(var(--font-size-base) * 1.25);
+    --font-size-2xl: calc(var(--font-size-base) * 1.5);
+    --font-size-3xl: calc(var(--font-size-base) * 1.875);
+
+    /* --- UI Density (spacing multiplier) --- */
+    --spacing-unit: 1; /* compact: 0.75, default: 1, comfortable: 1.25 */
+    --spacing-xs: calc(0.25rem * var(--spacing-unit));
+    --spacing-sm: calc(0.5rem * var(--spacing-unit));
+    --spacing-md: calc(0.75rem * var(--spacing-unit));
+    --spacing-lg: calc(1rem * var(--spacing-unit));
+    --spacing-xl: calc(1.5rem * var(--spacing-unit));
+    --spacing-2xl: calc(2rem * var(--spacing-unit));
+
+    /* --- Component Sizing (density-aware) --- */
+    --control-height-sm: calc(2rem * var(--spacing-unit));
+    --control-height-md: calc(2.25rem * var(--spacing-unit));
+    --control-height-lg: calc(2.5rem * var(--spacing-unit));
+    --control-size-icon: var(--control-height-md);
+    --control-px-sm: calc(0.75rem * var(--spacing-unit));
+    --control-px-md: calc(0.875rem * var(--spacing-unit));
+    --control-px-lg: calc(1.25rem * var(--spacing-unit));
+    --control-py-sm: calc(0.25rem * var(--spacing-unit));
+    --control-py-md: calc(0.5rem * var(--spacing-unit));
+    --panel-p-sm: calc(0.75rem * var(--spacing-unit));
+    --panel-p-md: calc(1rem * var(--spacing-unit));
+    --panel-p-lg: calc(1.5rem * var(--spacing-unit));
+    --stack-gap-sm: calc(0.5rem * var(--spacing-unit));
+    --stack-gap-md: calc(0.75rem * var(--spacing-unit));
+    --stack-gap-lg: calc(1rem * var(--spacing-unit));
+    --list-item-height: calc(2.25rem * var(--spacing-unit));
+
+    /* --- Border Radius Variants --- */
+    --radius-factor: 1; /* sharp: 0, sm: 0.5, default: 1, lg: 2, full: 9999 */
+    --radius-none: 0px;
+    --radius-sm: calc(0.25rem * var(--radius-factor));
+    --radius: calc(0.5rem * var(--radius-factor)); /* shadcn default alias */
+    --radius-md: calc(0.5rem * var(--radius-factor));
+    --radius-lg: calc(0.75rem * var(--radius-factor));
+    --radius-xl: calc(1rem * var(--radius-factor));
+    --radius-full: calc(9999px * var(--radius-factor));
+
+    /* --- Drop Shadow Variants --- */
+    --shadow-none: none;
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  }
+  /* ==================================================
+   * === Color Theme System ===
+   *
+   * html 要素に .theme-<name> クラスを付与して切り替え
+   * 例: document.documentElement.className = 'theme-dark'
+   *
+   * 新テーマの追加手順:
+   *   1. 下記ブロックをコピーして .theme-<newname> に変更
+   *   2. 色値を書き換える
+   *   3. index.tsx の COLOR_THEME_PRESETS に1行追加する
+   * ================================================== */
+
+  /* === Theme: Light (default) === */
+  html.theme-light,
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.985 0 0);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+  }
+
+  /* === Theme: Dark === */
+  html.theme-dark,
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --destructive-foreground: oklch(0.985 0 0);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
+
+  /* === Theme: Tokyo Night ===
+   * Source: https://github.com/tokyo-night/tokyo-night-vscode-theme
+   * A dark blue-purple theme inspired by Tokyo's night aesthetic.
+   *
+   * Key colors:
+   *   Background:  #1a1b26  (editor bg)
+   *   Surface:     #16161e  (panel/sidebar bg)
+   *   Foreground:  #a9b1d6  (main text)
+   *   Muted:       #787c99  (secondary text)
+   *   Primary:     #3d59a1  (buttons/links - blue)
+   *   Accent:      #7aa2f7  (highlights)
+   *   Destructive: #f7768e  (errors/danger - red)
+   *   Border:      #1f2034  (subtle borders)
+   */
+  html.theme-tokyo-night {
+    --background: #1a1b26;
+    --foreground: #a9b1d6;
+    --card: #16161e;
+    --card-foreground: #a9b1d6;
+    --popover: #16161e;
+    --popover-foreground: #a9b1d6;
+    --primary: #7aa2f7;
+    --primary-foreground: #1a1b26;
+    --secondary: #3b3e52;
+    --secondary-foreground: #a9b1d6;
+    --muted: #414868;
+    --muted-foreground: #787c99;
+    --accent: #bb9af7;
+    --accent-foreground: #1a1b26;
+    --destructive: #f7768e;
+    --destructive-foreground: #ffffff;
+    --border: #1f2034;
+    --input: #14141b;
+    --ring: #3d59a1;
+    --chart-1: #7aa2f7;
+    --chart-2: #73daca;
+    --chart-3: #bb9af7;
+    --chart-4: #e0af68;
+    --chart-5: #f7768e;
+    --sidebar: #16161e;
+    --sidebar-foreground: #787c99;
+    --sidebar-primary: #3d59a1;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1e202e;
+    --sidebar-accent-foreground: #a9b1d6;
+    --sidebar-border: #101014;
+    --sidebar-ring: #3d59a1;
+  }
+
+  /*
+   * ── Future themes: copy a block above and fill in new values ──
+   *
+   * html.theme-ocean { ... }
+   * html.theme-rose  { ... }
+   * html.theme-violet{ ... }
+   * html.theme-amber { ... }
+   * html.theme-teal  { ... }
+   * html.theme-slate { ... }
+   * html.theme-sepia { ... }
+   * html.theme-mono  { ... }
+   * html.theme-high-contrast { ... }
+   */
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+  html {
+    font-family: "Geist Variable", sans-serif;
+    font-size: var(--font-size-base);
+  }
+}

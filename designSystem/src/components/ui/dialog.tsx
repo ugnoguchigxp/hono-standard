@@ -30,7 +30,7 @@ const DialogContent = React.forwardRef<
     <BaseDialog.Popup
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background p-6 shadow-md',
+        'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] border border-border bg-background p-[var(--panel-p-lg)] shadow-md',
         className
       )}
       {...props}
@@ -52,7 +52,10 @@ DialogHeader.displayName = 'DialogHeader';
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn('mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+    className={cn(
+      'mt-[var(--panel-p-lg)] flex flex-col-reverse gap-[var(--stack-gap-sm)] sm:flex-row sm:justify-end',
+      className
+    )}
     {...props}
   />
 );

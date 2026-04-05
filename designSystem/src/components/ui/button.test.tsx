@@ -24,18 +24,18 @@ describe('Button', () => {
   it('renders with different sizes', () => {
     const { rerender } = render(<Button size="sm">Small</Button>);
     let button = screen.getByRole('button', { name: /small/i });
-    expect(button).toHaveClass('h-8');
+    expect(button).toHaveClass('h-[var(--control-height-sm)]');
 
     rerender(<Button size="lg">Large</Button>);
     button = screen.getByRole('button', { name: /large/i });
-    expect(button).toHaveClass('h-10');
+    expect(button).toHaveClass('h-[var(--control-height-lg)]');
   });
 
   it('handles click events', async () => {
     const handleClick = vi.fn();
     render(<Button onClick={handleClick}>Click me</Button>);
     const button = screen.getByRole('button', { name: /click me/i });
-    
+
     await userEvent.click(button);
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
