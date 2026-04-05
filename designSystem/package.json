@@ -7,8 +7,7 @@
     ".": "./src/index.ts",
     "./components/*": "./src/components/*",
     "./lib/*": "./src/lib/*",
-    "./styles.css": "./src/styles.css",
-    "./pencil": "./pencil/index.tsx"
+    "./styles.css": "./src/styles.css"
   },
   "scripts": {
     "dev": "vite",

@@ -53,37 +53,36 @@
   /* === Theme: Light (Classic Mac Edition) === */
   :root,
   html.theme-light {
-    --background: 210 20% 98%;
-    --foreground: 210 10% 12%;
-    --card: 210 20% 98%;
-    --card-foreground: 210 10% 12%;
+    /* Core - Standard Apple Aqua & Platinum */
+    --background: 240 5% 97%; /* #F8F8F9 - Platinum Soft */
+    --foreground: 240 10% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 10% 12%;
-    
-    --primary: 210 100% 45%;
+    --popover-foreground: 240 10% 4%;
+    --primary: 211 100% 50%; /* #007AFF - Apple Aqua */
     --primary-foreground: 0 0% 100%;
-    
-    --secondary: 210 10% 90%;
-    --secondary-foreground: 210 10% 20%;
-    
-    --muted: 210 10% 94%;
-    --muted-foreground: 210 10% 45%;
-    --accent: 210 100% 96%;
-    --accent-foreground: 210 100% 40%;
-    
-    --destructive: 0 85% 60%;
+    --secondary: 240 5% 91%; /* #E9E9EB - Platinum Darker */
+    --secondary-foreground: 240 10% 4%;
+    --muted: 240 5% 95%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 60%; /* #FF3B30 - Apple Red */
     --destructive-foreground: 0 0% 100%;
-    
-    --info: 210 100% 45%;
-    --info-foreground: 0 0% 100%;
-    --success: 142 70% 45%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 211 100% 50%;
+
+    /* Semantic Extensions - Apple Standard */
+    --success: 142 71% 45%; /* #34C759 - Apple Green */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 38 10% 10%;
-    
-    --border: 210 10% 86%;
-    --input: 210 10% 86%;
-    --ring: 210 100% 45%;
+    --warning: 35 100% 50%; /* #FF9500 - Apple Orange */
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%; /* #0EA5E9 - Apple Sky Blue */
+    --info-foreground: 0 0% 100%;
+
+    --radius: 0.6rem;
   }
 
   /* === Theme: Dark === */

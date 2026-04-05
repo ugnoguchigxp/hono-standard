@@ -1,5 +1,5 @@
 {
-  "version": "2.10",
+  "version": "2.9",
   "children": [
     {
       "type": "frame",
@@ -5071,9 +5071,9 @@
         },
         {
           "type": "frame",
-          "id": "aoterx",
+          "id": "a85ee8fb",
           "x": 422,
-          "y": 1656,
+          "y": 2200,
           "name": "Button/Success",
           "reusable": true,
           "fill": "$--success",
@@ -5107,15 +5107,16 @@
                   "height": 16,
                   "iconFontName": "plus",
                   "iconFontFamily": "lucide",
-                  "fill": "$--primary-foreground"
+                  "fill": "$--success-foreground"
                 }
-              ]
+              ],
+              "fill": "$--success-foreground"
             },
             {
               "type": "text",
               "id": "8tnXG",
               "name": "Button",
-              "fill": "$--primary-foreground",
+              "fill": "$--success-foreground",
               "content": "Button",
               "lineHeight": 1.4285714285714286,
               "textAlign": "center",
@@ -5128,9 +5129,9 @@
         },
         {
           "type": "frame",
-          "id": "u49z2f",
+          "id": "79536167",
           "x": 422,
-          "y": 1656,
+          "y": 2280,
           "name": "Button/Warning",
           "reusable": true,
           "fill": "$--warning",
@@ -5164,15 +5165,16 @@
                   "height": 16,
                   "iconFontName": "plus",
                   "iconFontFamily": "lucide",
-                  "fill": "$--primary-foreground"
+                  "fill": "$--warning-foreground"
                 }
-              ]
+              ],
+              "fill": "$--warning-foreground"
             },
             {
               "type": "text",
               "id": "8tnXG",
               "name": "Button",
-              "fill": "$--primary-foreground",
+              "fill": "$--warning-foreground",
               "content": "Button",
               "lineHeight": 1.4285714285714286,
               "textAlign": "center",
@@ -5185,9 +5187,9 @@
         },
         {
           "type": "frame",
-          "id": "xucpmu",
+          "id": "8e15a76e",
           "x": 422,
-          "y": 1656,
+          "y": 2360,
           "name": "Button/Info",
           "reusable": true,
           "fill": "$--info",
@@ -5221,15 +5223,16 @@
                   "height": 16,
                   "iconFontName": "plus",
                   "iconFontFamily": "lucide",
-                  "fill": "$--primary-foreground"
+                  "fill": "$--info-foreground"
                 }
-              ]
+              ],
+              "fill": "$--info-foreground"
             },
             {
               "type": "text",
               "id": "8tnXG",
               "name": "Button",
-              "fill": "$--primary-foreground",
+              "fill": "$--info-foreground",
               "content": "Button",
               "lineHeight": 1.4285714285714286,
               "textAlign": "center",
@@ -5237,369 +5240,6 @@
               "fontFamily": "Inter",
               "fontSize": 14,
               "fontWeight": "500"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "01q0x",
-          "x": 200,
-          "y": 1236,
-          "name": "Badge/Success",
-          "reusable": true,
-          "fill": "$--success",
-          "cornerRadius": 16,
-          "gap": 8,
-          "padding": [
-            2,
-            8
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "zHpCv",
-              "name": "Badge",
-              "fill": "$--primary-foreground",
-              "content": "Badge",
-              "lineHeight": 1.3333333333333333,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "600"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "wexijq",
-          "x": 200,
-          "y": 1236,
-          "name": "Badge/Warning",
-          "reusable": true,
-          "fill": "$--warning",
-          "cornerRadius": 16,
-          "gap": 8,
-          "padding": [
-            2,
-            8
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "zHpCv",
-              "name": "Badge",
-              "fill": "$--primary-foreground",
-              "content": "Badge",
-              "lineHeight": 1.3333333333333333,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "600"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "8u1iht",
-          "x": 200,
-          "y": 1236,
-          "name": "Badge/Info",
-          "reusable": true,
-          "fill": "$--info",
-          "cornerRadius": 16,
-          "gap": 8,
-          "padding": [
-            2,
-            8
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "zHpCv",
-              "name": "Badge",
-              "fill": "$--primary-foreground",
-              "content": "Badge",
-              "lineHeight": 1.3333333333333333,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "600"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "dw1hov",
-          "x": 422,
-          "y": 1656,
-          "name": "Button/Success",
-          "reusable": true,
-          "fill": "$--success",
-          "cornerRadius": 6,
-          "gap": 6,
-          "padding": [
-            8,
-            16
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "frame",
-              "id": "8jVfJ",
-              "name": "plus",
-              "width": 20,
-              "height": 20,
-              "stroke": {
-                "align": "inside",
-                "thickness": 1
-              },
-              "layout": "none",
-              "children": [
-                {
-                  "type": "icon_font",
-                  "id": "WNalu",
-                  "x": 2,
-                  "y": 2,
-                  "width": 16,
-                  "height": 16,
-                  "iconFontName": "plus",
-                  "iconFontFamily": "lucide",
-                  "fill": "$--primary-foreground"
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "id": "8tnXG",
-              "name": "Button",
-              "fill": "$--primary-foreground",
-              "content": "Button",
-              "lineHeight": 1.4285714285714286,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 14,
-              "fontWeight": "500"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "bgoufg",
-          "x": 422,
-          "y": 1656,
-          "name": "Button/Warning",
-          "reusable": true,
-          "fill": "$--warning",
-          "cornerRadius": 6,
-          "gap": 6,
-          "padding": [
-            8,
-            16
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "frame",
-              "id": "8jVfJ",
-              "name": "plus",
-              "width": 20,
-              "height": 20,
-              "stroke": {
-                "align": "inside",
-                "thickness": 1
-              },
-              "layout": "none",
-              "children": [
-                {
-                  "type": "icon_font",
-                  "id": "WNalu",
-                  "x": 2,
-                  "y": 2,
-                  "width": 16,
-                  "height": 16,
-                  "iconFontName": "plus",
-                  "iconFontFamily": "lucide",
-                  "fill": "$--primary-foreground"
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "id": "8tnXG",
-              "name": "Button",
-              "fill": "$--primary-foreground",
-              "content": "Button",
-              "lineHeight": 1.4285714285714286,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 14,
-              "fontWeight": "500"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "b0h8dn",
-          "x": 422,
-          "y": 1656,
-          "name": "Button/Info",
-          "reusable": true,
-          "fill": "$--info",
-          "cornerRadius": 6,
-          "gap": 6,
-          "padding": [
-            8,
-            16
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "frame",
-              "id": "8jVfJ",
-              "name": "plus",
-              "width": 20,
-              "height": 20,
-              "stroke": {
-                "align": "inside",
-                "thickness": 1
-              },
-              "layout": "none",
-              "children": [
-                {
-                  "type": "icon_font",
-                  "id": "WNalu",
-                  "x": 2,
-                  "y": 2,
-                  "width": 16,
-                  "height": 16,
-                  "iconFontName": "plus",
-                  "iconFontFamily": "lucide",
-                  "fill": "$--primary-foreground"
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "id": "8tnXG",
-              "name": "Button",
-              "fill": "$--primary-foreground",
-              "content": "Button",
-              "lineHeight": 1.4285714285714286,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 14,
-              "fontWeight": "500"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "m7z9fd",
-          "x": 200,
-          "y": 1236,
-          "name": "Badge/Success",
-          "reusable": true,
-          "fill": "$--success",
-          "cornerRadius": 16,
-          "gap": 8,
-          "padding": [
-            2,
-            8
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "zHpCv",
-              "name": "Badge",
-              "fill": "$--primary-foreground",
-              "content": "Badge",
-              "lineHeight": 1.3333333333333333,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "600"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "cjoklc",
-          "x": 200,
-          "y": 1236,
-          "name": "Badge/Warning",
-          "reusable": true,
-          "fill": "$--warning",
-          "cornerRadius": 16,
-          "gap": 8,
-          "padding": [
-            2,
-            8
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "zHpCv",
-              "name": "Badge",
-              "fill": "$--primary-foreground",
-              "content": "Badge",
-              "lineHeight": 1.3333333333333333,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "600"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "izk9b",
-          "x": 200,
-          "y": 1236,
-          "name": "Badge/Info",
-          "reusable": true,
-          "fill": "$--info",
-          "cornerRadius": 16,
-          "gap": 8,
-          "padding": [
-            2,
-            8
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "zHpCv",
-              "name": "Badge",
-              "fill": "$--primary-foreground",
-              "content": "Badge",
-              "lineHeight": 1.3333333333333333,
-              "textAlign": "center",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "600"
             }
           ]
         }
@@ -5819,83 +5459,11 @@
     },
     "--background": {
       "type": "color",
-      "value": [
-        {
-          "value": "#fafafa"
-        },
-        {
-          "value": "#0a0a0a",
-          "theme": {
-            "Mode": "Dark"
-          }
-        },
-        {
-          "value": "#030712",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#020617",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#0c0a09",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#09090b",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Zinc"
-          }
-        }
-      ]
+      "value": "#f8f8f9ff"
     },
     "--foreground": {
       "type": "color",
-      "value": [
-        {
-          "value": "#0a0a0a"
-        },
-        {
-          "value": "#030712",
-          "theme": {
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#020617",
-          "theme": {
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#0c0a09",
-          "theme": {
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#09090b",
-          "theme": {
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#fafafa",
-          "theme": {
-            "Mode": "Dark"
-          }
-        }
-      ]
+      "value": "#0a0a0aff"
     },
     "--card": {
       "type": "color",
@@ -6059,324 +5627,19 @@
     },
     "--primary": {
       "type": "color",
-      "value": [
-        {
-          "value": "#171717"
-        },
-        {
-          "value": "#111827",
-          "theme": {
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#0f172a",
-          "theme": {
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#1c1917",
-          "theme": {
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#18181b",
-          "theme": {
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#e5e5e5",
-          "theme": {
-            "Mode": "Dark"
-          }
-        },
-        {
-          "value": "#e5e7eb",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#e2e8f0",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#e5e5e5",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#e4e4e7",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#dc2626",
-          "theme": {
-            "Accent": "Red"
-          }
-        },
-        {
-          "value": "#e11d48",
-          "theme": {
-            "Accent": "Rose"
-          }
-        },
-        {
-          "value": "#ea580c",
-          "theme": {
-            "Accent": "Orange"
-          }
-        },
-        {
-          "value": "#65a30d",
-          "theme": {
-            "Accent": "Green"
-          }
-        },
-        {
-          "value": "#1d4ed8",
-          "theme": {
-            "Accent": "Blue"
-          }
-        },
-        {
-          "value": "#facc15",
-          "theme": {
-            "Accent": "Yellow"
-          }
-        },
-        {
-          "value": "#7c3aed",
-          "theme": {
-            "Accent": "Violet"
-          }
-        },
-        {
-          "value": "#ef4444",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Red"
-          }
-        },
-        {
-          "value": "#f43f5e",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Rose"
-          }
-        },
-        {
-          "value": "#f97316",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Orange"
-          }
-        },
-        {
-          "value": "#65a30d",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Green"
-          }
-        },
-        {
-          "value": "#1d4ed8",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Blue"
-          }
-        },
-        {
-          "value": "#eab308",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Yellow"
-          }
-        },
-        {
-          "value": "#8b5cf6",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Violet"
-          }
-        }
-      ]
+      "value": "#007affff"
     },
     "--primary-foreground": {
       "type": "color",
-      "value": [
-        {
-          "value": "#fafafa"
-        },
-        {
-          "value": "#171717",
-          "theme": {
-            "Mode": "Dark"
-          }
-        },
-        {
-          "value": "#111827",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#0f172a",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#1c1917",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#18181b",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#fef2f2",
-          "theme": {
-            "Accent": "Red"
-          }
-        },
-        {
-          "value": "#fff1f2",
-          "theme": {
-            "Accent": "Rose"
-          }
-        },
-        {
-          "value": "#fff7ed",
-          "theme": {
-            "Accent": "Orange"
-          }
-        },
-        {
-          "value": "#f7fee7",
-          "theme": {
-            "Accent": "Green"
-          }
-        },
-        {
-          "value": "#eff6ff",
-          "theme": {
-            "Accent": "Blue"
-          }
-        },
-        {
-          "value": "#713f12",
-          "theme": {
-            "Accent": "Yellow"
-          }
-        },
-        {
-          "value": "#f5f3ff",
-          "theme": {
-            "Accent": "Violet"
-          }
-        }
-      ]
+      "value": "#ffffffff"
     },
     "--secondary": {
       "type": "color",
-      "value": [
-        {
-          "value": "#f5f5f5"
-        },
-        {
-          "value": "#262626",
-          "theme": {
-            "Mode": "Dark"
-          }
-        },
-        {
-          "value": "#1f2937",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#1e293b",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#292524",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#27272a",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Zinc"
-          }
-        }
-      ]
+      "value": "#e9e9ebff"
     },
     "--secondary-foreground": {
       "type": "color",
-      "value": [
-        {
-          "value": "#171717"
-        },
-        {
-          "value": "#111827",
-          "theme": {
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#0f172a",
-          "theme": {
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#1c1917",
-          "theme": {
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#18181b",
-          "theme": {
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#fafafa",
-          "theme": {
-            "Mode": "Dark"
-          }
-        }
-      ]
+      "value": "#1c1c1eff"
     },
     "--muted": {
       "type": "color",
@@ -6568,250 +5831,19 @@
     },
     "--destructive": {
       "type": "color",
-      "value": [
-        {
-          "value": "#e7000b"
-        },
-        {
-          "value": "#ff666999",
-          "theme": {
-            "Mode": "Dark"
-          }
-        }
-      ]
+      "value": "#ff3b30ff"
     },
     "--border": {
       "type": "color",
-      "value": [
-        {
-          "value": "#e5e5e5"
-        },
-        {
-          "value": "#e5e7eb",
-          "theme": {
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#e2e8f0",
-          "theme": {
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#e5e5e5",
-          "theme": {
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#e4e4e7",
-          "theme": {
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#ffffff1a",
-          "theme": {
-            "Mode": "Dark"
-          }
-        }
-      ]
+      "value": "#e5e5eaff"
     },
     "--input": {
       "type": "color",
-      "value": [
-        {
-          "value": "#e5e5e5"
-        },
-        {
-          "value": "#e5e7eb",
-          "theme": {
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#e2e8f0",
-          "theme": {
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#e5e5e5",
-          "theme": {
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#e4e4e7",
-          "theme": {
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#ffffff1a",
-          "theme": {
-            "Mode": "Dark"
-          }
-        }
-      ]
+      "value": "#e5e5eaff"
     },
     "--ring": {
       "type": "color",
-      "value": [
-        {
-          "value": "#a3a3a3"
-        },
-        {
-          "value": "#9ca3af",
-          "theme": {
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#94a3b8",
-          "theme": {
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#a8a29e",
-          "theme": {
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#a1a1aa",
-          "theme": {
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#737373",
-          "theme": {
-            "Mode": "Dark"
-          }
-        },
-        {
-          "value": "#6b7280",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Gray"
-          }
-        },
-        {
-          "value": "#64748b",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Slate"
-          }
-        },
-        {
-          "value": "#78716c",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Stone"
-          }
-        },
-        {
-          "value": "#71717a",
-          "theme": {
-            "Mode": "Dark",
-            "Base": "Zinc"
-          }
-        },
-        {
-          "value": "#7f1d1d",
-          "theme": {
-            "Accent": "Red"
-          }
-        },
-        {
-          "value": "#fb7185",
-          "theme": {
-            "Accent": "Rose"
-          }
-        },
-        {
-          "value": "#fb923c",
-          "theme": {
-            "Accent": "Orange"
-          }
-        },
-        {
-          "value": "#a3e635",
-          "theme": {
-            "Accent": "Green"
-          }
-        },
-        {
-          "value": "#3b82f6",
-          "theme": {
-            "Accent": "Blue"
-          }
-        },
-        {
-          "value": "#713f12",
-          "theme": {
-            "Accent": "Yellow"
-          }
-        },
-        {
-          "value": "#a78bfa",
-          "theme": {
-            "Accent": "Violet"
-          }
-        },
-        {
-          "value": "#dc2626",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Red"
-          }
-        },
-        {
-          "value": "#881337",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Rose"
-          }
-        },
-        {
-          "value": "#7c2d12",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Orange"
-          }
-        },
-        {
-          "value": "#365314",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Green"
-          }
-        },
-        {
-          "value": "#2563eb",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Blue"
-          }
-        },
-        {
-          "value": "#ca8a06",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Yellow"
-          }
-        },
-        {
-          "value": "#4c1d95",
-          "theme": {
-            "Mode": "Dark",
-            "Accent": "Violet"
-          }
-        }
-      ]
+      "value": "#007affff"
     },
     "--white": {
       "type": "color",
@@ -6820,6 +5852,34 @@
     "--black": {
       "type": "color",
       "value": "#000000"
+    },
+    "--success": {
+      "type": "color",
+      "value": "#34c759ff"
+    },
+    "--success-foreground": {
+      "type": "color",
+      "value": "#ffffffff"
+    },
+    "--warning": {
+      "type": "color",
+      "value": "#ff9500ff"
+    },
+    "--warning-foreground": {
+      "type": "color",
+      "value": "#ffffffff"
+    },
+    "--info": {
+      "type": "color",
+      "value": "#0ea5e9ff"
+    },
+    "--info-foreground": {
+      "type": "color",
+      "value": "#ffffffff"
+    },
+    "--destructive-foreground": {
+      "type": "color",
+      "value": "#ffffffff"
     }
   }
 }

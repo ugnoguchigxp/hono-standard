@@ -21,11 +21,8 @@ export const penVariantIndex: PenVariantIndex = {
   "Badge": [
     "Default",
     "Destructive",
-    "Info",
     "Outline",
-    "Secondary",
-    "Success",
-    "Warning"
+    "Secondary"
   ],
   "Breadcrumb Item": [
     "Current",
@@ -122,7 +119,7 @@ export const penVariantIndex: PenVariantIndex = {
 };
 
 export const penVariantMeta = {
-  sourceVersion: "2.10",
+  sourceVersion: "2.9",
   totalComponents: 22,
-  totalVariants: 67
+  totalVariants: 64
 } as const;
