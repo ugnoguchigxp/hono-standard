@@ -17,6 +17,7 @@
     "lint:all": "biome check .",
     "pencil:variants": "pnpm -C designSystem pencil:variants",
     "design-system:variants": "pnpm -C designSystem pencil:variants",
+    "generate-tokens": "pnpm -C designSystem generate-tokens",
     "design-system:storybook": "pnpm -C designSystem storybook",
     "design-system:storybook:build": "pnpm -C designSystem storybook:build",
     "db:generate": "drizzle-kit generate",

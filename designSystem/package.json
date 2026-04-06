@@ -15,8 +15,11 @@
     "storybook": "pnpm pencil:variants && storybook dev -p 6006",
     "storybook:build": "pnpm pencil:variants && storybook build",
     "pencil:variants": "node ./pencil/scripts/sync-variants.mjs",
+    "generate-tokens": "tsx ./scripts/generate-tokens.mts",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
     "lint": "biome check ."
   },
   "dependencies": {
@@ -32,6 +35,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
+    "@playwright/test": "^1.59.1",
     "@storybook/addon-a11y": "^10.3.4",
     "@storybook/addon-docs": "10.3.4",
     "@storybook/react-vite": "^10.3.4",

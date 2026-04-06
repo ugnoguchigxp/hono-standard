@@ -9,7 +9,11 @@ export type PenVariantIndex = Record<string, string[]>;
 
 export const penVariantIndex: PenVariantIndex = {
   "Accordion": [
+    "Default",
     "Open"
+  ],
+  "Accordion.test": [
+    "Default"
   ],
   "Alert": [
     "Default",
@@ -18,9 +22,15 @@ export const penVariantIndex: PenVariantIndex = {
     "Success",
     "Warning"
   ],
+  "Alert.test": [
+    "Default"
+  ],
   "Avatar": [
-    "Image",
+    "Default",
     "Text"
+  ],
+  "Avatar.test": [
+    "Default"
   ],
   "Badge": [
     "Default",
@@ -28,9 +38,20 @@ export const penVariantIndex: PenVariantIndex = {
     "Outline",
     "Secondary"
   ],
-  "Breadcrumb Item": [
+  "Badge.test": [
+    "Default"
+  ],
+  "Breadcrumb": [
     "Current",
     "Default",
+    "Ellipsis",
+    "Separator"
+  ],
+  "Breadcrumb.test": [
+    "Default"
+  ],
+  "BreadcrumbItem": [
+    "Current",
     "Ellipsis",
     "Separator"
   ],
@@ -49,81 +70,202 @@ export const penVariantIndex: PenVariantIndex = {
     "Success",
     "Warning"
   ],
+  "Button.test": [
+    "Default"
+  ],
+  "Card": [
+    "Default"
+  ],
+  "Card.test": [
+    "Default"
+  ],
   "Checkbox": [
-    "Checked"
+    "Checked",
+    "Default"
+  ],
+  "Checkbox.test": [
+    "Default"
   ],
   "Combobox": [
     "Default"
   ],
-  "Icon Button": [
+  "Combobox.test": [
+    "Default"
+  ],
+  "DataTable": [
+    "Default"
+  ],
+  "DataTable.test": [
+    "Default"
+  ],
+  "Dialog": [
+    "Default"
+  ],
+  "Dialog.test": [
+    "Default"
+  ],
+  "DropdownMenu": [
+    "Default"
+  ],
+  "DropdownMenu.test": [
+    "Default"
+  ],
+  "Icon": [
+    "Chevron-right",
+    "Dots"
+  ],
+  "IconButton": [
     "Default",
     "Destructive",
-    "Large/Default",
-    "Large/Destructive",
-    "Large/Ghost",
-    "Large/Outline",
-    "Large/Secondary",
     "Outline",
     "Secondary"
   ],
+  "IconButton.test": [
+    "Default"
+  ],
   "Input": [
-    "Default",
-    "Filled"
+    "Default"
   ],
-  "Input Group": [
-    "Default",
-    "Filled"
+  "Input.test": [
+    "Default"
   ],
-  "Input OTP Group": [
-    "Default",
-    "Filled"
+  "InputGroup": [
+    "Default"
   ],
-  "List Item": [
+  "InputGroup.test": [
+    "Default"
+  ],
+  "InputOtp": [
+    "Default"
+  ],
+  "InputOtp.test": [
+    "Default"
+  ],
+  "InputOTPGroup": [
+    "Default"
+  ],
+  "Label": [
+    "Default"
+  ],
+  "Label.test": [
+    "Default"
+  ],
+  "List": [
     "Checked",
-    "Unchecked"
-  ],
-  "List Search Box": [
     "Default",
+    "Filled"
+  ],
+  "List.test": [
+    "Default"
+  ],
+  "ListItem": [
+    "Checked"
+  ],
+  "ListSearchBox": [
     "Filled"
   ],
   "Modal": [
-    "Center",
-    "Icon",
-    "Left"
+    "Default"
   ],
-  "Pagination Item": [
+  "Modal.test": [
+    "Default"
+  ],
+  "Pagination": [
+    "Default"
+  ],
+  "Pagination.test": [
+    "Default"
+  ],
+  "PaginationItem": [
     "Active",
-    "Default",
     "Ellipsis"
   ],
+  "Progress": [
+    "Default"
+  ],
+  "Progress.test": [
+    "Default"
+  ],
   "Radio": [
-    "Selected",
-    "Unselected"
-  ],
-  "Select Group": [
     "Default",
-    "Filled"
+    "Selected"
   ],
-  "Sidebar Item": [
+  "Radio.test": [
+    "Default"
+  ],
+  "RadioGroup": [
+    "Default",
+    "Selected"
+  ],
+  "RadioGroup.test": [
+    "Default"
+  ],
+  "Select": [
+    "Default"
+  ],
+  "Select.test": [
+    "Default"
+  ],
+  "SelectGroup": [
+    "Default"
+  ],
+  "Separator": [
+    "Default"
+  ],
+  "Separator.test": [
+    "Default"
+  ],
+  "Sidebar": [
     "Active",
     "Default"
   ],
+  "Sidebar.test": [
+    "Default"
+  ],
+  "SidebarItem": [
+    "Active"
+  ],
   "Switch": [
     "Checked",
-    "Unchecked"
+    "Default"
   ],
-  "Tab Item": [
-    "Active",
-    "Inactive"
+  "Switch.test": [
+    "Default"
   ],
-  "Textarea Group": [
-    "Default",
-    "Filled"
+  "TabItem": [
+    "Active"
+  ],
+  "Table": [
+    "Default"
+  ],
+  "Table.test": [
+    "Default"
+  ],
+  "Tabs": [
+    "Default"
+  ],
+  "Tabs.test": [
+    "Default"
+  ],
+  "Textarea": [
+    "Default"
+  ],
+  "Textarea.test": [
+    "Default"
+  ],
+  "TextareaGroup": [
+    "Default"
+  ],
+  "Tooltip": [
+    "Default"
+  ],
+  "Tooltip.test": [
+    "Default"
   ]
 };
 
 export const penVariantMeta = {
   sourceVersion: "2.9",
-  totalComponents: 22,
-  totalVariants: 68
+  totalComponents: 72,
+  totalVariants: 110
 } as const;
