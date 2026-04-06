@@ -11,6 +11,7 @@
     "start": "cross-env NODE_ENV=production node dist-api/index.js",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
     "lint": "biome check api src shared tests README.md .env.example package.json tsconfig.json vite.config.ts vitest.config.ts playwright.config.ts",
     "lint:all": "biome check .",
     "pencil:variants": "pnpm -C designSystem pencil:variants",

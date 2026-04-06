@@ -12,7 +12,11 @@ export const penVariantIndex: PenVariantIndex = {
     "Open"
   ],
   "Alert": [
-    "Default"
+    "Default",
+    "Destructive",
+    "Info",
+    "Success",
+    "Warning"
   ],
   "Avatar": [
     "Image",
@@ -121,5 +125,5 @@ export const penVariantIndex: PenVariantIndex = {
 export const penVariantMeta = {
   sourceVersion: "2.9",
   totalComponents: 22,
-  totalVariants: 64
+  totalVariants: 68
 } as const;

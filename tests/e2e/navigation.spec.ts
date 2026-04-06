@@ -54,6 +54,24 @@ test.describe('Navigation and Public Pages @regression', () => {
   });
 
   test('shows OAuth buttons on login page', async ({ page }) => {
+    await page.route('**/api/auth/methods', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          authMode: 'both',
+          local: true,
+          oauth: {
+            enabled: true,
+            providers: {
+              google: true,
+              github: true,
+            },
+          },
+        }),
+      });
+    });
+
     await page.goto('/login');
     await expect(page.getByRole('link', { name: 'Login with Google' })).toHaveAttribute(
       'href',

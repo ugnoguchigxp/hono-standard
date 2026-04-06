@@ -1,12 +1,11 @@
 import { serveStatic } from '@hono/node-server/serve-static';
 import { swaggerUI } from '@hono/swagger-ui';
-import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { secureHeaders } from 'hono/secure-headers';
 import { timing } from 'hono/timing';
 import { config } from './config';
-import type { AppEnv } from './lib/types';
+import { createOpenApiRouter } from './lib/openapi';
 import { errorHandler } from './middleware/error-handler';
 import { loggerMiddleware } from './middleware/logger';
 import { rateLimiter } from './middleware/rate-limiter';
@@ -15,13 +14,13 @@ import { authRouter } from './routes/auth';
 import { healthRouter } from './routes/health';
 import { oauthRouter } from './routes/oauth';
 
-const apiRoutes = new OpenAPIHono<AppEnv>()
+const apiRoutes = createOpenApiRouter()
   .route('/health', healthRouter)
   .route('/auth/oauth', oauthRouter)
   .route('/auth', authRouter)
   .route('/bbs', bbsRouter);
 
-const app = new OpenAPIHono<AppEnv>();
+const app = createOpenApiRouter();
 const isProduction = config.NODE_ENV === 'production';
 
 // Middleware
@@ -80,7 +79,27 @@ app.doc('/api/doc', {
   },
 });
 
-app.get('/api/ui', swaggerUI({ url: '/api/doc' }));
+app.get(
+  '/api/ui',
+  async (c, next) => {
+    c.header(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'",
+        "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'",
+        "img-src 'self' data: https:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+      ].join('; ')
+    );
+    await next();
+  },
+  swaggerUI({ url: '/api/doc' })
+);
 
 // Routes
 app.route('/api', apiRoutes);

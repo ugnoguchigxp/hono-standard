@@ -1170,7 +1170,18 @@
                 }
               ]
             }
-          ]
+          ],
+          "effect": {
+            "type": "shadow",
+            "enabled": true,
+            "shadowType": "outer",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 2,
+            "color": "#0000000d"
+          }
         },
         {
           "type": "frame",
@@ -5242,6 +5253,626 @@
               "fontWeight": "500"
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "cd94bac1",
+          "x": 200,
+          "y": 628,
+          "name": "Alert/Destructive",
+          "reusable": true,
+          "width": "fill_container(480)",
+          "fill": "$--destructive-soft",
+          "cornerRadius": 8,
+          "stroke": {
+            "align": "inside",
+            "thickness": 1,
+            "fill": "$--destructive"
+          },
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "LuqyG",
+              "name": "Icon Container",
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "gap": 8,
+              "padding": [
+                2,
+                0
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "LGayV",
+                  "name": "info-circle",
+                  "width": 20,
+                  "height": 20,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "DeaWZ",
+                      "x": 9.583333015441895,
+                      "y": 13.333333015441895,
+                      "name": "Vector",
+                      "rotation": 180,
+                      "flipX": true,
+                      "geometry": "M0.5 0l0 5-0.5 0m0-5l1 0",
+                      "width": 0.8333339691162109,
+                      "height": 4.166666030883789,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "X45fI",
+                      "x": 10,
+                      "y": 6.666666507720947,
+                      "name": "Vector",
+                      "geometry": "M0 1.41421l0-1.41421",
+                      "width": 0,
+                      "height": 0.41666698455810547,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "WjioW",
+                      "x": 2.5,
+                      "y": 2.5,
+                      "name": "Vector",
+                      "width": 15,
+                      "height": 15,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Q1t8n",
+              "name": "Text Container",
+              "width": "fill_container",
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nbvca",
+                  "name": "Alert Title",
+                  "fill": "$--destructive",
+                  "content": "Alert Title",
+                  "lineHeight": 1.5,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "W4UBy",
+                  "name": "Alert Description",
+                  "fill": "$--destructive",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "This is the alert description to shows some information.",
+                  "lineHeight": 1.4285714285714286,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ],
+          "effect": {
+            "type": "shadow",
+            "enabled": true,
+            "shadowType": "outer",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 2,
+            "color": "#0000000d"
+          }
+        },
+        {
+          "type": "frame",
+          "id": "e238fbc3",
+          "x": 200,
+          "y": 748,
+          "name": "Alert/Success",
+          "reusable": true,
+          "width": "fill_container(480)",
+          "fill": "$--success-soft",
+          "cornerRadius": 8,
+          "stroke": {
+            "align": "inside",
+            "thickness": 1,
+            "fill": "$--success"
+          },
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "LuqyG",
+              "name": "Icon Container",
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "gap": 8,
+              "padding": [
+                2,
+                0
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "LGayV",
+                  "name": "info-circle",
+                  "width": 20,
+                  "height": 20,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "DeaWZ",
+                      "x": 9.583333015441895,
+                      "y": 13.333333015441895,
+                      "name": "Vector",
+                      "rotation": 180,
+                      "flipX": true,
+                      "geometry": "M0.5 0l0 5-0.5 0m0-5l1 0",
+                      "width": 0.8333339691162109,
+                      "height": 4.166666030883789,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "X45fI",
+                      "x": 10,
+                      "y": 6.666666507720947,
+                      "name": "Vector",
+                      "geometry": "M0 1.41421l0-1.41421",
+                      "width": 0,
+                      "height": 0.41666698455810547,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "WjioW",
+                      "x": 2.5,
+                      "y": 2.5,
+                      "name": "Vector",
+                      "width": 15,
+                      "height": 15,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Q1t8n",
+              "name": "Text Container",
+              "width": "fill_container",
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nbvca",
+                  "name": "Alert Title",
+                  "fill": "$--success",
+                  "content": "Alert Title",
+                  "lineHeight": 1.5,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "W4UBy",
+                  "name": "Alert Description",
+                  "fill": "$--success",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "This is the alert description to shows some information.",
+                  "lineHeight": 1.4285714285714286,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ],
+          "effect": {
+            "type": "shadow",
+            "enabled": true,
+            "shadowType": "outer",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 2,
+            "color": "#0000000d"
+          }
+        },
+        {
+          "type": "frame",
+          "id": "aa1cc930",
+          "x": 200,
+          "y": 868,
+          "name": "Alert/Warning",
+          "reusable": true,
+          "width": "fill_container(480)",
+          "fill": "$--warning-soft",
+          "cornerRadius": 8,
+          "stroke": {
+            "align": "inside",
+            "thickness": 1,
+            "fill": "$--warning"
+          },
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "LuqyG",
+              "name": "Icon Container",
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "gap": 8,
+              "padding": [
+                2,
+                0
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "LGayV",
+                  "name": "info-circle",
+                  "width": 20,
+                  "height": 20,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "DeaWZ",
+                      "x": 9.583333015441895,
+                      "y": 13.333333015441895,
+                      "name": "Vector",
+                      "rotation": 180,
+                      "flipX": true,
+                      "geometry": "M0.5 0l0 5-0.5 0m0-5l1 0",
+                      "width": 0.8333339691162109,
+                      "height": 4.166666030883789,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "X45fI",
+                      "x": 10,
+                      "y": 6.666666507720947,
+                      "name": "Vector",
+                      "geometry": "M0 1.41421l0-1.41421",
+                      "width": 0,
+                      "height": 0.41666698455810547,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "WjioW",
+                      "x": 2.5,
+                      "y": 2.5,
+                      "name": "Vector",
+                      "width": 15,
+                      "height": 15,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Q1t8n",
+              "name": "Text Container",
+              "width": "fill_container",
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nbvca",
+                  "name": "Alert Title",
+                  "fill": "$--warning",
+                  "content": "Alert Title",
+                  "lineHeight": 1.5,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "W4UBy",
+                  "name": "Alert Description",
+                  "fill": "$--warning",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "This is the alert description to shows some information.",
+                  "lineHeight": 1.4285714285714286,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ],
+          "effect": {
+            "type": "shadow",
+            "enabled": true,
+            "shadowType": "outer",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 2,
+            "color": "#0000000d"
+          }
+        },
+        {
+          "type": "frame",
+          "id": "8d0ed858",
+          "x": 200,
+          "y": 988,
+          "name": "Alert/Info",
+          "reusable": true,
+          "width": "fill_container(480)",
+          "fill": "$--info-soft",
+          "cornerRadius": 8,
+          "stroke": {
+            "align": "inside",
+            "thickness": 1,
+            "fill": "$--info"
+          },
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "LuqyG",
+              "name": "Icon Container",
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "gap": 8,
+              "padding": [
+                2,
+                0
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "LGayV",
+                  "name": "info-circle",
+                  "width": 20,
+                  "height": 20,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "DeaWZ",
+                      "x": 9.583333015441895,
+                      "y": 13.333333015441895,
+                      "name": "Vector",
+                      "rotation": 180,
+                      "flipX": true,
+                      "geometry": "M0.5 0l0 5-0.5 0m0-5l1 0",
+                      "width": 0.8333339691162109,
+                      "height": 4.166666030883789,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "X45fI",
+                      "x": 10,
+                      "y": 6.666666507720947,
+                      "name": "Vector",
+                      "geometry": "M0 1.41421l0-1.41421",
+                      "width": 0,
+                      "height": 0.41666698455810547,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "WjioW",
+                      "x": 2.5,
+                      "y": 2.5,
+                      "name": "Vector",
+                      "width": 15,
+                      "height": 15,
+                      "stroke": {
+                        "align": "center",
+                        "thickness": 1.5,
+                        "join": "round",
+                        "cap": "round",
+                        "fill": "$--foreground"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Q1t8n",
+              "name": "Text Container",
+              "width": "fill_container",
+              "stroke": {
+                "align": "inside",
+                "thickness": 1
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nbvca",
+                  "name": "Alert Title",
+                  "fill": "$--info",
+                  "content": "Alert Title",
+                  "lineHeight": 1.5,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "W4UBy",
+                  "name": "Alert Description",
+                  "fill": "$--info",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "This is the alert description to shows some information.",
+                  "lineHeight": 1.4285714285714286,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ],
+          "effect": {
+            "type": "shadow",
+            "enabled": true,
+            "shadowType": "outer",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 2,
+            "color": "#0000000d"
+          }
         }
       ]
     },
@@ -5880,6 +6511,22 @@
     "--destructive-foreground": {
       "type": "color",
       "value": "#ffffffff"
+    },
+    "--destructive-soft": {
+      "type": "color",
+      "value": "#ff3b301a"
+    },
+    "--success-soft": {
+      "type": "color",
+      "value": "#34c7591a"
+    },
+    "--warning-soft": {
+      "type": "color",
+      "value": "#ff950026"
+    },
+    "--info-soft": {
+      "type": "color",
+      "value": "#0ea5e91a"
     }
   }
 }

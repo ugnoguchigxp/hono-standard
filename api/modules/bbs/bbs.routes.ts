@@ -1,4 +1,4 @@
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import { createRoute, z } from '@hono/zod-openapi';
 import {
   commentSchema,
   createCommentSchema,
@@ -8,7 +8,7 @@ import {
   threadSchema,
 } from '../../../shared/schemas/bbs.schema';
 import { AuthError } from '../../lib/errors';
-import type { AppEnv } from '../../lib/types';
+import { createOpenApiRouter } from '../../lib/openapi';
 import { authMiddleware } from '../../middleware/auth';
 import * as BBSService from './bbs.service';
 
@@ -104,7 +104,7 @@ const createCommentRoute = createRoute({
   },
 });
 
-const publicBbs = new OpenAPIHono<AppEnv>()
+const publicBbs = createOpenApiRouter()
   .openapi(listThreadsRoute, async (c) => {
     const threads = await BBSService.listThreads();
     return c.json({ threads }, 200);
@@ -115,7 +115,7 @@ const publicBbs = new OpenAPIHono<AppEnv>()
     return c.json({ thread }, 200);
   });
 
-const protectedBbsBase = new OpenAPIHono<AppEnv>();
+const protectedBbsBase = createOpenApiRouter();
 protectedBbsBase.use('*', authMiddleware());
 const protectedBbs = protectedBbsBase
   .openapi(createThreadRoute, async (c) => {
@@ -138,4 +138,4 @@ const protectedBbs = protectedBbsBase
     return c.json(comment, 201);
   });
 
-export const bbsRouter = new OpenAPIHono<AppEnv>().route('/', publicBbs).route('/', protectedBbs);
+export const bbsRouter = createOpenApiRouter().route('/', publicBbs).route('/', protectedBbs);

@@ -10,7 +10,7 @@ export const loggerMiddleware = () => {
     c.header('X-Request-Id', requestId);
 
     const start = Date.now();
-    logger.info({ method: c.req.method, url: c.req.url }, 'Request started');
+    logger.info({ method: c.req.method, path: c.req.path }, 'Request started');
 
     await next();
 

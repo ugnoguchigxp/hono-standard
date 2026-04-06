@@ -19,7 +19,7 @@ describe('shared auth schemas', () => {
       registerSchema.parse({
         email: 'user@example.com',
         password: 'password123',
-        name: 'John Doe',
+        name: '<b>John Doe</b>',
       })
     ).toEqual({
       email: 'user@example.com',

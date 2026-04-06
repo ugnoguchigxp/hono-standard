@@ -14,7 +14,6 @@ export default defineConfig({
       include: [
         'api/lib/**/*.ts',
         'api/middleware/**/*.ts',
-        'api/schemas/**/*.ts',
         'api/services/oauth/**/*.ts',
         'api/services/token.service.ts',
         'api/services/auth.service.ts',

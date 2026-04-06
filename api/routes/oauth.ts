@@ -1,9 +1,9 @@
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import { createRoute, z } from '@hono/zod-openapi';
 import { getCookie, setCookie } from 'hono/cookie';
 import { config } from '../config';
 import { setAuthCookies } from '../lib/auth-cookies';
 import { AuthError, ValidationError } from '../lib/errors';
-import type { AppEnv } from '../lib/types';
+import { createOpenApiRouter } from '../lib/openapi';
 import { generateTokens, handleExternalUser } from '../services/auth.service';
 import type { OAuthProvider } from '../services/oauth/base';
 import { GitHubOAuthClient } from '../services/oauth/github';
@@ -63,7 +63,7 @@ const callbackRoute = createRoute({
   },
 });
 
-export const oauthRouter = new OpenAPIHono<AppEnv>()
+export const oauthRouter = createOpenApiRouter()
   .openapi(loginRoute, (c) => {
     if (config.AUTH_MODE === 'local') throw new AuthError('OAuth authentication is disabled');
     const providerId = c.req.param('provider');

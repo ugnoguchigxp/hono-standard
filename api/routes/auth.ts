@@ -1,18 +1,12 @@
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import { createRoute, z } from '@hono/zod-openapi';
 import { getCookie } from 'hono/cookie';
+import { authResponseSchema, loginSchema, registerSchema } from '../../shared/schemas/auth.schema';
+import { config } from '../config';
 import { clearAuthCookies, REFRESH_TOKEN_COOKIE_NAME, setAuthCookies } from '../lib/auth-cookies';
 import { AuthError } from '../lib/errors';
-import type { AppEnv } from '../lib/types';
+import { createOpenApiRouter } from '../lib/openapi';
 import { authMiddleware } from '../middleware/auth';
-import { loginSchema, registerSchema } from '../schemas/auth.schema';
 import { login, logout, refresh, register } from '../services/auth.service';
-
-const authSessionSchema = z.object({
-  user: z.object({
-    id: z.string(),
-    email: z.string(),
-  }),
-});
 
 const registerRoute = createRoute({
   method: 'post',
@@ -30,7 +24,7 @@ const registerRoute = createRoute({
     201: {
       content: {
         'application/json': {
-          schema: authSessionSchema,
+          schema: authResponseSchema,
         },
       },
       description: 'Registration successful',
@@ -54,7 +48,7 @@ const loginRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: authSessionSchema,
+          schema: authResponseSchema,
         },
       },
       description: 'Login successful',
@@ -69,7 +63,7 @@ const refreshRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: authSessionSchema,
+          schema: authResponseSchema,
         },
       },
       description: 'Token refresh successful',
@@ -101,7 +95,7 @@ const meRoute = createRoute({
         'application/json': {
           schema: z.object({
             userId: z.string(),
-            email: z.string(),
+            email: z.string().email(),
           }),
         },
       },
@@ -110,7 +104,52 @@ const meRoute = createRoute({
   },
 });
 
-const publicAuthRouter = new OpenAPIHono<AppEnv>()
+const methodsRoute = createRoute({
+  method: 'get',
+  path: '/methods',
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            authMode: z.enum(['local', 'oauth', 'both']),
+            local: z.boolean(),
+            oauth: z.object({
+              enabled: z.boolean(),
+              providers: z.object({
+                google: z.boolean(),
+                github: z.boolean(),
+              }),
+            }),
+          }),
+        },
+      },
+      description: 'Get enabled authentication methods',
+    },
+  },
+});
+
+const hasGoogleOAuth = Boolean(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET);
+const hasGithubOAuth = Boolean(config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET);
+const oauthEnabled = config.AUTH_MODE !== 'local' && (hasGoogleOAuth || hasGithubOAuth);
+
+const publicAuthRouter = createOpenApiRouter()
+  .openapi(methodsRoute, (c) => {
+    return c.json(
+      {
+        authMode: config.AUTH_MODE,
+        local: config.AUTH_MODE !== 'oauth',
+        oauth: {
+          enabled: oauthEnabled,
+          providers: {
+            google: config.AUTH_MODE !== 'local' && hasGoogleOAuth,
+            github: config.AUTH_MODE !== 'local' && hasGithubOAuth,
+          },
+        },
+      },
+      200
+    );
+  })
   .openapi(registerRoute, async (c) => {
     const data = c.req.valid('json');
     const result = await register(data);
@@ -137,13 +176,17 @@ const publicAuthRouter = new OpenAPIHono<AppEnv>()
     return c.json({ success: true }, 200);
   });
 
-const protectedAuthRouterBase = new OpenAPIHono<AppEnv>();
+const protectedAuthRouterBase = createOpenApiRouter();
 protectedAuthRouterBase.use('/me', authMiddleware());
+
 const protectedAuthRouter = protectedAuthRouterBase.openapi(meRoute, (c) => {
   const user = c.get('user');
-  return c.json(user, 200);
+  if (!user) {
+    throw new AuthError('Unauthorized');
+  }
+  return c.json({ userId: user.userId, email: user.email }, 200);
 });
 
-export const authRouter = new OpenAPIHono<AppEnv>()
+export const authRouter = createOpenApiRouter()
   .route('/', publicAuthRouter)
   .route('/', protectedAuthRouter);

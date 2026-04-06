@@ -10,7 +10,11 @@ const AccordionItem = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof BaseAccordion.Item>
 >(({ className, ...props }, ref) => (
-  <BaseAccordion.Item ref={ref} className={cn('border-b', className)} {...props} />
+  <BaseAccordion.Item
+    ref={ref}
+    className={cn('rounded-[6px] border border-border bg-card', className)}
+    {...props}
+  />
 ));
 AccordionItem.displayName = 'AccordionItem';
 
@@ -22,7 +26,7 @@ const AccordionTrigger = React.forwardRef<
     <BaseAccordion.Trigger
       ref={ref}
       className={cn(
-        'flex flex-1 items-center justify-between py-[var(--panel-p-sm)] text-[var(--font-size-sm)] font-medium transition-colors hover:text-foreground/90 [&>svg]:transition-transform data-[open]:[&>svg]:rotate-180',
+        'flex flex-1 items-center justify-between px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary/60 [&>svg]:transition-transform data-[open]:[&>svg]:rotate-180',
         className
       )}
       {...props}
@@ -40,10 +44,10 @@ const AccordionContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <BaseAccordion.Panel
     ref={ref}
-    className={cn('overflow-hidden text-[var(--font-size-sm)]', className)}
+    className={cn('overflow-hidden text-sm', className)}
     {...props}
   >
-    <div className="pb-[var(--panel-p-sm)] pt-0">{children}</div>
+    <div className="border-t border-border px-4 pb-3 pt-3 text-muted-foreground">{children}</div>
   </BaseAccordion.Panel>
 ));
 AccordionContent.displayName = 'AccordionContent';

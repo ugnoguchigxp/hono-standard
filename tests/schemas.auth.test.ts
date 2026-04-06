@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loginSchema, registerSchema } from '../api/schemas/auth.schema';
+import { loginSchema, registerSchema } from '../shared/schemas/auth.schema';
 
 describe('auth schemas', () => {
   it('validates and sanitizes register payload', () => {

@@ -1,10 +1,10 @@
 import { and, eq } from 'drizzle-orm';
+import type { LoginInput, RegisterInput } from '../../shared/schemas/auth.schema';
 import { config } from '../config';
 import { type DbTransaction, db } from '../db/client';
 import { userExternalAccounts, users } from '../db/schema';
 import { AuthError, ValidationError } from '../lib/errors';
 import { hashPassword, verifyPassword } from '../lib/password';
-import type { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import {
   generateAccessToken,
   generateRefreshToken,
