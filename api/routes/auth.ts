@@ -133,60 +133,60 @@ const hasGoogleOAuth = Boolean(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_S
 const hasGithubOAuth = Boolean(config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET);
 const oauthEnabled = config.AUTH_MODE !== 'local' && (hasGoogleOAuth || hasGithubOAuth);
 
-const publicAuthRouter = createOpenApiRouter()
-  .openapi(methodsRoute, (c) => {
-    return c.json(
-      {
-        authMode: config.AUTH_MODE,
-        local: config.AUTH_MODE !== 'oauth',
-        oauth: {
-          enabled: oauthEnabled,
-          providers: {
-            google: config.AUTH_MODE !== 'local' && hasGoogleOAuth,
-            github: config.AUTH_MODE !== 'local' && hasGithubOAuth,
-          },
+export const authRouter = createOpenApiRouter();
+
+authRouter.use('/me', authMiddleware());
+
+authRouter.openapi(methodsRoute, (c) => {
+  return c.json(
+    {
+      authMode: config.AUTH_MODE,
+      local: config.AUTH_MODE !== 'oauth',
+      oauth: {
+        enabled: oauthEnabled,
+        providers: {
+          google: config.AUTH_MODE !== 'local' && hasGoogleOAuth,
+          github: config.AUTH_MODE !== 'local' && hasGithubOAuth,
         },
       },
-      200
-    );
-  })
-  .openapi(registerRoute, async (c) => {
-    const data = c.req.valid('json');
-    const result = await register(data);
-    setAuthCookies(c, result);
-    return c.json({ user: result.user }, 201);
-  })
-  .openapi(loginRoute, async (c) => {
-    const data = c.req.valid('json');
-    const result = await login(data);
-    setAuthCookies(c, result);
-    return c.json({ user: result.user }, 200);
-  })
-  .openapi(refreshRoute, async (c) => {
-    const refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE_NAME);
-    if (!refreshToken) throw new AuthError('Missing refresh token');
-    const result = await refresh(refreshToken);
-    setAuthCookies(c, result);
-    return c.json({ user: result.user }, 200);
-  })
-  .openapi(logoutRoute, async (c) => {
-    const refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE_NAME);
-    await logout(refreshToken);
-    clearAuthCookies(c);
-    return c.json({ success: true }, 200);
-  });
+    },
+    200
+  );
+});
 
-const protectedAuthRouterBase = createOpenApiRouter();
-protectedAuthRouterBase.use('/me', authMiddleware());
+authRouter.openapi(registerRoute, async (c) => {
+  const data = c.req.valid('json');
+  const result = await register(data);
+  setAuthCookies(c, result);
+  return c.json({ user: result.user }, 201);
+});
 
-const protectedAuthRouter = protectedAuthRouterBase.openapi(meRoute, (c) => {
+authRouter.openapi(loginRoute, async (c) => {
+  const data = c.req.valid('json');
+  const result = await login(data);
+  setAuthCookies(c, result);
+  return c.json({ user: result.user }, 200);
+});
+
+authRouter.openapi(refreshRoute, async (c) => {
+  const refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE_NAME);
+  if (!refreshToken) throw new AuthError('Missing refresh token');
+  const result = await refresh(refreshToken);
+  setAuthCookies(c, result);
+  return c.json({ user: result.user }, 200);
+});
+
+authRouter.openapi(logoutRoute, async (c) => {
+  const refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE_NAME);
+  await logout(refreshToken);
+  clearAuthCookies(c);
+  return c.json({ success: true }, 200);
+});
+
+authRouter.openapi(meRoute, (c) => {
   const user = c.get('user');
   if (!user) {
     throw new AuthError('Unauthorized');
   }
   return c.json({ userId: user.userId, email: user.email }, 200);
 });
-
-export const authRouter = createOpenApiRouter()
-  .route('/', publicAuthRouter)
-  .route('/', protectedAuthRouter);

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { client } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { authRpc } from '../lib/auth-rpc';
 
 export const Route = createFileRoute('/login')({
   component: Login,
@@ -44,7 +44,7 @@ function Login() {
 
     const loadAuthMethods = async () => {
       try {
-        const res = await client.auth.methods.$get({});
+        const res = await authRpc.methods.$get({});
         if (!res.ok || !active) return;
         const data = (await res.json()) as {
           local: boolean;
@@ -72,7 +72,7 @@ function Login() {
     e.preventDefault();
     setError('');
     try {
-      const res = await client.auth.login.$post({ json: { email, password } });
+      const res = await authRpc.login.$post({ json: { email, password } });
       if (!res.ok) {
         throw new Error('Login failed');
       }

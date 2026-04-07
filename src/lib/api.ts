@@ -35,12 +35,11 @@ const redirectToLoginIfNeeded = () => {
 };
 
 const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const headers = new Headers(init?.headers);
   const newInit: RequestInit = {
     ...init,
     credentials: 'include',
-    headers: {
-      ...init?.headers,
-    },
+    headers,
   };
 
   let response = await fetch(input, newInit);

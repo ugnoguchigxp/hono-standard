@@ -1,0 +1,2453 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Hono Standard API",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {
+      "RegisterInput": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "example": "password123"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "John Doe"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "name"
+        ]
+      },
+      "LoginInput": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "example": "password123"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "Thread": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "thread-uuid"
+          },
+          "title": {
+            "type": "string",
+            "example": "My Thread"
+          },
+          "content": {
+            "type": "string",
+            "example": "Thread content"
+          },
+          "authorId": {
+            "type": "string",
+            "example": "user-uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-04-02T11:47:06.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-04-02T11:47:06.000Z"
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Comment"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "content",
+          "authorId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "comment-uuid"
+          },
+          "threadId": {
+            "type": "string",
+            "example": "thread-uuid"
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "content": {
+            "type": "string",
+            "example": "My comment"
+          },
+          "authorId": {
+            "type": "string",
+            "example": "user-uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-04-02T11:47:06.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-04-02T11:47:06.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "threadId",
+          "parentId",
+          "content",
+          "authorId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateThreadInput": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "example": "My First Thread"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Hello, this is the content of my first thread."
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ]
+      },
+      "CreateCommentInput": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Great thread!"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "uuid-of-parent-comment"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "BloodPressureRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recordedAt": {
+            "type": "string"
+          },
+          "systolic": {
+            "type": "integer"
+          },
+          "diastolic": {
+            "type": "integer"
+          },
+          "pulse": {
+            "type": "integer",
+            "nullable": true
+          },
+          "period": {
+            "$ref": "#/components/schemas/BloodPressurePeriod"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "valueHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "inputSource": {
+            "$ref": "#/components/schemas/HealthInputSource"
+          },
+          "syncSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "memo": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recordedAt",
+          "systolic",
+          "diastolic",
+          "pulse",
+          "period",
+          "externalId",
+          "valueHash",
+          "inputSource",
+          "syncSource",
+          "memo",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "BloodPressurePeriod": {
+        "type": "string",
+        "enum": [
+          "morning",
+          "evening",
+          "other"
+        ]
+      },
+      "HealthInputSource": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "device",
+          "import",
+          "api"
+        ]
+      },
+      "CreateBloodPressureInput": {
+        "type": "object",
+        "properties": {
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-07T08:30:00.000Z"
+          },
+          "timeZone": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "Asia/Tokyo"
+          },
+          "externalId": {
+            "type": "string",
+            "maxLength": 256,
+            "example": "healthkit:sample:123"
+          },
+          "valueHash": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$/i",
+            "description": "重複排除用 SHA-256 hex"
+          },
+          "inputSource": {
+            "$ref": "#/components/schemas/HealthInputSource"
+          },
+          "syncSource": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "apple_health"
+          },
+          "memo": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "systolic": {
+            "type": "integer",
+            "minimum": 40,
+            "maximum": 300,
+            "example": 120
+          },
+          "diastolic": {
+            "type": "integer",
+            "minimum": 20,
+            "maximum": 200,
+            "example": 80
+          },
+          "pulse": {
+            "type": "integer",
+            "minimum": 20,
+            "maximum": 250,
+            "example": 72
+          },
+          "period": {
+            "$ref": "#/components/schemas/BloodPressurePeriod"
+          }
+        },
+        "required": [
+          "recordedAt",
+          "systolic",
+          "diastolic",
+          "period"
+        ]
+      },
+      "BloodGlucoseRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recordedAt": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/BloodGlucoseUnit"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/BloodGlucoseTiming"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "valueHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "inputSource": {
+            "$ref": "#/components/schemas/HealthInputSource"
+          },
+          "syncSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "memo": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recordedAt",
+          "value",
+          "unit",
+          "timing",
+          "externalId",
+          "valueHash",
+          "inputSource",
+          "syncSource",
+          "memo",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "BloodGlucoseUnit": {
+        "type": "string",
+        "enum": [
+          "mg_dl",
+          "mmol_l"
+        ]
+      },
+      "BloodGlucoseTiming": {
+        "type": "string",
+        "enum": [
+          "fasting",
+          "postprandial",
+          "random"
+        ]
+      },
+      "CreateBloodGlucoseInput": {
+        "type": "object",
+        "properties": {
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-07T08:30:00.000Z"
+          },
+          "timeZone": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "Asia/Tokyo"
+          },
+          "externalId": {
+            "type": "string",
+            "maxLength": 256,
+            "example": "healthkit:sample:123"
+          },
+          "valueHash": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$/i",
+            "description": "重複排除用 SHA-256 hex"
+          },
+          "inputSource": {
+            "$ref": "#/components/schemas/HealthInputSource"
+          },
+          "syncSource": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "apple_health"
+          },
+          "memo": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "example": 95
+          },
+          "unit": {
+            "$ref": "#/components/schemas/BloodGlucoseUnit"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/BloodGlucoseTiming"
+          }
+        },
+        "required": [
+          "recordedAt",
+          "value",
+          "unit",
+          "timing"
+        ]
+      },
+      "MealRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recordedAt": {
+            "type": "string"
+          },
+          "items": {
+            "type": "string"
+          },
+          "estimatedCalories": {
+            "type": "integer",
+            "nullable": true
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "valueHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "inputSource": {
+            "$ref": "#/components/schemas/HealthInputSource"
+          },
+          "syncSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "memo": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recordedAt",
+          "items",
+          "estimatedCalories",
+          "externalId",
+          "valueHash",
+          "inputSource",
+          "syncSource",
+          "memo",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateMealInput": {
+        "type": "object",
+        "properties": {
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-07T08:30:00.000Z"
+          },
+          "timeZone": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "Asia/Tokyo"
+          },
+          "externalId": {
+            "type": "string",
+            "maxLength": 256,
+            "example": "healthkit:sample:123"
+          },
+          "valueHash": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$/i",
+            "description": "重複排除用 SHA-256 hex"
+          },
+          "inputSource": {
+            "$ref": "#/components/schemas/HealthInputSource"
+          },
+          "syncSource": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "apple_health"
+          },
+          "memo": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "example": "玄米ごはん、味噌汁、焼き魚"
+          },
+          "estimatedCalories": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000,
+            "example": 450
+          }
+        },
+        "required": [
+          "recordedAt",
+          "items"
+        ]
+      },
+      "ActivityRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recordedAt": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "integer",
+            "nullable": true
+          },
+          "activeMinutes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "caloriesBurned": {
+            "type": "integer",
+            "nullable": true
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "valueHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "inputSource": {
+            "$ref": "#/components/schemas/HealthInputSource"
+          },
+          "syncSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "memo": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recordedAt",
+          "steps",
+          "activeMinutes",
+          "caloriesBurned",
+          "externalId",
+          "valueHash",
+          "inputSource",
+          "syncSource",
+          "memo",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ActivitySyncBody": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivitySyncItem"
+            },
+            "minItems": 1,
+            "maxItems": 500
+          },
+          "syncSource": {
+            "type": "string",
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ActivitySyncItem": {
+        "type": "object",
+        "properties": {
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-07T08:30:00.000Z"
+          },
+          "timeZone": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "Asia/Tokyo"
+          },
+          "externalId": {
+            "type": "string",
+            "maxLength": 256,
+            "example": "healthkit:sample:123"
+          },
+          "valueHash": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$/i",
+            "description": "重複排除用 SHA-256 hex"
+          },
+          "inputSource": {
+            "$ref": "#/components/schemas/HealthInputSource"
+          },
+          "syncSource": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "apple_health"
+          },
+          "memo": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "steps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200000
+          },
+          "activeMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1440
+          },
+          "caloriesBurned": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000
+          }
+        },
+        "required": [
+          "recordedAt"
+        ]
+      },
+      "DailySummaryResponse": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "stepsTotal": {
+            "type": "integer"
+          },
+          "activeMinutesTotal": {
+            "type": "integer"
+          },
+          "activityCaloriesTotal": {
+            "type": "integer"
+          },
+          "mealCount": {
+            "type": "integer"
+          },
+          "latestBloodPressure": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodPressureRecord"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "latestBloodGlucose": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGlucoseRecord"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          }
+        },
+        "required": [
+          "date",
+          "stepsTotal",
+          "activeMinutesTotal",
+          "activityCaloriesTotal",
+          "mealCount",
+          "latestBloodPressure",
+          "latestBloodGlucose"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/health/live": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Liveness probe (process is up)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "alive"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "2026-04-02T11:47:06.000Z"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "timestamp",
+                    "version"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health/ready": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Readiness probe (dependencies are ready)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "connected"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "2026-04-02T11:47:06.000Z"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "database",
+                    "timestamp",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Readiness probe failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "connected"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "2026-04-02T11:47:06.000Z"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "database",
+                    "timestamp",
+                    "version"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Backward-compatible readiness endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "connected"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "2026-04-02T11:47:06.000Z"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "database",
+                    "timestamp",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Backward-compatible readiness endpoint failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "connected"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "2026-04-02T11:47:06.000Z"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "database",
+                    "timestamp",
+                    "version"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth/:provider": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "google"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to OAuth provider"
+          }
+        }
+      }
+    },
+    "/api/auth/oauth/:provider/callback": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "google"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "code",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "state",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to frontend with tokens"
+          }
+        }
+      }
+    },
+    "/api/auth/methods": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Get enabled authentication methods",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authMode": {
+                      "type": "string",
+                      "enum": [
+                        "local",
+                        "oauth",
+                        "both"
+                      ]
+                    },
+                    "local": {
+                      "type": "boolean"
+                    },
+                    "oauth": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "providers": {
+                          "type": "object",
+                          "properties": {
+                            "google": {
+                              "type": "boolean"
+                            },
+                            "github": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "google",
+                            "github"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "providers"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "authMode",
+                    "local",
+                    "oauth"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Registration successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "user"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "user"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Token refresh successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "user"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Get current user profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "email"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bbs/threads": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "List of all threads",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "threads": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Thread"
+                      }
+                    }
+                  },
+                  "required": [
+                    "threads"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateThreadInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thread created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Thread"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bbs/threads/:id": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "thread-uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The thread detail with comments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "thread": {
+                      "$ref": "#/components/schemas/Thread"
+                    }
+                  },
+                  "required": [
+                    "thread"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Thread not found"
+          }
+        }
+      }
+    },
+    "/api/bbs/threads/:id/comments": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "thread-uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCommentInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Thread not found"
+          }
+        }
+      }
+    },
+    "/api/v1/health/vitals/blood-pressure": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBloodPressureInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "既存と同一の外部 ID / 値ハッシュの場合は既存レコードを返す",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/components/schemas/BloodPressureRecord"
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "duplicate"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "新規作成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/components/schemas/BloodPressureRecord"
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "duplicate"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "血圧記録一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BloodPressureRecord"
+                      }
+                    }
+                  },
+                  "required": [
+                    "records"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/vitals/blood-pressure/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "血圧記録",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BloodPressureRecord"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "他ユーザーのデータ"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "put": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recordedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-04-07T08:30:00.000Z"
+                  },
+                  "timeZone": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "Asia/Tokyo"
+                  },
+                  "externalId": {
+                    "type": "string",
+                    "maxLength": 256,
+                    "example": "healthkit:sample:123"
+                  },
+                  "valueHash": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$/i",
+                    "description": "重複排除用 SHA-256 hex"
+                  },
+                  "inputSource": {
+                    "$ref": "#/components/schemas/HealthInputSource"
+                  },
+                  "syncSource": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "apple_health"
+                  },
+                  "memo": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "systolic": {
+                    "type": "integer",
+                    "minimum": 40,
+                    "maximum": 300,
+                    "example": 120
+                  },
+                  "diastolic": {
+                    "type": "integer",
+                    "minimum": 20,
+                    "maximum": 200,
+                    "example": 80
+                  },
+                  "pulse": {
+                    "type": "integer",
+                    "minimum": 20,
+                    "maximum": 250,
+                    "example": 72
+                  },
+                  "period": {
+                    "$ref": "#/components/schemas/BloodPressurePeriod"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新後の血圧記録",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BloodPressureRecord"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          }
+        }
+      }
+    },
+    "/api/v1/health/vitals/blood-glucose": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBloodGlucoseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "重複のため既存レコードを返却",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/components/schemas/BloodGlucoseRecord"
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "duplicate"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "血糖値記録を新規作成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/components/schemas/BloodGlucoseRecord"
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "duplicate"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "血糖値記録一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BloodGlucoseRecord"
+                      }
+                    }
+                  },
+                  "required": [
+                    "records"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/vitals/blood-glucose/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "血糖値記録",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BloodGlucoseRecord"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "他ユーザーのデータ"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "put": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recordedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-04-07T08:30:00.000Z"
+                  },
+                  "timeZone": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "Asia/Tokyo"
+                  },
+                  "externalId": {
+                    "type": "string",
+                    "maxLength": 256,
+                    "example": "healthkit:sample:123"
+                  },
+                  "valueHash": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$/i",
+                    "description": "重複排除用 SHA-256 hex"
+                  },
+                  "inputSource": {
+                    "$ref": "#/components/schemas/HealthInputSource"
+                  },
+                  "syncSource": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "apple_health"
+                  },
+                  "memo": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "value": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "example": 95
+                  },
+                  "unit": {
+                    "$ref": "#/components/schemas/BloodGlucoseUnit"
+                  },
+                  "timing": {
+                    "$ref": "#/components/schemas/BloodGlucoseTiming"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新後の血糖値記録",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BloodGlucoseRecord"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          }
+        }
+      }
+    },
+    "/api/v1/health/nutrition/meals": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMealInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "重複のため既存レコードを返却",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/components/schemas/MealRecord"
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "duplicate"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "食事記録を新規作成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record": {
+                      "$ref": "#/components/schemas/MealRecord"
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "record",
+                    "duplicate"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "食事記録一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MealRecord"
+                      }
+                    }
+                  },
+                  "required": [
+                    "records"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/activity/sync": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivitySyncBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "活動データの同期結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ActivityRecord"
+                      }
+                    },
+                    "inserted": {
+                      "type": "integer"
+                    },
+                    "duplicates": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "records",
+                    "inserted",
+                    "duplicates"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/activity/daily": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "指定日の活動集計",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "example": "2026-04-07"
+                    },
+                    "stepsTotal": {
+                      "type": "integer"
+                    },
+                    "activeMinutesTotal": {
+                      "type": "integer"
+                    },
+                    "caloriesBurnedTotal": {
+                      "type": "integer"
+                    },
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ActivityRecord"
+                      }
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "stepsTotal",
+                    "activeMinutesTotal",
+                    "caloriesBurnedTotal",
+                    "records"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/activity/records": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "期間内の運動記録一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ActivityRecord"
+                      }
+                    }
+                  },
+                  "required": [
+                    "records"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/summary/daily": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "日次健康サマリ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailySummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/summary/weekly": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": true,
+            "name": "weekStart",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "週次サマリ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "weekStart": {
+                      "type": "string"
+                    },
+                    "weekEnd": {
+                      "type": "string"
+                    },
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "stepsTotal": {
+                            "type": "integer"
+                          },
+                          "mealCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "stepsTotal",
+                          "mealCount"
+                        ]
+                      }
+                    },
+                    "avgSystolic": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "avgDiastolic": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "bloodPressureSampleCount": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "weekStart",
+                    "weekEnd",
+                    "days",
+                    "avgSystolic",
+                    "avgDiastolic",
+                    "bloodPressureSampleCount"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/summary/monthly": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-04"
+            },
+            "required": true,
+            "name": "yearMonth",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "月次サマリ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "yearMonth": {
+                      "type": "string"
+                    },
+                    "stepsTotal": {
+                      "type": "number"
+                    },
+                    "mealCount": {
+                      "type": "number"
+                    },
+                    "avgSteps": {
+                      "type": "number"
+                    },
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "stepsTotal": {
+                            "type": "number"
+                          },
+                          "mealCount": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "stepsTotal",
+                          "mealCount"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "yearMonth",
+                    "stepsTotal",
+                    "mealCount",
+                    "avgSteps",
+                    "days"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/nutrition/meals/{id}": {
+      "put": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recordedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-04-07T08:30:00.000Z"
+                  },
+                  "timeZone": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "Asia/Tokyo"
+                  },
+                  "externalId": {
+                    "type": "string",
+                    "maxLength": 256,
+                    "example": "healthkit:sample:123"
+                  },
+                  "valueHash": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$/i",
+                    "description": "重複排除用 SHA-256 hex"
+                  },
+                  "inputSource": {
+                    "$ref": "#/components/schemas/HealthInputSource"
+                  },
+                  "syncSource": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "apple_health"
+                  },
+                  "memo": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "example": "玄米ごはん、味噌汁、焼き魚"
+                  },
+                  "estimatedCalories": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20000,
+                    "example": 450
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新後の食事記録",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealRecord"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          }
+        }
+      }
+    }
+  }
+}

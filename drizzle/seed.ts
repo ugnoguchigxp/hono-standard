@@ -10,37 +10,36 @@ async function main() {
   const db = drizzle(client);
 
   try {
-    // Check if user already exists
-    const [existing] = await db.select().from(users).limit(1);
+    // Aggressively clear users to refresh credentials
+    console.log('Clearing existing records...');
+    await db.delete(comments);
+    await db.delete(threads);
+    await db.delete(users);
     
-    if (!existing) {
-      const passwordHash = await hashPassword('password123');
-      const [user] = await db.insert(users).values({
-        email: 'test@example.com',
-        name: 'Test User',
-        passwordHash,
-      }).returning();
+    const passwordHash = await hashPassword('8f7D9s2A1q5W4e3R');
+    const [user] = await db.insert(users).values({
+      email: 'ugnoguchigxp@gmail.com',
+      name: 'Admin User',
+      passwordHash,
+    }).returning();
 
-      console.log('Created test user:', user.email);
+    console.log('Created admin user:', user.email);
 
-      const [thread] = await db.insert(threads).values({
-        title: 'Welcome to Hono Standard BBS',
-        content: 'This is a sample thread to get you started.',
-        authorId: user.id
-      }).returning();
+    const [thread] = await db.insert(threads).values({
+      title: 'Welcome to Wellpathy.jp',
+      content: 'This is a sample thread to get you started.',
+      authorId: user.id
+    }).returning();
 
-      console.log('Created sample thread');
+    console.log('Created sample thread');
 
-      await db.insert(comments).values({
-        threadId: thread.id,
-        content: 'And this is a sample comment!',
-        authorId: user.id
-      });
+    await db.insert(comments).values({
+      threadId: thread.id,
+      content: 'And this is a sample comment!',
+      authorId: user.id
+    });
 
-      console.log('Created sample comment');
-    } else {
-      console.log('Database already has data. Skipping seed.');
-    }
+    console.log('Created sample comment');
   } catch (err) {
     console.error('Error seeding DB:', err);
   } finally {

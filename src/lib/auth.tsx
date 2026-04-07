@@ -1,5 +1,5 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
-import { client } from './api';
+import { authRpc } from './auth-rpc';
 
 interface User {
   id: string;
@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const res = await client.auth.me.$get({});
+        const res = await authRpc.me.$get({});
         if (res.ok) {
           const data = (await res.json()) as { userId: string; email: string };
           setUser({ id: data.userId, email: data.email });
@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await client.auth.logout.$post({});
+      await authRpc.logout.$post({});
     } catch {
       // ignore network error on logout
     }

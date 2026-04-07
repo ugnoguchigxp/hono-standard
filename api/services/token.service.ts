@@ -28,6 +28,7 @@ export const generateRefreshToken = async (
 ): Promise<string> => {
   const token = await new SignJWT({ ...payload, type: 'refresh' })
     .setProtectedHeader({ alg: 'HS256' })
+    .setJti(crypto.randomUUID())
     .setIssuedAt()
     .setExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
     .sign(secretKey);

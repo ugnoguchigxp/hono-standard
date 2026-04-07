@@ -10,16 +10,16 @@ const sanitize = (val: string) =>
 
 export const loginSchema = z
   .object({
-    email: z.string().email().openapi({ example: 'user@example.com' }),
-    password: z.string().min(1).openapi({ example: 'password123' }),
+    email: z.string().email().openapi({ example: 'ugnoguchigxp@gmail.com' }),
+    password: z.string().min(1).openapi({ example: '8f7D9s2A1q5W4e3R' }),
   })
   .openapi('LoginInput');
 
 export const registerSchema = z
   .object({
-    email: z.string().email().openapi({ example: 'user@example.com' }),
-    password: z.string().min(8).openapi({ example: 'password123' }),
-    name: z.string().min(1).transform(sanitize).openapi({ example: 'John Doe' }),
+    email: z.string().email().openapi({ example: 'ugnoguchigxp@gmail.com' }),
+    password: z.string().min(8).openapi({ example: '8f7D9s2A1q5W4e3R' }),
+    name: z.string().min(1).transform(sanitize).openapi({ example: 'Admin User' }),
   })
   .openapi('RegisterInput');
 

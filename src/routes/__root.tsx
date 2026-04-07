@@ -18,6 +18,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
             Home
           </Link>
           <Link to="/bbs">BBS</Link>
+          <Link to="/health">健康記録</Link>
           <div className="flex-1" />
           {auth.user ? (
             <>

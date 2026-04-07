@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import { client } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { authRpc } from '../lib/auth-rpc';
 
 export const Route = createFileRoute('/oauth/callback')({
   component: OAuthCallback,
@@ -14,7 +14,7 @@ function OAuthCallback() {
   useEffect(() => {
     async function finalizeOAuthLogin() {
       try {
-        const res = await client.auth.me.$get({});
+        const res = await authRpc.me.$get({});
         if (!res.ok) {
           navigate({ to: '/login' });
           return;
