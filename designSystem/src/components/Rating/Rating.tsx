@@ -50,7 +50,6 @@ export const Rating = React.memo(
         >
           {Array.from({ length: fullStars }).map((_, i) => (
             <Star
-              // biome-ignore lint/suspicious/noArrayIndexKey: 星の順序は固定
               key={`full-${i}`}
               size={starSize}
               fill={color}
@@ -73,7 +72,6 @@ export const Rating = React.memo(
 
           {Array.from({ length: emptyStars }).map((_, i) => (
             <Star
-              // biome-ignore lint/suspicious/noArrayIndexKey: 星の順序は固定
               key={`empty-${i}`}
               size={starSize}
               stroke={color}

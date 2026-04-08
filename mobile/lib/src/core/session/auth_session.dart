@@ -15,8 +15,12 @@ class AuthSession {
     return AuthSession(
       accessToken: json['accessToken'] as String? ?? '',
       refreshToken: json['refreshToken'] as String? ?? '',
-      userId: (json['user'] as Map<String, dynamic>? ?? const {})['id'] as String? ?? '',
-      email: (json['user'] as Map<String, dynamic>? ?? const {})['email'] as String? ?? '',
+      userId: (json['user'] as Map<String, dynamic>? ?? const {})['id']
+              as String? ??
+          '',
+      email: (json['user'] as Map<String, dynamic>? ?? const {})['email']
+              as String? ??
+          '',
     );
   }
 

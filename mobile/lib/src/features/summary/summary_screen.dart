@@ -46,7 +46,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
   List<_TimelineRow> _mapBloodPressure(Map<String, dynamic> response) {
     return (response['records'] as List<dynamic>? ?? const []).map((record) {
-      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)..['kind'] = 'blood_pressure';
+      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)
+        ..['kind'] = 'blood_pressure';
       return _TimelineRow(
         kind: 'blood_pressure',
         record: map,
@@ -59,7 +60,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
   List<_TimelineRow> _mapBloodGlucose(Map<String, dynamic> response) {
     return (response['records'] as List<dynamic>? ?? const []).map((record) {
-      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)..['kind'] = 'blood_glucose';
+      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)
+        ..['kind'] = 'blood_glucose';
       return _TimelineRow(
         kind: 'blood_glucose',
         record: map,
@@ -72,21 +74,25 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
   List<_TimelineRow> _mapMeals(Map<String, dynamic> response) {
     return (response['records'] as List<dynamic>? ?? const []).map((record) {
-      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)..['kind'] = 'meal';
+      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)
+        ..['kind'] = 'meal';
       final items = (map['items'] as String? ?? '').trim();
       return _TimelineRow(
         kind: 'meal',
         record: map,
         recordedAt: DateTime.parse(map['recordedAt'] as String),
         title: items.isEmpty ? '食事' : items,
-        subtitle: map['estimatedCalories'] != null ? '約 ${map['estimatedCalories']} kcal' : 'カロリー未設定',
+        subtitle: map['estimatedCalories'] != null
+            ? '約 ${map['estimatedCalories']} kcal'
+            : 'カロリー未設定',
       );
     }).toList();
   }
 
   List<_TimelineRow> _mapWeight(Map<String, dynamic> response) {
     return (response['records'] as List<dynamic>? ?? const []).map((record) {
-      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)..['kind'] = 'weight';
+      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)
+        ..['kind'] = 'weight';
       return _TimelineRow(
         kind: 'weight',
         record: map,
@@ -99,11 +105,14 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
   List<_TimelineRow> _mapActivity(Map<String, dynamic> response) {
     return (response['records'] as List<dynamic>? ?? const []).map((record) {
-      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)..['kind'] = 'activity';
+      final map = Map<String, dynamic>.from(record as Map<String, dynamic>)
+        ..['kind'] = 'activity';
       final parts = <String>[];
       if (map['steps'] != null) parts.add('歩数 ${map['steps']}');
-      if (map['activeMinutes'] != null) parts.add('活動 ${map['activeMinutes']} 分');
-      if (map['caloriesBurned'] != null) parts.add('消費 ${map['caloriesBurned']} kcal');
+      if (map['activeMinutes'] != null)
+        parts.add('活動 ${map['activeMinutes']} 分');
+      if (map['caloriesBurned'] != null)
+        parts.add('消費 ${map['caloriesBurned']} kcal');
       return _TimelineRow(
         kind: 'activity',
         record: map,
@@ -268,8 +277,9 @@ class _SummaryScreenState extends State<SummaryScreen> {
     }
 
     final rows = result.data ?? const <_TimelineRow>[];
-    final filtered =
-        _filter == 'all' ? rows : rows.where((row) => row.kind == _filter).toList();
+    final filtered = _filter == 'all'
+        ? rows
+        : rows.where((row) => row.kind == _filter).toList();
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),

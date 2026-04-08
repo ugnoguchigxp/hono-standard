@@ -1,0 +1,152 @@
+/opt/homebrew/share/flutter/packages/integration_test/example/web/flutter_bootstrap.js:5:1 lint/complexity/noUselessLoneBlockStatements ━━━━━━━━━━
+
+  i This block statement doesn't serve any purpose and can be safely removed.
+  
+    3 │ // found in the LICENSE file.
+    4 │ 
+  > 5 │ {
+      │ ^
+  > 6 │   flutter_js;
+  > 7 │ }
+      │ ^
+    8 │ {
+    9 │   flutter_build_config;
+  
+  i Standalone block statements without any block-level declarations are redundant in JavaScript and can be removed to simplify the code.
+  
+
+/opt/homebrew/share/flutter/packages/integration_test/example/web/flutter_bootstrap.js:8:1 lint/complexity/noUselessLoneBlockStatements ━━━━━━━━━━
+
+  i This block statement doesn't serve any purpose and can be safely removed.
+  
+     6 │   flutter_js;
+     7 │ }
+   > 8 │ {
+       │ ^
+   > 9 │   flutter_build_config;
+  > 10 │ }
+       │ ^
+    11 │ _flutter.loader.load({
+    12 │   config: {
+  
+  i Standalone block statements without any block-level declarations are redundant in JavaScript and can be removed to simplify the code.
+  
+
+designSystem/src/components/MenuBar/MenuDropdown.tsx:107:11 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    105 │       {items.map((item, index) => {
+    106 │         if (item.separator) {
+  > 107 │           // biome-ignore lint/suspicious/noArrayIndexKey: Separators do not have unique IDs and order is static
+        │           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    108 │           return <div key={`sep-${index}`} className="h-[1px] bg-border my-1 mx-3" />;
+    109 │         }
+  
+
+designSystem/src/components/Rating/Rating.tsx:53:16 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    51 │           {Array.from({ length: fullStars }).map((_, i) => (
+    52 │             <React.Fragment key={`full-${i}`}>
+  > 53 │               {/* biome-ignore lint/suspicious/noArrayIndexKey: 星の順序は固定 */}
+       │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    54 │               <Star size={starSize} fill={color} stroke={color} aria-hidden="true" />
+    55 │             </React.Fragment>
+  
+
+designSystem/src/components/Rating/Rating.tsx:72:16 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    70 │           {Array.from({ length: emptyStars }).map((_, i) => (
+    71 │             <React.Fragment key={`empty-${i}`}>
+  > 72 │               {/* biome-ignore lint/suspicious/noArrayIndexKey: 星の順序は固定 */}
+       │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    73 │               <Star size={starSize} stroke={color} fill="none" aria-hidden="true" />
+    74 │             </React.Fragment>
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:11:1 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+     9 │ }
+    10 │ 
+  > 11 │ // biome-ignore lint/a11y/useSemanticElements: Tab group implementation using buttons
+       │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    12 │ const ToggleGroup = React.forwardRef<HTMLDivElement, ToggleGroupProps>(
+    13 │   ({ value, onValueChange, className, children }, ref) => {
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:51:1 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    49 │ }
+    50 │ 
+  > 51 │ // biome-ignore lint/a11y/useSemanticElements: Tab items using buttons
+       │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    52 │ const ToggleGroupItem = React.forwardRef<HTMLButtonElement, ToggleGroupItemProps>(
+    53 │   ({ isSelected = false, onSelect, className, id, children }, ref) => {
+  
+
+/opt/homebrew/share/flutter/packages/integration_test/example/web/index.html:5:1 lint/a11y/useHtmlLang ━━━━━━━━━━
+
+  × Provide a lang attribute when using the html element.
+  
+     3 │ Use of this source code is governed by a BSD-style license that can be
+     4 │ found in the LICENSE file. -->
+   > 5 │ <html>
+       │ ^^^^^^
+   > 6 │ <head>
+        ...
+  > 23 │   <script src="flutter_bootstrap.js" async></script>
+  > 24 │ </body>
+  > 25 │ </html>
+       │ ^^^^^^^
+    26 │ 
+  
+  i Setting a lang attribute on HTML document elements configures the language used by screen readers when no user default is specified.
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:17:9 lint/a11y/useSemanticElements ━━━━━━━━━━
+
+  × The elements with this role can be changed to the following elements:
+    <fieldset>
+  
+    15 │       <div
+    16 │         ref={ref}
+  > 17 │         role="group"
+       │         ^^^^^^^^^^^^
+    18 │         className={cn(
+    19 │           'inline-flex items-center justify-center w-full',
+  
+  i For examples and more information, see WAI-ARIA Roles
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:58:9 lint/a11y/useSemanticElements ━━━━━━━━━━
+
+  × The elements with this role can be changed to the following elements:
+    <input type="radio">
+  
+    56 │         ref={ref}
+    57 │         type="button"
+  > 58 │         role="radio"
+       │         ^^^^^^^^^^^^
+    59 │         aria-checked={isSelected}
+    60 │         aria-label={`${children}`}
+  
+  i For examples and more information, see WAI-ARIA Roles
+  
+
+Checked 968 files in 254ms. No fixes applied.
+Found 3 errors.
+Found 5 warnings.
+Found 2 infos.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+

@@ -18,14 +18,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
   Future<Map<String, dynamic>> _loadSnapshot() async {
     final now = DateTime.now();
     final today = DateFormat('yyyy-MM-dd').format(now);
-    final weekAgo = DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 7)));
+    final weekAgo =
+        DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 7)));
 
     final summary = await widget.controller.api.getDailySummary(date: today);
-    final weights = await widget.controller.api.listWeight(from: weekAgo, to: today);
+    final weights =
+        await widget.controller.api.listWeight(from: weekAgo, to: today);
 
     return {
       'summary': summary,
@@ -33,7 +34,8 @@ class _HomeScreenState extends State<HomeScreen> {
     };
   }
 
-  Future<void> _openDetail(String kind, String title, IconData icon, Color color) async {
+  Future<void> _openDetail(
+      String kind, String title, IconData icon, Color color) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => MetricDetailScreen(
@@ -47,17 +49,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  num _overallScore(Map<String, dynamic> summary, Map<String, dynamic>? latestWeight) {
+  num _overallScore(
+      Map<String, dynamic> summary, Map<String, dynamic>? latestWeight) {
     final latestBp = summary['latestBloodPressure'] as Map<String, dynamic>?;
-    final latestGlucose = summary['latestBloodGlucose'] as Map<String, dynamic>?;
+    final latestGlucose =
+        summary['latestBloodGlucose'] as Map<String, dynamic>?;
     final bpScore = latestBp == null
         ? 10
-        : _rangeScore(latestBp['systolic'], 105, 135) + _rangeScore(latestBp['diastolic'], 65, 85);
-    final glucoseScore = latestGlucose == null ? 10 : _rangeScore(latestGlucose['value'], 75, 130);
+        : _rangeScore(latestBp['systolic'], 105, 135) +
+            _rangeScore(latestBp['diastolic'], 65, 85);
+    final glucoseScore = latestGlucose == null
+        ? 10
+        : _rangeScore(latestGlucose['value'], 75, 130);
     final activityScore = _rangeScore(summary['stepsTotal'], 3000, 9000);
     final mealScore = _rangeScore(7 - (summary['mealCount'] ?? 0), 2, 7);
     final weightScore = latestWeight == null ? 10 : 18;
-    return ((bpScore + glucoseScore + activityScore + mealScore + weightScore) / 5).round();
+    return ((bpScore + glucoseScore + activityScore + mealScore + weightScore) /
+            5)
+        .round();
   }
 
   num _rangeScore(dynamic value, num low, num high) {
@@ -139,12 +148,14 @@ class _MetricGrid extends StatelessWidget {
 
   final Map<String, dynamic> summary;
   final Map<String, dynamic>? latestWeight;
-  final Future<void> Function(String kind, String title, IconData icon, Color color) onOpenDetail;
+  final Future<void> Function(
+      String kind, String title, IconData icon, Color color) onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
     final latestBp = summary['latestBloodPressure'] as Map<String, dynamic>?;
-    final latestGlucose = summary['latestBloodGlucose'] as Map<String, dynamic>?;
+    final latestGlucose =
+        summary['latestBloodGlucose'] as Map<String, dynamic>?;
     final weightValue = latestWeight?['value'];
 
     return GridView(
@@ -163,7 +174,8 @@ class _MetricGrid extends StatelessWidget {
           value: (summary['stepsTotal'] ?? 0).toString(),
           subtitle: '活動 ${summary['activityCaloriesTotal'] ?? 0} kcal',
           color: Colors.blue,
-          onTap: () => onOpenDetail('activity', '運動', Icons.directions_walk_rounded, Colors.blue),
+          onTap: () => onOpenDetail(
+              'activity', '運動', Icons.directions_walk_rounded, Colors.blue),
         ),
         _MetricCard(
           icon: Icons.restaurant_rounded,
@@ -171,15 +183,20 @@ class _MetricGrid extends StatelessWidget {
           value: '${summary['mealCount'] ?? 0} 件',
           subtitle: '今日の記録数',
           color: Colors.orange,
-          onTap: () => onOpenDetail('meal', '食事', Icons.restaurant_rounded, Colors.orange),
+          onTap: () => onOpenDetail(
+              'meal', '食事', Icons.restaurant_rounded, Colors.orange),
         ),
         _MetricCard(
           icon: Icons.monitor_heart_rounded,
           title: '最新 血圧',
-          value: latestBp == null ? '—' : '${latestBp['systolic']} / ${latestBp['diastolic']}',
-          subtitle: latestBp?['pulse'] != null ? '脈拍 ${latestBp?['pulse']}' : 'mmHg',
+          value: latestBp == null
+              ? '—'
+              : '${latestBp['systolic']} / ${latestBp['diastolic']}',
+          subtitle:
+              latestBp?['pulse'] != null ? '脈拍 ${latestBp?['pulse']}' : 'mmHg',
           color: Colors.red,
-          onTap: () => onOpenDetail('blood_pressure', '血圧', Icons.monitor_heart_rounded, Colors.red),
+          onTap: () => onOpenDetail(
+              'blood_pressure', '血圧', Icons.monitor_heart_rounded, Colors.red),
         ),
         _MetricCard(
           icon: Icons.water_drop_rounded,
@@ -187,7 +204,8 @@ class _MetricGrid extends StatelessWidget {
           value: latestGlucose == null ? '—' : '${latestGlucose['value']}',
           subtitle: latestGlucose == null ? '—' : '${latestGlucose['unit']}',
           color: Colors.teal,
-          onTap: () => onOpenDetail('blood_glucose', '血糖', Icons.water_drop_rounded, Colors.teal),
+          onTap: () => onOpenDetail(
+              'blood_glucose', '血糖', Icons.water_drop_rounded, Colors.teal),
         ),
         _MetricCard(
           icon: Icons.scale_rounded,
@@ -195,7 +213,8 @@ class _MetricGrid extends StatelessWidget {
           value: weightValue == null ? '—' : weightValue.toString(),
           subtitle: weightValue == null ? '—' : 'kg',
           color: Colors.grey,
-          onTap: () => onOpenDetail('weight', '体重', Icons.scale_rounded, Colors.grey),
+          onTap: () =>
+              onOpenDetail('weight', '体重', Icons.scale_rounded, Colors.grey),
         ),
       ],
     );
@@ -230,7 +249,8 @@ class _MetricCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+            border:
+                Border.all(color: Theme.of(context).colorScheme.outlineVariant),
           ),
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -264,7 +284,10 @@ class _MetricCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     value,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -320,7 +343,10 @@ class _SummaryScoreCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '$value',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 4),
                   const Text('血圧・血糖・食事・運動・体重をまとめたスコアです'),

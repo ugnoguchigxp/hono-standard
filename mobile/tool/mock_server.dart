@@ -28,7 +28,8 @@ Future<void> main() async {
           'records': [
             {
               'id': '00000000-0000-0000-0000-000000000010',
-              'alertKey': 'Asia/Tokyo:high_blood_pressure_trend:2026-04-05:2026-04-07:',
+              'alertKey':
+                  'Asia/Tokyo:high_blood_pressure_trend:2026-04-05:2026-04-07:',
               'alertType': 'high_blood_pressure_trend',
               'severity': 'warning',
               'title': '高血圧傾向を検出しました',
@@ -93,7 +94,13 @@ Future<void> main() async {
               'reminderType': 'blood_pressure',
               'isEnabled': true,
               'localTime': '08:00',
-              'daysOfWeek': ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+              'daysOfWeek': [
+                'monday',
+                'tuesday',
+                'wednesday',
+                'thursday',
+                'friday'
+              ],
               'timeZone': 'Asia/Tokyo',
               'memo': null,
               'createdAt': '2026-04-07T09:00:00.000Z',

@@ -7,5 +7,6 @@ class Env {
   );
 
   /// `dart-define=USE_MOCK=true` でモック API に切り替え（開発用）
-  static const bool useMock = bool.fromEnvironment('USE_MOCK', defaultValue: false);
+  static const bool useMock =
+      bool.fromEnvironment('USE_MOCK', defaultValue: false);
 }

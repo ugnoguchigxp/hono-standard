@@ -207,7 +207,7 @@ function HealthHistory() {
             type="date"
             value={dateRange.from}
             onChange={(e) => setDateRange((d) => ({ ...d, from: e.target.value }))}
-            className="rounded-md border bg-background px-2 py-1"
+            className="rounded-md border bg-background px-2 py-1 text-foreground"
           />
           <label htmlFor="history-to" className="text-muted-foreground">
             終了
@@ -217,7 +217,7 @@ function HealthHistory() {
             type="date"
             value={dateRange.to}
             onChange={(e) => setDateRange((d) => ({ ...d, to: e.target.value }))}
-            className="rounded-md border bg-background px-2 py-1"
+            className="rounded-md border bg-background px-2 py-1 text-foreground"
           />
         </div>
       </header>

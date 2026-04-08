@@ -230,7 +230,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
         case 'weight':
           await api.deleteWeight(entry.record['id'] as String);
           break;
-      case 'activity':
+        case 'activity':
           await api.deleteActivity(entry.record['id'] as String);
           break;
       }
@@ -438,7 +438,8 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _GoalCard(
                       goal: goal,
-                      achievement: goalAchievements[goal['id'] as String? ?? ''],
+                      achievement:
+                          goalAchievements[goal['id'] as String? ?? ''],
                       color: widget.color,
                       onEdit: () => _saveGoal(goal: goal),
                       onDelete: () => _deleteGoal(goal),

@@ -11,7 +11,8 @@ class SessionStore {
 
   final SharedPreferences? _preferences;
 
-  Future<SharedPreferences> _prefs() async => _preferences ?? SharedPreferences.getInstance();
+  Future<SharedPreferences> _prefs() async =>
+      _preferences ?? SharedPreferences.getInstance();
 
   Future<AuthSession?> read() async {
     final prefs = await _prefs();

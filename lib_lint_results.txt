@@ -1,0 +1,132 @@
+designSystem/src/components/MenuBar/MenuDropdown.tsx:108:13 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    106 │         if (item.separator) {
+    107 │           return (
+  > 108 │             // biome-ignore lint/suspicious/noArrayIndexKey: Separators do not have unique IDs and order is static
+        │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    109 │             <div key={`sep-${index}`} className="h-[1px] bg-border my-1 mx-3" />
+    110 │           );
+  
+
+designSystem/src/components/Rating/Rating.tsx:53:15 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    51 │           {Array.from({ length: fullStars }).map((_, i) => (
+    52 │             <Star
+  > 53 │               // biome-ignore lint/suspicious/noArrayIndexKey: 星の順序は固定
+       │               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    54 │               key={`full-${i}`}
+    55 │               size={starSize}
+  
+
+designSystem/src/components/Rating/Rating.tsx:76:15 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    74 │           {Array.from({ length: emptyStars }).map((_, i) => (
+    75 │             <Star
+  > 76 │               // biome-ignore lint/suspicious/noArrayIndexKey: 星の順序は固定
+       │               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    77 │               key={`empty-${i}`}
+    78 │               size={starSize}
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:31:65 lint/suspicious/noExplicitAny ━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    29 │           if (!React.isValidElement(child)) return child;
+    30 │           const childProps = child.props as { value?: string };
+  > 31 │           return React.cloneElement(child as React.ReactElement<any>, {
+       │                                                                 ^^^
+    32 │             isSelected: childProps.value === value,
+    33 │             onSelect: () => childProps.value && onValueChange?.(childProps.value),
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:16:9 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    14 │       <div
+    15 │         ref={ref}
+  > 16 │         // biome-ignore lint/a11y/useSemanticElements: Tab group implementation using buttons
+       │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    17 │         role="group"
+    18 │         className={cn(
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:57:9 suppressions/unused ━━━━━━━━━━
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    55 │         ref={ref}
+    56 │         type="button"
+  > 57 │         // biome-ignore lint/a11y/useSemanticElements: Tab items using buttons
+       │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    58 │         role="radio"
+    59 │         aria-checked={isSelected}
+  
+
+designSystem/src/components/Alert/Alert.stories.tsx:24:9 lint/a11y/useButtonType ━━━━━━━━━━
+
+  × Provide an explicit type prop for the button element.
+  
+    22 │     if (!isVisible) {
+    23 │       return (
+  > 24 │         <button
+       │         ^^^^^^^
+  > 25 │           onClick={() => setIsVisible(true)}
+  > 26 │           className={cn('px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600')}
+  > 27 │         >
+       │         ^
+    28 │           Show Alert
+    29 │         </button>
+  
+  i The default type of a button is submit, which causes the submission of a form when placed inside a `form` element. This is likely not the behaviour that you want inside a React application.
+  
+  i Allowed button types are: submit, button or reset
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:17:9 lint/a11y/useSemanticElements ━━━━━━━━━━
+
+  × The elements with this role can be changed to the following elements:
+    <fieldset>
+  
+    15 │         ref={ref}
+    16 │         // biome-ignore lint/a11y/useSemanticElements: Tab group implementation using buttons
+  > 17 │         role="group"
+       │         ^^^^^^^^^^^^
+    18 │         className={cn(
+    19 │           'inline-flex items-center justify-center w-full',
+  
+  i For examples and more information, see WAI-ARIA Roles
+  
+
+designSystem/src/components/ToggleGroup/ToggleGroup.tsx:58:9 lint/a11y/useSemanticElements ━━━━━━━━━━
+
+  × The elements with this role can be changed to the following elements:
+    <input type="radio">
+  
+    56 │         type="button"
+    57 │         // biome-ignore lint/a11y/useSemanticElements: Tab items using buttons
+  > 58 │         role="radio"
+       │         ^^^^^^^^^^^^
+    59 │         aria-checked={isSelected}
+    60 │         aria-label={`${children}`}
+  
+  i For examples and more information, see WAI-ARIA Roles
+  
+
+Checked 274 files in 71ms. No fixes applied.
+Found 3 errors.
+Found 6 warnings.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+

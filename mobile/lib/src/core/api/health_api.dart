@@ -36,7 +36,8 @@ class HealthApiClient {
     }
   }
 
-  Map<String, dynamic> _map(Map<String, dynamic>? data) => data ?? <String, dynamic>{};
+  Map<String, dynamic> _map(Map<String, dynamic>? data) =>
+      data ?? <String, dynamic>{};
 
   List<Map<String, dynamic>> _records(Map<String, dynamic>? data, String key) {
     final list = (data?[key] as List<dynamic>? ?? const []);
@@ -185,7 +186,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> updateSyncPreference(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateSyncPreference(
+      Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.put<Map<String, dynamic>>(
         '/api/v1/health/sync/settings',
@@ -208,7 +210,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> updateHealthProfile(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateHealthProfile(
+      Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.put<Map<String, dynamic>>(
         '/api/v1/health/profile',
@@ -220,7 +223,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> registerNotificationDevice(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> registerNotificationDevice(
+      Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.post<Map<String, dynamic>>(
         '/api/v1/notifications/device-token',
@@ -276,7 +280,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> createHealthGoal(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> createHealthGoal(
+      Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.post<Map<String, dynamic>>(
         '/api/v1/health/goals',
@@ -288,7 +293,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> updateHealthGoal(String id, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateHealthGoal(
+      String id, Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.put<Map<String, dynamic>>(
         '/api/v1/health/goals/$id',
@@ -325,7 +331,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> createBloodPressure(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> createBloodPressure(
+      Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.post<Map<String, dynamic>>(
         '/api/v1/health/vitals/blood-pressure',
@@ -337,7 +344,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> updateBloodPressure(String id, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateBloodPressure(
+      String id, Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.put<Map<String, dynamic>>(
         '/api/v1/health/vitals/blood-pressure/$id',
@@ -359,7 +367,8 @@ class HealthApiClient {
     );
   }
 
-  Future<Map<String, dynamic>> listBloodPressure({String? from, String? to}) async {
+  Future<Map<String, dynamic>> listBloodPressure(
+      {String? from, String? to}) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.get<Map<String, dynamic>>(
         '/api/v1/health/vitals/blood-pressure',
@@ -375,7 +384,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> createBloodGlucose(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> createBloodGlucose(
+      Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.post<Map<String, dynamic>>(
         '/api/v1/health/vitals/blood-glucose',
@@ -387,7 +397,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> updateBloodGlucose(String id, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateBloodGlucose(
+      String id, Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.put<Map<String, dynamic>>(
         '/api/v1/health/vitals/blood-glucose/$id',
@@ -409,7 +420,8 @@ class HealthApiClient {
     );
   }
 
-  Future<Map<String, dynamic>> listBloodGlucose({String? from, String? to}) async {
+  Future<Map<String, dynamic>> listBloodGlucose(
+      {String? from, String? to}) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.get<Map<String, dynamic>>(
         '/api/v1/health/vitals/blood-glucose',
@@ -449,7 +461,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> updateMeal(String id, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateMeal(
+      String id, Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.put<Map<String, dynamic>>(
         '/api/v1/health/nutrition/meals/$id',
@@ -461,7 +474,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> updateActivity(String id, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateActivity(
+      String id, Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.put<Map<String, dynamic>>(
         '/api/v1/health/activity/records/$id',
@@ -521,7 +535,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> updateWeight(String id, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateWeight(
+      String id, Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.put<Map<String, dynamic>>(
         '/api/v1/health/vitals/weight/$id',
@@ -559,7 +574,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  Future<Map<String, dynamic>> getActivityRecords({String? from, String? to}) async {
+  Future<Map<String, dynamic>> getActivityRecords(
+      {String? from, String? to}) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.get<Map<String, dynamic>>(
         '/api/v1/health/activity/records',
@@ -590,7 +606,8 @@ class HealthApiClient {
     return _map(res.data);
   }
 
-  List<Map<String, dynamic>> listRecords(Map<String, dynamic> response, String key) {
+  List<Map<String, dynamic>> listRecords(
+      Map<String, dynamic> response, String key) {
     return _records(response, key);
   }
 }

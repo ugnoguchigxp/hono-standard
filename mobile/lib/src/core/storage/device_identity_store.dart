@@ -3,13 +3,15 @@ import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DeviceIdentityStore {
-  DeviceIdentityStore({SharedPreferences? preferences}) : _preferences = preferences;
+  DeviceIdentityStore({SharedPreferences? preferences})
+      : _preferences = preferences;
 
   static const _deviceTokenKey = 'hono_health_device_token';
 
   final SharedPreferences? _preferences;
 
-  Future<SharedPreferences> _prefs() async => _preferences ?? SharedPreferences.getInstance();
+  Future<SharedPreferences> _prefs() async =>
+      _preferences ?? SharedPreferences.getInstance();
 
   Future<String> readOrCreateDeviceToken() async {
     final prefs = await _prefs();

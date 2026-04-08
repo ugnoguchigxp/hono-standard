@@ -8,8 +8,7 @@ import '../storage/session_store.dart';
 import 'auth_session.dart';
 
 class AppController extends ChangeNotifier {
-  AppController({SessionStore? store})
-    : store = store ?? SessionStore() {
+  AppController({SessionStore? store}) : store = store ?? SessionStore() {
     api = HealthApiClient(this);
   }
 
@@ -57,7 +56,8 @@ class AppController extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    final session = await api.register(name: name, email: email, password: password);
+    final session =
+        await api.register(name: name, email: email, password: password);
     await _setSession(session);
   }
 

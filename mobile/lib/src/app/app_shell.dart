@@ -59,7 +59,10 @@ class _AppShellState extends State<AppShell> {
                   alignment: Alignment.bottomLeft,
                   child: Text(
                     'Hono Health',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),

@@ -1,0 +1,24 @@
+/Users/y.noguchi/Code/hono-standard/biome.json:54:5 deserialize ━━━━━━━━━━
+
+  × Found an unknown key `ignore`.
+  
+    52 │   },
+    53 │   "files": {
+  > 54 │     "ignore": ["/opt/homebrew/**", "**/node_modules/**", "**/dist/**"],
+       │     ^^^^^^^^
+    55 │     "includes": [
+    56 │       "**",
+  
+  i Known keys:
+  
+  - maxSize
+  - ignoreUnknown
+  - includes
+  - experimentalScannerIgnores
+  
+
+configuration ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Biome exited because the configuration resulted in errors. Please fix them.
+  
+
