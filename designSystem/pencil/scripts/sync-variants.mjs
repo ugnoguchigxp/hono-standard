@@ -46,7 +46,9 @@ for (const name of names) {
 
   // Validation: PascalCase with no spaces
   if (component.includes(' ')) {
-    namingWarnings.push(`"${name}": Component name part should not contain spaces. Use PascalCase.`);
+    namingWarnings.push(
+      `"${name}": Component name part should not contain spaces. Use PascalCase.`
+    );
   }
 
   if (component[0] !== component[0].toUpperCase()) continue;
@@ -74,15 +76,17 @@ function pascalToKebab(str) {
 }
 
 const penComponents = Object.keys(index);
-const codeFiles = fs.readdirSync(componentsDir).filter(f => f.endsWith('.tsx') && !f.endsWith('.test.tsx'));
-const codeComponents = codeFiles.map(f => f.replace('.tsx', ''));
+const codeFiles = fs
+  .readdirSync(componentsDir)
+  .filter((f) => f.endsWith('.tsx') && !f.endsWith('.test.tsx'));
+const codeComponents = codeFiles.map((f) => f.replace('.tsx', ''));
 
 const missingInCode = [];
 for (const pc of penComponents) {
   const kebab = pascalToKebab(pc);
   // Special handling for "BreadcrumbItem" -> "breadcrumb" etc if needed
   const variants = [kebab, kebab.replace(/-item$/, ''), kebab.replace(/-group$/, '')];
-  if (!variants.some(v => codeComponents.includes(v))) {
+  if (!variants.some((v) => codeComponents.includes(v))) {
     missingInCode.push(pc);
   }
 }
@@ -90,7 +94,7 @@ for (const pc of penComponents) {
 const missingInPen = [];
 for (const cc of codeComponents) {
   // Simplistic reverse mapping: kebabs are documented if their Pascal equivalent exists
-  const isDocumented = penComponents.some(pc => {
+  const isDocumented = penComponents.some((pc) => {
     const pk = pascalToKebab(pc);
     return pk === cc || pk.replace(/-item$/, '') === cc || pk.replace(/-group$/, '') === cc;
   });
@@ -127,15 +131,15 @@ console.log(`Components: ${Object.keys(index).length}, Variants: ${totalVariants
 
 if (namingWarnings.length > 0) {
   console.log('\n\x1b[33m⚠️  Naming Warnings:\x1b[0m');
-  namingWarnings.forEach(w => console.log(`  - ${w}`));
+  for (const w of namingWarnings) console.log(`  - ${w}`);
 }
 
 if (missingInCode.length > 0) {
   console.log('\n\x1b[33m⚠️  Missing in Code (.pen components not implemented):\x1b[0m');
-  missingInCode.forEach(c => console.log(`  - ${c} (expected ${pascalToKebab(c)}.tsx)`));
+  for (const c of missingInCode) console.log(`  - ${c} (expected ${pascalToKebab(c)}.tsx)`);
 }
 
 if (missingInPen.length > 0) {
   console.log('\n\x1b[31m❌ Missing in Pencil (Components not documented in .pen):\x1b[0m');
-  missingInPen.forEach(c => console.log(`  - ${c}`));
+  for (const c of missingInPen) console.log(`  - ${c}`);
 }

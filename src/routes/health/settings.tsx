@@ -14,6 +14,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { format, subDays } from 'date-fns';
 import { Bell, Clock, Download, FileJson, FileSpreadsheet, Settings } from 'lucide-react';
 import { useState } from 'react';
+import { DesignSettings } from '../../components/DesignSettings';
 import { healthRpc } from '../../lib/health-rpc';
 import {
   useHealthAlerts,
@@ -156,6 +157,24 @@ function HealthSettings() {
               <p className="text-sm text-muted-foreground">
                 {reportData?.report?.summary || 'レポート生成待ち'}
               </p>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Design Settings Section */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Settings className="h-4 w-4 text-primary" />
+            <h2 className="text-lg font-semibold">表示・デザイン</h2>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-bold">外観のカスタマイズ</CardTitle>
+              <CardDescription>テーマ、密度、フォントサイズなどを調整します。</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DesignSettings />
             </CardContent>
           </Card>
         </section>

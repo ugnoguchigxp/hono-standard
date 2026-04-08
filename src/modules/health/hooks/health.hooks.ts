@@ -88,6 +88,20 @@ export function useMeals(from?: string, to?: string) {
   });
 }
 
+export function useWeights(from?: string, to?: string) {
+  const tz = browserTimeZone();
+  return useQuery({
+    queryKey: ['health', 'weights', from, to, tz],
+    queryFn: async () => {
+      const res = await healthRpc.vitals.weight.$get({
+        query: { from, to, timeZone: tz },
+      });
+      if (!res.ok) throw new Error('Failed to fetch weight records');
+      return res.json();
+    },
+  });
+}
+
 export function useActivityRecords(from?: string, to?: string) {
   const tz = browserTimeZone();
   return useQuery({
@@ -112,6 +126,22 @@ export function useCreateBloodPressure() {
         json: input,
       });
       if (!res.ok) throw new Error('Failed to create blood pressure record');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['health'] });
+    },
+  });
+}
+
+export function useCreateBloodGlucose() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Record<string, unknown>) => {
+      const res = await healthRpc.vitals['blood-glucose'].$post({
+        json: input,
+      });
+      if (!res.ok) throw new Error('Failed to create blood glucose record');
       return res.json();
     },
     onSuccess: () => {
@@ -184,6 +214,22 @@ export function useDeleteBloodGlucose() {
   });
 }
 
+export function useCreateMeal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Record<string, unknown>) => {
+      const res = await healthRpc.nutrition.meals.$post({
+        json: input,
+      });
+      if (!res.ok) throw new Error('Failed to create meal record');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['health'] });
+    },
+  });
+}
+
 export function useUpdateMeal() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -194,6 +240,54 @@ export function useUpdateMeal() {
       });
       if (!res.ok) throw new Error('Failed to update meal record');
       return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['health'] });
+    },
+  });
+}
+
+export function useCreateWeight() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Record<string, unknown>) => {
+      const res = await healthRpc.vitals.weight.$post({
+        json: input,
+      });
+      if (!res.ok) throw new Error('Failed to create weight record');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['health'] });
+    },
+  });
+}
+
+export function useUpdateWeight() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: Record<string, unknown> }) => {
+      const res = await healthRpc.vitals.weight[':id'].$put({
+        param: { id },
+        json: input,
+      });
+      if (!res.ok) throw new Error('Failed to update weight record');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['health'] });
+    },
+  });
+}
+
+export function useDeleteWeight() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await healthRpc.vitals.weight[':id'].$delete({
+        param: { id },
+      });
+      if (!res.ok) throw new Error('Failed to delete weight record');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['health'] });

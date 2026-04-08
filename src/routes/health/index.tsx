@@ -9,6 +9,7 @@ import {
   useDailySummary,
   useHealthAlerts,
   useWeeklyHealthReport,
+  useWeights,
 } from '../../modules/health/hooks/health.hooks';
 
 export const Route = createFileRoute('/health/')({
@@ -23,11 +24,25 @@ function HealthDashboard() {
   const { data: summary, isLoading: isSummaryLoading } = useDailySummary(todayStr);
   const { data: bpRecords, isLoading: isBpLoading } = useBloodPressure(weekAgoStr, todayStr);
   const { data: gRecords, isLoading: isGLoading } = useBloodGlucose(weekAgoStr, todayStr);
+  const { data: weightRecords, isLoading: isWeightLoading } = useWeights(weekAgoStr, todayStr);
   const { data: alerts, isLoading: isAlertsLoading } = useHealthAlerts(false, 3);
   const { data: weeklyReport, isLoading: isWeeklyReportLoading } =
     useWeeklyHealthReport(weekStartStr);
+  const alertRows = (alerts?.records ?? []) as Array<{
+    id: string;
+    title: string;
+    message: string;
+    severity: string;
+  }>;
 
-  if (isSummaryLoading || isBpLoading || isGLoading || isAlertsLoading || isWeeklyReportLoading) {
+  if (
+    isSummaryLoading ||
+    isBpLoading ||
+    isGLoading ||
+    isWeightLoading ||
+    isAlertsLoading ||
+    isWeeklyReportLoading
+  ) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex animate-pulse flex-col items-center gap-4">
@@ -93,6 +108,13 @@ function HealthDashboard() {
                     }
                   : null
               }
+              latestWeight={
+                weightRecords?.records?.[0]
+                  ? {
+                      value: weightRecords.records[0].value,
+                    }
+                  : null
+              }
             />
           </div>
           <div className="lg:col-span-1">
@@ -106,9 +128,9 @@ function HealthDashboard() {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground/70">
             未読アラート
           </h2>
-          {alerts?.records?.length ? (
+          {alertRows.length ? (
             <div className="space-y-3">
-              {alerts.records.map((alert: any) => (
+              {alertRows.map((alert) => (
                 <div key={alert.id} className="rounded-lg border bg-background/80 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold">{alert.title}</p>

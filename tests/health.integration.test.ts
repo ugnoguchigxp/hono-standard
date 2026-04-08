@@ -5,28 +5,34 @@ const enabled = Boolean(process.env.DATABASE_URL);
 const d = enabled ? describe : describe.skip;
 
 let app: typeof import('../api/app').default;
+let sharedUser: { id: string; email: string };
+let sharedToken: string;
 
 d('health API integration (DB)', () => {
   beforeAll(async () => {
     const mod = await import('../api/app');
     app = mod.default;
-  });
 
-  it('register → 血圧登録 → 同内容は重複で 200', async () => {
-    const email = `hi-${Date.now()}-a@local.test`;
+    const email = `hi-${Date.now()}-shared@local.test`;
     const reg = await app.request('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email,
         password: 'password12345',
-        name: 'IntA',
+        name: 'SharedUser',
       }),
     });
     expect(reg.status).toBe(201);
-    const { user } = (await reg.json()) as { user: { id: string; email: string } };
-    const token = await generateAccessToken({ userId: user.id, email: user.email });
+    const payload = (await reg.json()) as { user: { id: string; email: string } };
+    sharedUser = payload.user;
+    sharedToken = await generateAccessToken({
+      userId: sharedUser.id,
+      email: sharedUser.email,
+    });
+  });
 
+  it('register → 血圧登録 → 同内容は重複で 200', async () => {
     const payload = {
       recordedAt: '2026-04-07T10:00:00.000Z',
       systolic: 121,
@@ -39,7 +45,7 @@ d('health API integration (DB)', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${sharedToken}`,
       },
       body: JSON.stringify(payload),
     });
@@ -51,7 +57,39 @@ d('health API integration (DB)', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${sharedToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    expect(second.status).toBe(200);
+    const secondBody = (await second.json()) as { duplicate: boolean };
+    expect(secondBody.duplicate).toBe(true);
+  });
+
+  it('register → 体重登録 → 同内容は重複で 200', async () => {
+    const payload = {
+      recordedAt: '2026-04-07T10:00:00.000Z',
+      value: 70.2,
+      timeZone: 'UTC',
+    };
+
+    const first = await app.request('/api/v1/health/vitals/weight', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sharedToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    expect(first.status).toBe(201);
+    const firstBody = (await first.json()) as { duplicate: boolean };
+    expect(firstBody.duplicate).toBe(false);
+
+    const second = await app.request('/api/v1/health/vitals/weight', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sharedToken}`,
       },
       body: JSON.stringify(payload),
     });
@@ -112,24 +150,11 @@ d('health API integration (DB)', () => {
   });
 
   it('運動同期と日次サマリ集計', async () => {
-    const email = `hi-${Date.now()}-c@local.test`;
-    const reg = await app.request('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password: 'password12345',
-        name: 'IntC',
-      }),
-    });
-    const { user } = (await reg.json()) as { user: { id: string; email: string } };
-    const token = await generateAccessToken({ userId: user.id, email: user.email });
-
     const sync = await app.request('/api/v1/health/activity/sync', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${sharedToken}`,
       },
       body: JSON.stringify({
         items: [
@@ -143,7 +168,7 @@ d('health API integration (DB)', () => {
     });
     expect(sync.status).toBe(200);
     const sum = await app.request('/api/v1/health/summary/daily?date=2026-06-15&timeZone=UTC', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${sharedToken}` },
     });
     expect(sum.status).toBe(200);
     const json = (await sum.json()) as { stepsTotal: number };
@@ -151,24 +176,11 @@ d('health API integration (DB)', () => {
   });
 
   it('GET /activity/records は期間内のレコードを返す', async () => {
-    const email = `hi-${Date.now()}-d@local.test`;
-    const reg = await app.request('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password: 'password12345',
-        name: 'IntD',
-      }),
-    });
-    const { user } = (await reg.json()) as { user: { id: string; email: string } };
-    const token = await generateAccessToken({ userId: user.id, email: user.email });
-
     await app.request('/api/v1/health/activity/sync', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${sharedToken}`,
       },
       body: JSON.stringify({
         items: [
@@ -184,7 +196,7 @@ d('health API integration (DB)', () => {
     const list = await app.request(
       '/api/v1/health/activity/records?from=2026-07-01&to=2026-07-01&timeZone=UTC',
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${sharedToken}` },
       }
     );
     expect(list.status).toBe(200);

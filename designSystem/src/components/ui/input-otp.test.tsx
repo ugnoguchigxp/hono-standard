@@ -21,7 +21,7 @@ describe('InputOTP', () => {
     const slots = screen.getAllByRole('textbox');
     expect(slots).toHaveLength(3);
     expect(slots[0]).toHaveValue('1');
-    
+
     await userEvent.type(slots[1], '2');
     expect(slots[1]).toHaveValue('2');
   });

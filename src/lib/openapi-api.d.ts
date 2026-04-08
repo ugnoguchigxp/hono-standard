@@ -493,160 +493,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/bbs/threads': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of all threads */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              threads: components['schemas']['Thread'][];
-            };
-          };
-        };
-      };
-    };
-    put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateThreadInput'];
-        };
-      };
-      responses: {
-        /** @description Thread created successfully */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Thread'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/bbs/threads/:id': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The thread detail with comments */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              thread: components['schemas']['Thread'];
-            };
-          };
-        };
-        /** @description Thread not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/bbs/threads/:id/comments': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateCommentInput'];
-        };
-      };
-      responses: {
-        /** @description Comment created successfully */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Comment'];
-          };
-        };
-        /** @description Thread not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/health/vitals/blood-pressure': {
     parameters: {
       query?: never;
@@ -1460,6 +1306,584 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/health/goals': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 健康目標一覧 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthGoalListResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateHealthGoalInput'];
+        };
+      };
+      responses: {
+        /** @description 健康目標を新規作成 */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthGoalRecord'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/goals/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 健康目標 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthGoalRecord'];
+          };
+        };
+      };
+    };
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['UpdateHealthGoalInput'];
+        };
+      };
+      responses: {
+        /** @description 更新後の健康目標 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthGoalRecord'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 削除成功 */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/goals/achievements': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          date?: string;
+          timeZone?: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 健康目標達成度 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthGoalAchievementResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/alerts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          isRead?: boolean | null;
+          limit?: number;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 健康アラート一覧 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthAlertListResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/alerts/{id}/read': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 既読化したアラート */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthAlertRecord'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/reports/weekly': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          weekStart?: string;
+          timeZone?: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 週次健康レポート */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['WeeklyHealthReportResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/reminders/settings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description リマインド設定一覧 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReminderSettingListResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/reminders/settings/{reminderType}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          reminderType: components['schemas']['ReminderType'];
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description リマインド設定 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReminderSettingRecord'];
+          };
+        };
+      };
+    };
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          reminderType: components['schemas']['ReminderType'];
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['UpdateReminderSettingInput'];
+        };
+      };
+      responses: {
+        /** @description 更新後のリマインド設定 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReminderSettingRecord'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/sync/settings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 健康同期設定 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthSyncPreferenceRecord'];
+          };
+        };
+      };
+    };
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['HealthSyncPreferenceInput'];
+        };
+      };
+      responses: {
+        /** @description 更新後の健康同期設定 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthSyncPreferenceRecord'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health/export': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          format?: components['schemas']['HealthExportFormat'];
+          from?: string;
+          to?: string;
+          timeZone?: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 健康データのエクスポート */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HealthExportResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/notifications/device-token': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 通知端末一覧 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['NotificationDeviceListResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['RegisterNotificationDeviceInput'];
+        };
+      };
+      responses: {
+        /** @description 通知端末登録 */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['NotificationDeviceRecord'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/notifications/device-token/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description 削除成功 */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1467,68 +1891,22 @@ export interface components {
     RegisterInput: {
       /**
        * Format: email
-       * @example user@example.com
+       * @example ugnoguchigxp@gmail.com
        */
       email: string;
-      /** @example password123 */
+      /** @example 8f7D9s2A1q5W4e3R */
       password: string;
-      /** @example John Doe */
+      /** @example Admin User */
       name: string;
     };
     LoginInput: {
       /**
        * Format: email
-       * @example user@example.com
+       * @example ugnoguchigxp@gmail.com
        */
       email: string;
-      /** @example password123 */
+      /** @example 8f7D9s2A1q5W4e3R */
       password: string;
-    };
-    Thread: {
-      /** @example thread-uuid */
-      id: string;
-      /** @example My Thread */
-      title: string;
-      /** @example Thread content */
-      content: string;
-      /** @example user-uuid */
-      authorId: string;
-      /** @example 2026-04-02T11:47:06.000Z */
-      createdAt: string;
-      /** @example 2026-04-02T11:47:06.000Z */
-      updatedAt: string;
-      comments?: components['schemas']['Comment'][];
-    };
-    Comment: {
-      /** @example comment-uuid */
-      id: string;
-      /** @example thread-uuid */
-      threadId: string;
-      /** @example null */
-      parentId: string | null;
-      /** @example My comment */
-      content: string;
-      /** @example user-uuid */
-      authorId: string;
-      /** @example 2026-04-02T11:47:06.000Z */
-      createdAt: string;
-      /** @example 2026-04-02T11:47:06.000Z */
-      updatedAt: string;
-    };
-    CreateThreadInput: {
-      /** @example My First Thread */
-      title: string;
-      /** @example Hello, this is the content of my first thread. */
-      content: string;
-    };
-    CreateCommentInput: {
-      /** @example Great thread! */
-      content: string;
-      /**
-       * Format: uuid
-       * @example uuid-of-parent-comment
-       */
-      parentId?: string;
     };
     BloodPressureRecord: {
       /** Format: uuid */
@@ -1696,6 +2074,258 @@ export interface components {
       mealCount: number;
       latestBloodPressure: components['schemas']['BloodPressureRecord'] & unknown;
       latestBloodGlucose: components['schemas']['BloodGlucoseRecord'] & unknown;
+    };
+    HealthGoalListResponse: {
+      records: components['schemas']['HealthGoalRecord'][];
+    };
+    HealthGoalRecord: {
+      /** Format: uuid */
+      id: string;
+      goalType: components['schemas']['HealthGoalType'];
+      period: components['schemas']['HealthGoalPeriod'];
+      targetValue: number | null;
+      targetMin: number | null;
+      targetMax: number | null;
+      /** @example 2026-04-07 */
+      startsOn: string;
+      /** @example 2026-04-07 */
+      endsOn: string | null;
+      isActive: boolean;
+      memo: string | null;
+      createdAt: string;
+      updatedAt: string;
+    };
+    /** @enum {string} */
+    HealthGoalType:
+      | 'daily_step_count'
+      | 'blood_pressure_systolic_max'
+      | 'blood_pressure_diastolic_max'
+      | 'blood_glucose_fasting_range'
+      | 'blood_glucose_postprandial_range'
+      | 'daily_calorie_limit'
+      | 'weekly_exercise_days';
+    /** @enum {string} */
+    HealthGoalPeriod: 'daily' | 'weekly';
+    CreateHealthGoalInput: {
+      goalType: components['schemas']['HealthGoalType'];
+      period?: components['schemas']['HealthGoalPeriod'];
+      /** @example 8000 */
+      targetValue?: number;
+      /** @example 80 */
+      targetMin?: number;
+      /** @example 120 */
+      targetMax?: number;
+      /** @example 2026-04-07 */
+      startsOn: string;
+      /** @example 2026-04-07 */
+      endsOn?: string;
+      /** @default true */
+      isActive: boolean;
+      memo?: string;
+    };
+    UpdateHealthGoalInput: {
+      goalType?: components['schemas']['HealthGoalType'];
+      period?: components['schemas']['HealthGoalPeriod'];
+      /** @example 8000 */
+      targetValue?: number;
+      /** @example 80 */
+      targetMin?: number;
+      /** @example 120 */
+      targetMax?: number;
+      /** @example 2026-04-07 */
+      startsOn?: string;
+      /** @example 2026-04-07 */
+      endsOn?: string;
+      isActive?: boolean;
+      memo?: string;
+    };
+    HealthGoalAchievementResponse: {
+      /** @example 2026-04-07 */
+      asOfDate: string;
+      items: components['schemas']['HealthGoalAchievementItem'][];
+    };
+    HealthGoalAchievementItem: {
+      goal: components['schemas']['HealthGoalRecord'];
+      /** @example 2026-04-07 */
+      asOfDate: string;
+      currentValue: number | null;
+      targetValue: number | null;
+      achievementRate: number;
+      achieved: boolean;
+      details: string | null;
+    };
+    HealthAlertListResponse: {
+      records: components['schemas']['HealthAlertRecord'][];
+    };
+    HealthAlertRecord: {
+      /** Format: uuid */
+      id: string;
+      alertKey: string;
+      alertType: components['schemas']['HealthAlertType'];
+      severity: components['schemas']['HealthAlertSeverity'];
+      title: string;
+      message: string;
+      timeZone: string;
+      /** @example 2026-04-07 */
+      periodStart: string;
+      /** @example 2026-04-07 */
+      periodEnd: string;
+      metricName: string | null;
+      currentValue: number | null;
+      thresholdValue: number | null;
+      /** Format: uuid */
+      goalId: string | null;
+      isRead: boolean;
+      readAt: string | null;
+      detectedAt: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+    /** @enum {string} */
+    HealthAlertType:
+      | 'high_blood_pressure_trend'
+      | 'low_blood_pressure_trend'
+      | 'high_blood_glucose_trend'
+      | 'insufficient_activity'
+      | 'goal_unmet_streak';
+    /** @enum {string} */
+    HealthAlertSeverity: 'info' | 'warning' | 'critical';
+    WeeklyHealthReportResponse: {
+      report: components['schemas']['WeeklyHealthReportRecord'];
+      generated: boolean;
+    };
+    WeeklyHealthReportRecord: {
+      /** Format: uuid */
+      id: string;
+      reportKey: string;
+      timeZone: string;
+      /** @example 2026-04-07 */
+      weekStart: string;
+      /** @example 2026-04-07 */
+      weekEnd: string;
+      generatedAt: string;
+      stepsTotal: number;
+      avgSteps: number;
+      activityCaloriesTotal: number;
+      mealCount: number;
+      mealCaloriesTotal: number;
+      mealCaloriesAverage: number | null;
+      avgSystolic: number | null;
+      avgDiastolic: number | null;
+      bloodPressureSampleCount: number;
+      avgFastingGlucose: number | null;
+      avgPostprandialGlucose: number | null;
+      bloodGlucoseSampleCount: number;
+      goalCount: number;
+      goalAchievementRateAverage: number | null;
+      previousWeekStepsTotal: number;
+      stepsDelta: number;
+      summary: string | null;
+      createdAt: string;
+      updatedAt: string;
+    };
+    ReminderSettingListResponse: {
+      records: components['schemas']['ReminderSettingRecord'][];
+    };
+    ReminderSettingRecord: {
+      /** Format: uuid */
+      id: string;
+      reminderType: components['schemas']['ReminderType'];
+      isEnabled: boolean;
+      /** @example 08:30 */
+      localTime: string;
+      daysOfWeek: components['schemas']['ReminderDayOfWeek'][];
+      timeZone: string;
+      memo: string | null;
+      createdAt: string;
+      updatedAt: string;
+    };
+    /** @enum {string} */
+    ReminderType: 'blood_pressure' | 'blood_glucose' | 'meal' | 'activity';
+    /** @enum {string} */
+    ReminderDayOfWeek:
+      | 'monday'
+      | 'tuesday'
+      | 'wednesday'
+      | 'thursday'
+      | 'friday'
+      | 'saturday'
+      | 'sunday';
+    UpdateReminderSettingInput: {
+      isEnabled?: boolean;
+      /** @example 08:30 */
+      localTime?: string;
+      daysOfWeek?: components['schemas']['ReminderDayOfWeek'][];
+      /** @example Asia/Tokyo */
+      timeZone?: string;
+      memo?: string;
+    };
+    HealthSyncPreferenceRecord: {
+      /** Format: uuid */
+      id: string;
+      isEnabled: boolean;
+      intervalHours: number;
+      wifiOnly: boolean;
+      lastSyncedAt: string | null;
+      memo: string | null;
+      createdAt: string;
+      updatedAt: string;
+    };
+    HealthSyncPreferenceInput: {
+      isEnabled?: boolean;
+      intervalHours?: number;
+      wifiOnly?: boolean;
+      memo?: string;
+    };
+    HealthExportResponse: {
+      /** @example 2026-04-07 */
+      exportDate: string;
+      format: components['schemas']['HealthExportFormat'];
+      period: {
+        /** @example 2026-04-07 */
+        from: string;
+        /** @example 2026-04-07 */
+        to: string;
+      };
+      records: {
+        bloodPressure: components['schemas']['BloodPressureRecord'][];
+        bloodGlucose: components['schemas']['BloodGlucoseRecord'][];
+        meals: components['schemas']['MealRecord'][];
+        activities: components['schemas']['ActivityRecord'][];
+        goals: components['schemas']['HealthGoalRecord'][];
+        alerts: components['schemas']['HealthAlertRecord'][];
+        reports: components['schemas']['WeeklyHealthReportRecord'][];
+        reminders: components['schemas']['ReminderSettingRecord'][];
+      };
+      files?: components['schemas']['HealthExportFile'][];
+    };
+    /** @enum {string} */
+    HealthExportFormat: 'json' | 'csv';
+    HealthExportFile: {
+      name: string;
+      contentType: string;
+      content: string;
+    };
+    NotificationDeviceListResponse: {
+      records: components['schemas']['NotificationDeviceRecord'][];
+    };
+    NotificationDeviceRecord: {
+      /** Format: uuid */
+      id: string;
+      platform: components['schemas']['NotificationPlatform'];
+      deviceToken: string;
+      pushEnabled: boolean;
+      lastSeenAt: string | null;
+      createdAt: string;
+      updatedAt: string;
+    };
+    /** @enum {string} */
+    NotificationPlatform: 'ios' | 'android' | 'web';
+    RegisterNotificationDeviceInput: {
+      platform: components['schemas']['NotificationPlatform'];
+      deviceToken: string;
+      /** @default true */
+      pushEnabled: boolean;
     };
   };
   responses: never;

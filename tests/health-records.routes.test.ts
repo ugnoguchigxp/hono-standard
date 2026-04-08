@@ -25,6 +25,18 @@ describe('Health records API (v1)', () => {
     expect(res.status).toBe(401);
   });
 
+  it('returns 401 for POST weight without token', async () => {
+    const res = await app.request('/api/v1/health/vitals/weight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recordedAt: '2026-04-07T08:30:00.000Z',
+        value: 70.2,
+      }),
+    });
+    expect(res.status).toBe(401);
+  });
+
   it('returns 401 for goal listing without token', async () => {
     const res = await app.request('/api/v1/health/goals', {
       method: 'GET',

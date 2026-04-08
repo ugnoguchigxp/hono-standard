@@ -12,24 +12,20 @@
           "email": {
             "type": "string",
             "format": "email",
-            "example": "user@example.com"
+            "example": "ugnoguchigxp@gmail.com"
           },
           "password": {
             "type": "string",
             "minLength": 8,
-            "example": "password123"
+            "example": "8f7D9s2A1q5W4e3R"
           },
           "name": {
             "type": "string",
             "minLength": 1,
-            "example": "John Doe"
+            "example": "Admin User"
           }
         },
-        "required": [
-          "email",
-          "password",
-          "name"
-        ]
+        "required": ["email", "password", "name"]
       },
       "LoginInput": {
         "type": "object",
@@ -37,141 +33,15 @@
           "email": {
             "type": "string",
             "format": "email",
-            "example": "user@example.com"
+            "example": "ugnoguchigxp@gmail.com"
           },
           "password": {
             "type": "string",
             "minLength": 1,
-            "example": "password123"
+            "example": "8f7D9s2A1q5W4e3R"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
-      },
-      "Thread": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "thread-uuid"
-          },
-          "title": {
-            "type": "string",
-            "example": "My Thread"
-          },
-          "content": {
-            "type": "string",
-            "example": "Thread content"
-          },
-          "authorId": {
-            "type": "string",
-            "example": "user-uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "example": "2026-04-02T11:47:06.000Z"
-          },
-          "updatedAt": {
-            "type": "string",
-            "example": "2026-04-02T11:47:06.000Z"
-          },
-          "comments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Comment"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "content",
-          "authorId",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "Comment": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "comment-uuid"
-          },
-          "threadId": {
-            "type": "string",
-            "example": "thread-uuid"
-          },
-          "parentId": {
-            "type": "string",
-            "nullable": true,
-            "example": null
-          },
-          "content": {
-            "type": "string",
-            "example": "My comment"
-          },
-          "authorId": {
-            "type": "string",
-            "example": "user-uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "example": "2026-04-02T11:47:06.000Z"
-          },
-          "updatedAt": {
-            "type": "string",
-            "example": "2026-04-02T11:47:06.000Z"
-          }
-        },
-        "required": [
-          "id",
-          "threadId",
-          "parentId",
-          "content",
-          "authorId",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CreateThreadInput": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "example": "My First Thread"
-          },
-          "content": {
-            "type": "string",
-            "minLength": 1,
-            "example": "Hello, this is the content of my first thread."
-          }
-        },
-        "required": [
-          "title",
-          "content"
-        ]
-      },
-      "CreateCommentInput": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "string",
-            "minLength": 1,
-            "example": "Great thread!"
-          },
-          "parentId": {
-            "type": "string",
-            "format": "uuid",
-            "example": "uuid-of-parent-comment"
-          }
-        },
-        "required": [
-          "content"
-        ]
+        "required": ["email", "password"]
       },
       "BloodPressureRecord": {
         "type": "object",
@@ -240,20 +110,11 @@
       },
       "BloodPressurePeriod": {
         "type": "string",
-        "enum": [
-          "morning",
-          "evening",
-          "other"
-        ]
+        "enum": ["morning", "evening", "other"]
       },
       "HealthInputSource": {
         "type": "string",
-        "enum": [
-          "manual",
-          "device",
-          "import",
-          "api"
-        ]
+        "enum": ["manual", "device", "import", "api"]
       },
       "CreateBloodPressureInput": {
         "type": "object",
@@ -313,12 +174,7 @@
             "$ref": "#/components/schemas/BloodPressurePeriod"
           }
         },
-        "required": [
-          "recordedAt",
-          "systolic",
-          "diastolic",
-          "period"
-        ]
+        "required": ["recordedAt", "systolic", "diastolic", "period"]
       },
       "BloodGlucoseRecord": {
         "type": "object",
@@ -382,18 +238,11 @@
       },
       "BloodGlucoseUnit": {
         "type": "string",
-        "enum": [
-          "mg_dl",
-          "mmol_l"
-        ]
+        "enum": ["mg_dl", "mmol_l"]
       },
       "BloodGlucoseTiming": {
         "type": "string",
-        "enum": [
-          "fasting",
-          "postprandial",
-          "random"
-        ]
+        "enum": ["fasting", "postprandial", "random"]
       },
       "CreateBloodGlucoseInput": {
         "type": "object",
@@ -444,12 +293,7 @@
             "$ref": "#/components/schemas/BloodGlucoseTiming"
           }
         },
-        "required": [
-          "recordedAt",
-          "value",
-          "unit",
-          "timing"
-        ]
+        "required": ["recordedAt", "value", "unit", "timing"]
       },
       "MealRecord": {
         "type": "object",
@@ -557,10 +401,7 @@
             "example": 450
           }
         },
-        "required": [
-          "recordedAt",
-          "items"
-        ]
+        "required": ["recordedAt", "items"]
       },
       "ActivityRecord": {
         "type": "object",
@@ -641,9 +482,7 @@
             "maxLength": 64
           }
         },
-        "required": [
-          "items"
-        ]
+        "required": ["items"]
       },
       "ActivitySyncItem": {
         "type": "object",
@@ -697,9 +536,7 @@
             "maximum": 20000
           }
         },
-        "required": [
-          "recordedAt"
-        ]
+        "required": ["recordedAt"]
       },
       "DailySummaryResponse": {
         "type": "object",
@@ -749,6 +586,856 @@
           "latestBloodPressure",
           "latestBloodGlucose"
         ]
+      },
+      "HealthGoalListResponse": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthGoalRecord"
+            }
+          }
+        },
+        "required": ["records"]
+      },
+      "HealthGoalRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "goalType": {
+            "$ref": "#/components/schemas/HealthGoalType"
+          },
+          "period": {
+            "$ref": "#/components/schemas/HealthGoalPeriod"
+          },
+          "targetValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "targetMin": {
+            "type": "number",
+            "nullable": true
+          },
+          "targetMax": {
+            "type": "number",
+            "nullable": true
+          },
+          "startsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "endsOn": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "memo": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "goalType",
+          "period",
+          "targetValue",
+          "targetMin",
+          "targetMax",
+          "startsOn",
+          "endsOn",
+          "isActive",
+          "memo",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "HealthGoalType": {
+        "type": "string",
+        "enum": [
+          "daily_step_count",
+          "blood_pressure_systolic_max",
+          "blood_pressure_diastolic_max",
+          "blood_glucose_fasting_range",
+          "blood_glucose_postprandial_range",
+          "daily_calorie_limit",
+          "weekly_exercise_days"
+        ]
+      },
+      "HealthGoalPeriod": {
+        "type": "string",
+        "enum": ["daily", "weekly"]
+      },
+      "CreateHealthGoalInput": {
+        "type": "object",
+        "properties": {
+          "goalType": {
+            "$ref": "#/components/schemas/HealthGoalType"
+          },
+          "period": {
+            "$ref": "#/components/schemas/HealthGoalPeriod"
+          },
+          "targetValue": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 1000000,
+            "example": 8000
+          },
+          "targetMin": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 1000000,
+            "example": 80
+          },
+          "targetMax": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 1000000,
+            "example": 120
+          },
+          "startsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "endsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "memo": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": ["goalType", "startsOn"]
+      },
+      "UpdateHealthGoalInput": {
+        "type": "object",
+        "properties": {
+          "goalType": {
+            "$ref": "#/components/schemas/HealthGoalType"
+          },
+          "period": {
+            "$ref": "#/components/schemas/HealthGoalPeriod"
+          },
+          "targetValue": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 1000000,
+            "example": 8000
+          },
+          "targetMin": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 1000000,
+            "example": 80
+          },
+          "targetMax": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 1000000,
+            "example": 120
+          },
+          "startsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "endsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "memo": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "HealthGoalAchievementResponse": {
+        "type": "object",
+        "properties": {
+          "asOfDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthGoalAchievementItem"
+            }
+          }
+        },
+        "required": ["asOfDate", "items"]
+      },
+      "HealthGoalAchievementItem": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "$ref": "#/components/schemas/HealthGoalRecord"
+          },
+          "asOfDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "currentValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "targetValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "achievementRate": {
+            "type": "number"
+          },
+          "achieved": {
+            "type": "boolean"
+          },
+          "details": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "goal",
+          "asOfDate",
+          "currentValue",
+          "targetValue",
+          "achievementRate",
+          "achieved",
+          "details"
+        ]
+      },
+      "HealthAlertListResponse": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthAlertRecord"
+            }
+          }
+        },
+        "required": ["records"]
+      },
+      "HealthAlertRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alertKey": {
+            "type": "string"
+          },
+          "alertType": {
+            "$ref": "#/components/schemas/HealthAlertType"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/HealthAlertSeverity"
+          },
+          "title": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "periodEnd": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "metricName": {
+            "type": "string",
+            "nullable": true
+          },
+          "currentValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "thresholdValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "goalId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "isRead": {
+            "type": "boolean"
+          },
+          "readAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "detectedAt": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "alertKey",
+          "alertType",
+          "severity",
+          "title",
+          "message",
+          "timeZone",
+          "periodStart",
+          "periodEnd",
+          "metricName",
+          "currentValue",
+          "thresholdValue",
+          "goalId",
+          "isRead",
+          "readAt",
+          "detectedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "HealthAlertType": {
+        "type": "string",
+        "enum": [
+          "high_blood_pressure_trend",
+          "low_blood_pressure_trend",
+          "high_blood_glucose_trend",
+          "insufficient_activity",
+          "goal_unmet_streak"
+        ]
+      },
+      "HealthAlertSeverity": {
+        "type": "string",
+        "enum": ["info", "warning", "critical"]
+      },
+      "WeeklyHealthReportResponse": {
+        "type": "object",
+        "properties": {
+          "report": {
+            "$ref": "#/components/schemas/WeeklyHealthReportRecord"
+          },
+          "generated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["report", "generated"]
+      },
+      "WeeklyHealthReportRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportKey": {
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "weekStart": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "weekEnd": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "generatedAt": {
+            "type": "string"
+          },
+          "stepsTotal": {
+            "type": "integer"
+          },
+          "avgSteps": {
+            "type": "number"
+          },
+          "activityCaloriesTotal": {
+            "type": "integer"
+          },
+          "mealCount": {
+            "type": "integer"
+          },
+          "mealCaloriesTotal": {
+            "type": "integer"
+          },
+          "mealCaloriesAverage": {
+            "type": "number",
+            "nullable": true
+          },
+          "avgSystolic": {
+            "type": "number",
+            "nullable": true
+          },
+          "avgDiastolic": {
+            "type": "number",
+            "nullable": true
+          },
+          "bloodPressureSampleCount": {
+            "type": "integer"
+          },
+          "avgFastingGlucose": {
+            "type": "number",
+            "nullable": true
+          },
+          "avgPostprandialGlucose": {
+            "type": "number",
+            "nullable": true
+          },
+          "bloodGlucoseSampleCount": {
+            "type": "integer"
+          },
+          "goalCount": {
+            "type": "integer"
+          },
+          "goalAchievementRateAverage": {
+            "type": "number",
+            "nullable": true
+          },
+          "previousWeekStepsTotal": {
+            "type": "integer"
+          },
+          "stepsDelta": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reportKey",
+          "timeZone",
+          "weekStart",
+          "weekEnd",
+          "generatedAt",
+          "stepsTotal",
+          "avgSteps",
+          "activityCaloriesTotal",
+          "mealCount",
+          "mealCaloriesTotal",
+          "mealCaloriesAverage",
+          "avgSystolic",
+          "avgDiastolic",
+          "bloodPressureSampleCount",
+          "avgFastingGlucose",
+          "avgPostprandialGlucose",
+          "bloodGlucoseSampleCount",
+          "goalCount",
+          "goalAchievementRateAverage",
+          "previousWeekStepsTotal",
+          "stepsDelta",
+          "summary",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ReminderSettingListResponse": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReminderSettingRecord"
+            }
+          }
+        },
+        "required": ["records"]
+      },
+      "ReminderSettingRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reminderType": {
+            "$ref": "#/components/schemas/ReminderType"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "localTime": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$",
+            "example": "08:30"
+          },
+          "daysOfWeek": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReminderDayOfWeek"
+            },
+            "minItems": 1,
+            "maxItems": 7
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "memo": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reminderType",
+          "isEnabled",
+          "localTime",
+          "daysOfWeek",
+          "timeZone",
+          "memo",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ReminderType": {
+        "type": "string",
+        "enum": ["blood_pressure", "blood_glucose", "meal", "activity"]
+      },
+      "ReminderDayOfWeek": {
+        "type": "string",
+        "enum": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+      },
+      "UpdateReminderSettingInput": {
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "localTime": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$",
+            "example": "08:30"
+          },
+          "daysOfWeek": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReminderDayOfWeek"
+            },
+            "minItems": 1,
+            "maxItems": 7
+          },
+          "timeZone": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "Asia/Tokyo"
+          },
+          "memo": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "HealthSyncPreferenceRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "intervalHours": {
+            "type": "integer"
+          },
+          "wifiOnly": {
+            "type": "boolean"
+          },
+          "lastSyncedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "memo": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "isEnabled",
+          "intervalHours",
+          "wifiOnly",
+          "lastSyncedAt",
+          "memo",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "HealthSyncPreferenceInput": {
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "intervalHours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24
+          },
+          "wifiOnly": {
+            "type": "boolean"
+          },
+          "memo": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "HealthExportResponse": {
+        "type": "object",
+        "properties": {
+          "exportDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-04-07"
+          },
+          "format": {
+            "$ref": "#/components/schemas/HealthExportFormat"
+          },
+          "period": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "example": "2026-04-07"
+              },
+              "to": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "example": "2026-04-07"
+              }
+            },
+            "required": ["from", "to"]
+          },
+          "records": {
+            "type": "object",
+            "properties": {
+              "bloodPressure": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/BloodPressureRecord"
+                }
+              },
+              "bloodGlucose": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/BloodGlucoseRecord"
+                }
+              },
+              "meals": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MealRecord"
+                }
+              },
+              "activities": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ActivityRecord"
+                }
+              },
+              "goals": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HealthGoalRecord"
+                }
+              },
+              "alerts": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HealthAlertRecord"
+                }
+              },
+              "reports": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/WeeklyHealthReportRecord"
+                }
+              },
+              "reminders": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ReminderSettingRecord"
+                }
+              }
+            },
+            "required": [
+              "bloodPressure",
+              "bloodGlucose",
+              "meals",
+              "activities",
+              "goals",
+              "alerts",
+              "reports",
+              "reminders"
+            ]
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthExportFile"
+            }
+          }
+        },
+        "required": ["exportDate", "format", "period", "records"]
+      },
+      "HealthExportFormat": {
+        "type": "string",
+        "enum": ["json", "csv"]
+      },
+      "HealthExportFile": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "contentType", "content"]
+      },
+      "NotificationDeviceListResponse": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationDeviceRecord"
+            }
+          }
+        },
+        "required": ["records"]
+      },
+      "NotificationDeviceRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/NotificationPlatform"
+          },
+          "deviceToken": {
+            "type": "string"
+          },
+          "pushEnabled": {
+            "type": "boolean"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "platform",
+          "deviceToken",
+          "pushEnabled",
+          "lastSeenAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "NotificationPlatform": {
+        "type": "string",
+        "enum": ["ios", "android", "web"]
+      },
+      "RegisterNotificationDeviceInput": {
+        "type": "object",
+        "properties": {
+          "platform": {
+            "$ref": "#/components/schemas/NotificationPlatform"
+          },
+          "deviceToken": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 512
+          },
+          "pushEnabled": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": ["platform", "deviceToken"]
       }
     },
     "parameters": {}
@@ -777,11 +1464,7 @@
                       "example": "1.0.0"
                     }
                   },
-                  "required": [
-                    "status",
-                    "timestamp",
-                    "version"
-                  ]
+                  "required": ["status", "timestamp", "version"]
                 }
               }
             }
@@ -816,12 +1499,7 @@
                       "example": "1.0.0"
                     }
                   },
-                  "required": [
-                    "status",
-                    "database",
-                    "timestamp",
-                    "version"
-                  ]
+                  "required": ["status", "database", "timestamp", "version"]
                 }
               }
             }
@@ -850,12 +1528,7 @@
                       "example": "1.0.0"
                     }
                   },
-                  "required": [
-                    "status",
-                    "database",
-                    "timestamp",
-                    "version"
-                  ]
+                  "required": ["status", "database", "timestamp", "version"]
                 }
               }
             }
@@ -890,12 +1563,7 @@
                       "example": "1.0.0"
                     }
                   },
-                  "required": [
-                    "status",
-                    "database",
-                    "timestamp",
-                    "version"
-                  ]
+                  "required": ["status", "database", "timestamp", "version"]
                 }
               }
             }
@@ -924,12 +1592,7 @@
                       "example": "1.0.0"
                     }
                   },
-                  "required": [
-                    "status",
-                    "database",
-                    "timestamp",
-                    "version"
-                  ]
+                  "required": ["status", "database", "timestamp", "version"]
                 }
               }
             }
@@ -1005,11 +1668,7 @@
                   "properties": {
                     "authMode": {
                       "type": "string",
-                      "enum": [
-                        "local",
-                        "oauth",
-                        "both"
-                      ]
+                      "enum": ["local", "oauth", "both"]
                     },
                     "local": {
                       "type": "boolean"
@@ -1030,23 +1689,13 @@
                               "type": "boolean"
                             }
                           },
-                          "required": [
-                            "google",
-                            "github"
-                          ]
+                          "required": ["google", "github"]
                         }
                       },
-                      "required": [
-                        "enabled",
-                        "providers"
-                      ]
+                      "required": ["enabled", "providers"]
                     }
                   },
-                  "required": [
-                    "authMode",
-                    "local",
-                    "oauth"
-                  ]
+                  "required": ["authMode", "local", "oauth"]
                 }
               }
             }
@@ -1083,15 +1732,10 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "id",
-                        "email"
-                      ]
+                      "required": ["id", "email"]
                     }
                   },
-                  "required": [
-                    "user"
-                  ]
+                  "required": ["user"]
                 }
               }
             }
@@ -1128,15 +1772,10 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "id",
-                        "email"
-                      ]
+                      "required": ["id", "email"]
                     }
                   },
-                  "required": [
-                    "user"
-                  ]
+                  "required": ["user"]
                 }
               }
             }
@@ -1164,15 +1803,10 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "id",
-                        "email"
-                      ]
+                      "required": ["id", "email"]
                     }
                   },
-                  "required": [
-                    "user"
-                  ]
+                  "required": ["user"]
                 }
               }
             }
@@ -1194,9 +1828,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "success"
-                  ]
+                  "required": ["success"]
                 }
               }
             }
@@ -1222,142 +1854,10 @@
                       "format": "email"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "email"
-                  ]
+                  "required": ["userId", "email"]
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/bbs/threads": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "List of all threads",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "threads": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Thread"
-                      }
-                    }
-                  },
-                  "required": [
-                    "threads"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateThreadInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Thread created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Thread"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/bbs/threads/:id": {
-      "get": {
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "example": "thread-uuid"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The thread detail with comments",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "thread": {
-                      "$ref": "#/components/schemas/Thread"
-                    }
-                  },
-                  "required": [
-                    "thread"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Thread not found"
-          }
-        }
-      }
-    },
-    "/api/bbs/threads/:id/comments": {
-      "post": {
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "example": "thread-uuid"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCommentInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Comment created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Comment"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Thread not found"
           }
         }
       }
@@ -1388,10 +1888,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "record",
-                    "duplicate"
-                  ]
+                  "required": ["record", "duplicate"]
                 }
               }
             }
@@ -1410,10 +1907,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "record",
-                    "duplicate"
-                  ]
+                  "required": ["record", "duplicate"]
                 }
               }
             }
@@ -1468,9 +1962,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "records"
-                  ]
+                  "required": ["records"]
                 }
               }
             }
@@ -1645,10 +2137,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "record",
-                    "duplicate"
-                  ]
+                  "required": ["record", "duplicate"]
                 }
               }
             }
@@ -1667,10 +2156,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "record",
-                    "duplicate"
-                  ]
+                  "required": ["record", "duplicate"]
                 }
               }
             }
@@ -1725,9 +2211,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "records"
-                  ]
+                  "required": ["records"]
                 }
               }
             }
@@ -1893,10 +2377,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "record",
-                    "duplicate"
-                  ]
+                  "required": ["record", "duplicate"]
                 }
               }
             }
@@ -1915,10 +2396,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "record",
-                    "duplicate"
-                  ]
+                  "required": ["record", "duplicate"]
                 }
               }
             }
@@ -1973,9 +2451,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "records"
-                  ]
+                  "required": ["records"]
                 }
               }
             }
@@ -2015,11 +2491,7 @@
                       "type": "integer"
                     }
                   },
-                  "required": [
-                    "records",
-                    "inserted",
-                    "duplicates"
-                  ]
+                  "required": ["records", "inserted", "duplicates"]
                 }
               }
             }
@@ -2142,9 +2614,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "records"
-                  ]
+                  "required": ["records"]
                 }
               }
             }
@@ -2243,11 +2713,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "date",
-                          "stepsTotal",
-                          "mealCount"
-                        ]
+                        "required": ["date", "stepsTotal", "mealCount"]
                       }
                     },
                     "avgSystolic": {
@@ -2326,21 +2792,11 @@
                             "type": "number"
                           }
                         },
-                        "required": [
-                          "date",
-                          "stepsTotal",
-                          "mealCount"
-                        ]
+                        "required": ["date", "stepsTotal", "mealCount"]
                       }
                     }
                   },
-                  "required": [
-                    "yearMonth",
-                    "stepsTotal",
-                    "mealCount",
-                    "avgSteps",
-                    "days"
-                  ]
+                  "required": ["yearMonth", "stepsTotal", "mealCount", "avgSteps", "days"]
                 }
               }
             }
@@ -2430,6 +2886,494 @@
           }
         }
       },
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          }
+        }
+      }
+    },
+    "/api/v1/health/goals": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "健康目標一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthGoalListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHealthGoalInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "健康目標を新規作成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthGoalRecord"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/goals/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "健康目標",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthGoalRecord"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHealthGoalInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新後の健康目標",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthGoalRecord"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          }
+        }
+      }
+    },
+    "/api/v1/health/goals/achievements": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "健康目標達成度",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthGoalAchievementResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/alerts": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            },
+            "required": false,
+            "name": "isRead",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "健康アラート一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthAlertListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/alerts/{id}/read": {
+      "put": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "既読化したアラート",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthAlertRecord"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/reports/weekly": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "weekStart",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "週次健康レポート",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyHealthReportResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/reminders/settings": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "リマインド設定一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderSettingListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/reminders/settings/{reminderType}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ReminderType"
+            },
+            "required": true,
+            "name": "reminderType",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "リマインド設定",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderSettingRecord"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ReminderType"
+            },
+            "required": true,
+            "name": "reminderType",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReminderSettingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新後のリマインド設定",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderSettingRecord"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/sync/settings": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "健康同期設定",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthSyncPreferenceRecord"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HealthSyncPreferenceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新後の健康同期設定",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthSyncPreferenceRecord"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/export": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/HealthExportFormat"
+            },
+            "required": false,
+            "name": "format",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-04-07"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "example": "Asia/Tokyo"
+            },
+            "required": false,
+            "name": "timeZone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "健康データのエクスポート",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthExportResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/device-token": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "通知端末一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationDeviceListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterNotificationDeviceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "通知端末登録",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationDeviceRecord"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/device-token/{id}": {
       "delete": {
         "parameters": [
           {

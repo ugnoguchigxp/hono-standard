@@ -4,6 +4,7 @@ import {
   hashBloodGlucose,
   hashBloodPressure,
   hashMeal,
+  hashWeight,
 } from '../api/modules/health/health.service';
 import { getLocalDayRange, toLocalDateString } from '../api/modules/health/health-timezone';
 import {
@@ -12,6 +13,7 @@ import {
   createBloodPressureSchema,
   createHealthGoalSchema,
   createMealSchema,
+  createWeightSchema,
   dateQuerySchema,
   healthAlertListQuerySchema,
   healthExportQuerySchema,
@@ -61,6 +63,14 @@ describe('health shared schemas', () => {
       estimatedCalories: 600,
     });
     expect(parsed.items).toBe('ランチ');
+  });
+
+  it('validates weight', () => {
+    const parsed = createWeightSchema.parse({
+      recordedAt: '2026-04-07T08:30:00.000Z',
+      value: 70.2,
+    });
+    expect(parsed.value).toBe(70.2);
   });
 
   it('validates activity sync requires at least one metric', () => {
@@ -200,6 +210,16 @@ describe('health hash helpers', () => {
       estimatedCalories: 420,
     });
     expect(hashMeal('user-1', mealA)).toBe(hashMeal('user-1', mealB));
+
+    const weightA = createWeightSchema.parse({
+      recordedAt: '2026-04-07T08:30:00.000Z',
+      value: 70.2,
+    });
+    const weightB = createWeightSchema.parse({
+      recordedAt: '2026-04-07T17:30:00+09:00',
+      value: 70.2,
+    });
+    expect(hashWeight('user-1', weightA)).toBe(hashWeight('user-1', weightB));
 
     const activityA = {
       recordedAt: '2026-04-07T08:30:00.000Z',

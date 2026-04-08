@@ -9,7 +9,7 @@ import {
   Switch,
 } from '@repo/design-system';
 import { createFileRoute } from '@tanstack/react-router';
-import { CheckCircle2, Circle, Pencil, Plus, Target, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Target, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { GoalDialog } from '../../modules/health/components/GoalDialog';
 import {

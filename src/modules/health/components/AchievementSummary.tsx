@@ -1,7 +1,6 @@
 import { Badge } from '@repo/design-system/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/design-system/components/ui/card';
 import { Progress } from '@repo/design-system/components/ui/progress';
-import { format } from 'date-fns';
 import { CheckCircle2, Circle, Target } from 'lucide-react';
 import { useHealthGoalAchievements } from '../hooks/health.hooks';
 

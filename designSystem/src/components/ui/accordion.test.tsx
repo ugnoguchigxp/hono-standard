@@ -16,11 +16,11 @@ describe('Accordion', () => {
 
     const trigger = screen.getByRole('button', { name: /is it accessible/i });
     expect(trigger).toBeInTheDocument();
-    
+
     // Initially content is hidden or has data-closed
-    const content = screen.queryByText(/yes\. it adheres/i);
+    const _content = screen.queryByText(/yes\. it adheres/i);
     // BaseUI typically hides it or uses data-open/closed
-    
+
     await userEvent.click(trigger);
     expect(screen.getByText(/yes\. it adheres/i)).toBeInTheDocument();
   });

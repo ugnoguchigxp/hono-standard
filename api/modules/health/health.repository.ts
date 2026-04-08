@@ -7,6 +7,7 @@ import {
   dailyHealthSummaries,
   healthSyncStates,
   mealRecords,
+  weightRecords,
 } from '../../db/schema';
 import {
   getLocalDateRange,
@@ -20,6 +21,7 @@ export { getLocalDateRange, getLocalDayRange, normalizeTimeZone, toLocalDateStri
 export type BloodPressureRow = typeof bloodPressureRecords.$inferSelect;
 export type BloodGlucoseRow = typeof bloodGlucoseRecords.$inferSelect;
 export type MealRow = typeof mealRecords.$inferSelect;
+export type WeightRow = typeof weightRecords.$inferSelect;
 export type ActivityRow = typeof activityRecords.$inferSelect;
 
 export const findBloodPressureByExternalOrHash = async (
@@ -248,6 +250,76 @@ export const findMealById = async (id: string) => {
   return row ?? null;
 };
 
+export const findWeightByExternalOrHash = async (
+  userId: string,
+  externalId: string | null | undefined,
+  valueHash: string | null | undefined
+) => {
+  if (externalId) {
+    const [row] = await db
+      .select()
+      .from(weightRecords)
+      .where(and(eq(weightRecords.userId, userId), eq(weightRecords.externalId, externalId)))
+      .limit(1);
+    if (row) return row;
+  }
+  if (valueHash) {
+    const [row] = await db
+      .select()
+      .from(weightRecords)
+      .where(and(eq(weightRecords.userId, userId), eq(weightRecords.valueHash, valueHash)))
+      .limit(1);
+    if (row) return row;
+  }
+  return null;
+};
+
+export const insertWeight = async (values: typeof weightRecords.$inferInsert) => {
+  const [row] = await db.insert(weightRecords).values(values).returning();
+  return row;
+};
+
+export const listWeightByUser = async (
+  userId: string,
+  fromDateStr: string,
+  toDateStr: string,
+  timeZone?: string | null
+) => {
+  const { start, endExclusive } = getLocalDateRange(fromDateStr, toDateStr, timeZone);
+  return db
+    .select()
+    .from(weightRecords)
+    .where(
+      and(
+        eq(weightRecords.userId, userId),
+        gte(weightRecords.recordedAt, start),
+        lt(weightRecords.recordedAt, endExclusive)
+      )
+    )
+    .orderBy(desc(weightRecords.recordedAt));
+};
+
+export const findWeightById = async (id: string) => {
+  const [row] = await db.select().from(weightRecords).where(eq(weightRecords.id, id)).limit(1);
+  return row ?? null;
+};
+
+export const updateWeight = async (
+  id: string,
+  values: Partial<typeof weightRecords.$inferInsert>
+) => {
+  const [row] = await db
+    .update(weightRecords)
+    .set({ ...values, updatedAt: new Date() })
+    .where(eq(weightRecords.id, id))
+    .returning();
+  return row;
+};
+
+export const deleteWeight = async (id: string) => {
+  await db.delete(weightRecords).where(eq(weightRecords.id, id));
+};
+
 export const findActivityByExternalOrHash = async (
   userId: string,
   externalId: string | null | undefined,
@@ -275,6 +347,27 @@ export const findActivityByExternalOrHash = async (
 export const insertActivity = async (values: typeof activityRecords.$inferInsert) => {
   const [row] = await db.insert(activityRecords).values(values).returning();
   return row;
+};
+
+export const findActivityById = async (id: string) => {
+  const [row] = await db.select().from(activityRecords).where(eq(activityRecords.id, id)).limit(1);
+  return row ?? null;
+};
+
+export const updateActivity = async (
+  id: string,
+  values: Partial<typeof activityRecords.$inferInsert>
+) => {
+  const [row] = await db
+    .update(activityRecords)
+    .set({ ...values, updatedAt: new Date() })
+    .where(eq(activityRecords.id, id))
+    .returning();
+  return row;
+};
+
+export const deleteActivity = async (id: string) => {
+  await db.delete(activityRecords).where(eq(activityRecords.id, id));
 };
 
 export const listActivityByUserDay = async (
@@ -482,6 +575,20 @@ export const listMealsInRange = async (userId: string, from: Date, toExclusive: 
       )
     )
     .orderBy(desc(mealRecords.recordedAt));
+};
+
+export const listWeightInRange = async (userId: string, from: Date, toExclusive: Date) => {
+  return db
+    .select()
+    .from(weightRecords)
+    .where(
+      and(
+        eq(weightRecords.userId, userId),
+        gte(weightRecords.recordedAt, from),
+        lt(weightRecords.recordedAt, toExclusive)
+      )
+    )
+    .orderBy(desc(weightRecords.recordedAt));
 };
 
 export const aggregateDayMetrics = async (

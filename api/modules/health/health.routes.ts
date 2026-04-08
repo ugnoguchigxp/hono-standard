@@ -1,14 +1,18 @@
 import { createRoute, z } from '@hono/zod-openapi';
 import {
+  activityCreateResponseSchema,
+  activityRecordSchema,
   activitySyncBodySchema,
   activitySyncResponseSchema,
   bloodGlucoseCreateResponseSchema,
   bloodGlucoseRecordSchema,
   bloodPressureCreateResponseSchema,
   bloodPressureRecordSchema,
+  createActivitySchema,
   createBloodGlucoseSchema,
   createBloodPressureSchema,
   createMealSchema,
+  createWeightSchema,
   dailyActivityResponseSchema,
   dailySummaryResponseSchema,
   dateQuerySchema,
@@ -16,11 +20,14 @@ import {
   listBloodGlucoseResponseSchema,
   listBloodPressureResponseSchema,
   listMealsResponseSchema,
+  listWeightResponseSchema,
   mealCreateResponseSchema,
   mealRecordSchema,
   summaryDateQuerySchema,
   weeklySummaryQuerySchema,
   weeklySummaryResponseSchema,
+  weightCreateResponseSchema,
+  weightRecordSchema,
 } from '../../../shared/schemas/health.schema';
 import { AuthError } from '../../lib/errors';
 import { createOpenApiRouter } from '../../lib/openapi';
@@ -185,6 +192,68 @@ const postMealRoute = createRoute({
   },
 });
 
+const postWeightRoute = createRoute({
+  method: 'post',
+  path: '/vitals/weight',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: createWeightSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: '重複のため既存レコードを返却',
+      content: {
+        'application/json': { schema: weightCreateResponseSchema },
+      },
+    },
+    201: {
+      description: '体重記録を新規作成',
+      content: {
+        'application/json': { schema: weightCreateResponseSchema },
+      },
+    },
+  },
+});
+
+const listWeightRoute = createRoute({
+  method: 'get',
+  path: '/vitals/weight',
+  request: { query: dateQuerySchema },
+  responses: {
+    200: {
+      description: '体重記録一覧',
+      content: {
+        'application/json': { schema: listWeightResponseSchema },
+      },
+    },
+  },
+});
+
+const getWeightByIdRoute = createRoute({
+  method: 'get',
+  path: '/vitals/weight/{id}',
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '体重記録',
+      content: {
+        'application/json': { schema: weightRecordSchema },
+      },
+    },
+    403: { description: '他ユーザーのデータ' },
+    404: { description: 'Not found' },
+  },
+});
+
 const listMealsRoute = createRoute({
   method: 'get',
   path: '/nutrition/meals',
@@ -246,6 +315,96 @@ const listActivityRecordsRoute = createRoute({
         'application/json': { schema: listActivityResponseSchema },
       },
     },
+  },
+});
+
+const postActivityRecordRoute = createRoute({
+  method: 'post',
+  path: '/activity/records',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: createActivitySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: '重複のため既存レコードを返却',
+      content: {
+        'application/json': { schema: activityCreateResponseSchema },
+      },
+    },
+    201: {
+      description: '運動記録を新規作成',
+      content: {
+        'application/json': { schema: activityCreateResponseSchema },
+      },
+    },
+  },
+});
+
+const putActivityRoute = createRoute({
+  method: 'put',
+  path: '/activity/records/{id}',
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z
+            .object({
+              recordedAt: z.string().datetime({ offset: true }),
+              timeZone: z.string().max(64),
+              externalId: z.string().max(256),
+              valueHash: z
+                .string()
+                .max(64)
+                .regex(/^[a-f0-9]{64}$/i),
+              inputSource: z.enum(['manual', 'device', 'import', 'api']),
+              syncSource: z.string().max(64),
+              memo: z.string().max(2000),
+              steps: z.number().int().min(0).max(200_000),
+              activeMinutes: z
+                .number()
+                .int()
+                .min(0)
+                .max(24 * 60),
+              caloriesBurned: z.number().int().min(0).max(20000),
+            })
+            .partial(),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: '運動記録を更新',
+      content: {
+        'application/json': { schema: activityRecordSchema },
+      },
+    },
+    403: { description: '他ユーザーのデータ' },
+    404: { description: 'Not found' },
+  },
+});
+
+const deleteActivityRoute = createRoute({
+  method: 'delete',
+  path: '/activity/records/{id}',
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+  },
+  responses: {
+    204: { description: '削除完了' },
+    403: { description: '他ユーザーのデータ' },
+    404: { description: 'Not found' },
   },
 });
 
@@ -385,6 +544,34 @@ const putMealRoute = createRoute({
   },
 });
 
+const putWeightRoute = createRoute({
+  method: 'put',
+  path: '/vitals/weight/{id}',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: { 'application/json': { schema: createWeightSchema.partial() } },
+    },
+  },
+  responses: {
+    200: {
+      description: '更新後の体重記録',
+      content: { 'application/json': { schema: weightRecordSchema } },
+    },
+  },
+});
+
+const deleteWeightRoute = createRoute({
+  method: 'delete',
+  path: '/vitals/weight/{id}',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    204: { description: '削除成功' },
+  },
+});
+
 const deleteMealRoute = createRoute({
   method: 'delete',
   path: '/nutrition/meals/{id}',
@@ -455,12 +642,36 @@ protectedHealth.openapi(postMealRoute, async (c) => {
   return c.json({ record, duplicate }, duplicate ? 200 : 201);
 });
 
+protectedHealth.openapi(postWeightRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const body = c.req.valid('json');
+  const { record, duplicate } = await HealthService.createWeight(user.userId, body);
+  return c.json({ record, duplicate }, duplicate ? 200 : 201);
+});
+
 protectedHealth.openapi(listMealsRoute, async (c) => {
   const user = c.get('user');
   if (!user) throw new AuthError('Unauthorized');
   const q = c.req.valid('query');
   const data = await HealthService.listMeals(user.userId, q.from, q.to, q.timeZone);
   return c.json(data, 200);
+});
+
+protectedHealth.openapi(listWeightRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const q = c.req.valid('query');
+  const data = await HealthService.listWeight(user.userId, q.from, q.to, q.timeZone);
+  return c.json(data, 200);
+});
+
+protectedHealth.openapi(getWeightByIdRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const { id } = c.req.valid('param');
+  const record = await HealthService.getWeightById(user.userId, id);
+  return c.json(record, 200);
 });
 
 protectedHealth.openapi(postActivitySyncRoute, async (c) => {
@@ -485,6 +696,14 @@ protectedHealth.openapi(listActivityRecordsRoute, async (c) => {
   const q = c.req.valid('query');
   const data = await HealthService.listActivity(user.userId, q.from, q.to, q.timeZone);
   return c.json(data, 200);
+});
+
+protectedHealth.openapi(postActivityRecordRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const body = c.req.valid('json');
+  const { record, duplicate } = await HealthService.createActivity(user.userId, body);
+  return c.json({ record, duplicate }, duplicate ? 200 : 201);
 });
 
 protectedHealth.openapi(getSummaryDailyRoute, async (c) => {
@@ -559,6 +778,40 @@ protectedHealth.openapi(deleteMealRoute, async (c) => {
   if (!user) throw new AuthError('Unauthorized');
   const { id } = c.req.valid('param');
   await HealthService.deleteMeal(user.userId, id);
+  return c.body(null, 204);
+});
+
+protectedHealth.openapi(putWeightRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const { id } = c.req.valid('param');
+  const body = c.req.valid('json');
+  const data = await HealthService.updateWeight(user.userId, id, body);
+  return c.json(data, 200);
+});
+
+protectedHealth.openapi(deleteWeightRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const { id } = c.req.valid('param');
+  await HealthService.deleteWeight(user.userId, id);
+  return c.body(null, 204);
+});
+
+protectedHealth.openapi(putActivityRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const { id } = c.req.valid('param');
+  const body = c.req.valid('json');
+  const data = await HealthService.updateActivity(user.userId, id, body);
+  return c.json(data, 200);
+});
+
+protectedHealth.openapi(deleteActivityRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const { id } = c.req.valid('param');
+  await HealthService.deleteActivity(user.userId, id);
   return c.body(null, 204);
 });
 

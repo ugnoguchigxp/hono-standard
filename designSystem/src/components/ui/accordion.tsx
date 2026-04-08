@@ -42,11 +42,7 @@ const AccordionContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof BaseAccordion.Panel>
 >(({ className, children, ...props }, ref) => (
-  <BaseAccordion.Panel
-    ref={ref}
-    className={cn('overflow-hidden text-sm', className)}
-    {...props}
-  >
+  <BaseAccordion.Panel ref={ref} className={cn('overflow-hidden text-sm', className)} {...props}>
     <div className="border-t border-border px-4 pb-3 pt-3 text-muted-foreground">{children}</div>
   </BaseAccordion.Panel>
 ));

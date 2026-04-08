@@ -25,7 +25,7 @@ describe('DropdownMenu', () => {
     );
 
     await userEvent.click(screen.getByRole('button', { name: /open menu/i }));
-    
+
     expect(await screen.findByText('My Account')).toBeInTheDocument();
     expect(screen.getByText('Profile')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();

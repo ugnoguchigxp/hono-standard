@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { Input } from './input';
 
 describe('Input', () => {
@@ -14,7 +14,7 @@ describe('Input', () => {
   it('handles value changes', async () => {
     render(<Input placeholder="Type here" />);
     const input = screen.getByPlaceholderText(/type here/i);
-    
+
     await userEvent.type(input, 'Hello World');
     expect(input).toHaveValue('Hello World');
   });

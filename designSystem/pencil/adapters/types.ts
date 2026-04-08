@@ -1,4 +1,3 @@
-
 export interface Theme {
   [key: string]: string;
 }
@@ -7,10 +6,10 @@ export type ThemeAxesValues = {
   [axisName: string]: string[];
 };
 
-export type VariableValue = 
-  | string 
-  | number 
-  | boolean 
+export type VariableValue =
+  | string
+  | number
+  | boolean
   | { value: string | number | boolean; theme?: Theme }[];
 
 export interface NormalizedVariables {
@@ -22,11 +21,7 @@ export interface NormalizedVariables {
 
 export interface PenFileAdapter {
   readonly supportedVersion: string;
-  
+
   /** Update variables and themes in the original pen document */
-  updateVariablesAndThemes(
-    raw: any, 
-    variables: NormalizedVariables, 
-    themes: ThemeAxesValues
-  ): any;
+  updateVariablesAndThemes(raw: any, variables: NormalizedVariables, themes: ThemeAxesValues): any;
 }

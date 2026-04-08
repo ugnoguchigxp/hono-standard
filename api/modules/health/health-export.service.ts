@@ -33,6 +33,7 @@ const buildExportFiles = (payload: {
   bloodPressure: Record<string, unknown>[];
   bloodGlucose: Record<string, unknown>[];
   meals: Record<string, unknown>[];
+  weight: Record<string, unknown>[];
   activities: Record<string, unknown>[];
   goals: Record<string, unknown>[];
   alerts: Record<string, unknown>[];
@@ -42,6 +43,7 @@ const buildExportFiles = (payload: {
   { name: 'blood_pressure.csv', contentType: 'text/csv', content: toCsv(payload.bloodPressure) },
   { name: 'blood_glucose.csv', contentType: 'text/csv', content: toCsv(payload.bloodGlucose) },
   { name: 'meals.csv', contentType: 'text/csv', content: toCsv(payload.meals) },
+  { name: 'weight.csv', contentType: 'text/csv', content: toCsv(payload.weight) },
   { name: 'activities.csv', contentType: 'text/csv', content: toCsv(payload.activities) },
   { name: 'goals.csv', contentType: 'text/csv', content: toCsv(payload.goals) },
   { name: 'alerts.csv', contentType: 'text/csv', content: toCsv(payload.alerts) },
@@ -63,6 +65,7 @@ export const exportHealthData = async (
   const bloodGlucose = (await HealthService.listBloodGlucose(userId, fromStr, toStr, timeZone))
     .records;
   const meals = (await HealthService.listMeals(userId, fromStr, toStr, timeZone)).records;
+  const weight = (await HealthService.listWeight(userId, fromStr, toStr, timeZone)).records;
   const activities = (await HealthService.listActivity(userId, fromStr, toStr, timeZone)).records;
   const goals = (await HealthService.listHealthGoals(userId)).records;
   const alerts = (await listHealthAlerts(userId, { limit: 1000 })).records;
@@ -99,6 +102,7 @@ export const exportHealthData = async (
     bloodPressure,
     bloodGlucose,
     meals,
+    weight,
     activities,
     goals,
     alerts,

@@ -12,8 +12,6 @@ Dio buildDio() {
       headers: {'Accept': 'application/json'},
     ),
   );
-  if (Env.useMock) {
-    dio.interceptors.add(mockInterceptor);
-  }
+  if (Env.useMock) dio.interceptors.add(mockInterceptor);
   return dio;
 }

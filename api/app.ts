@@ -9,7 +9,6 @@ import { createOpenApiRouter } from './lib/openapi';
 import { errorHandler } from './middleware/error-handler';
 import { loggerMiddleware } from './middleware/logger';
 import { rateLimiter } from './middleware/rate-limiter';
-import { bbsRouter } from './modules/bbs/bbs.routes';
 import { healthRecordsRouter } from './modules/health/health.routes';
 import { notificationsRouterV1 } from './modules/notifications/notifications.routes';
 import { authRouter } from './routes/auth';
@@ -20,7 +19,6 @@ const apiRoutes = createOpenApiRouter()
   .route('/health', healthRouter)
   .route('/auth/oauth', oauthRouter)
   .route('/auth', authRouter)
-  .route('/bbs', bbsRouter)
   .route('/v1/health', healthRecordsRouter)
   .route('/v1/notifications', notificationsRouterV1);
 

@@ -9,21 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
-        secondary:
-          'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
-        destructive:
-          'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
-        success:
-          'bg-success text-success-foreground shadow-sm hover:bg-success/90',
-        warning:
-          'bg-warning text-warning-foreground shadow-sm hover:bg-warning/90',
-        info:
-          'bg-info text-info-foreground shadow-sm hover:bg-info/90',
+        default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
+        secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+        success: 'bg-success text-success-foreground shadow-sm hover:bg-success/90',
+        warning: 'bg-warning text-warning-foreground shadow-sm hover:bg-warning/90',
+        info: 'bg-info text-info-foreground shadow-sm hover:bg-info/90',
         outline:
           'border border-border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground',
-        ghost: 'text-foreground hover:bg-secondary hover:text-secondary-foreground active:bg-border',
+        ghost:
+          'text-foreground hover:bg-secondary hover:text-secondary-foreground active:bg-border',
         link: 'text-primary underline-offset-4 hover:underline active:opacity-70',
       },
       size: {

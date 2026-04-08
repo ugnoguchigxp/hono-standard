@@ -1,4 +1,4 @@
-import { Activity, Droplet, Flame, Footprints, HeartPulse, Utensils } from 'lucide-react';
+import { Activity, Droplet, Flame, Footprints, HeartPulse, Scale, Utensils } from 'lucide-react';
 
 export interface DailySummaryLatestBp {
   systolic: number;
@@ -11,6 +11,10 @@ export interface DailySummaryLatestGlucose {
   unit: string;
 }
 
+export interface DailySummaryLatestWeight {
+  value: number;
+}
+
 interface DailySummaryCardProps {
   steps: number;
   stepsGoal: number;
@@ -19,6 +23,7 @@ interface DailySummaryCardProps {
   mealCount: number;
   latestBloodPressure?: DailySummaryLatestBp | null;
   latestBloodGlucose?: DailySummaryLatestGlucose | null;
+  latestWeight?: DailySummaryLatestWeight | null;
 }
 
 export function DailySummaryCard({
@@ -29,9 +34,16 @@ export function DailySummaryCard({
   mealCount,
   latestBloodPressure,
   latestBloodGlucose,
+  latestWeight,
 }: DailySummaryCardProps) {
   const stepsProgress = Math.min((steps / stepsGoal) * 100, 100);
   const caloriesProgress = Math.min((calories / caloriesGoal) * 100, 100);
+  const latestWeightValue =
+    latestWeight?.value != null
+      ? Number.isInteger(latestWeight.value)
+        ? latestWeight.value.toFixed(0)
+        : latestWeight.value.toFixed(1)
+      : null;
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -127,6 +139,27 @@ export function DailySummaryCard({
                 <span className="ml-1 text-xs font-normal text-muted-foreground">
                   {latestBloodGlucose.unit}
                 </span>
+              </h3>
+            ) : (
+              <h3 className="text-lg text-muted-foreground">—</h3>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="rounded-lg bg-slate-100 p-2 text-slate-600">
+            <Scale className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              最新 体重
+            </p>
+            {latestWeightValue ? (
+              <h3 className="text-xl font-bold tracking-tight">
+                {latestWeightValue}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">kg</span>
               </h3>
             ) : (
               <h3 className="text-lg text-muted-foreground">—</h3>

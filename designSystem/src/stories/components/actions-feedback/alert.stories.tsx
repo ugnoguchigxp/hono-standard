@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { AlertCircle, AlertTriangle, CheckCircle, Info, Terminal } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 
 const meta = {
   title: 'Components/Actions & Feedback/Alert',

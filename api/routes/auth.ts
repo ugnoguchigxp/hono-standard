@@ -158,14 +158,14 @@ authRouter.openapi(registerRoute, async (c) => {
   const data = c.req.valid('json');
   const result = await register(data);
   setAuthCookies(c, result);
-  return c.json({ user: result.user }, 201);
+  return c.json(result, 201);
 });
 
 authRouter.openapi(loginRoute, async (c) => {
   const data = c.req.valid('json');
   const result = await login(data);
   setAuthCookies(c, result);
-  return c.json({ user: result.user }, 200);
+  return c.json(result, 200);
 });
 
 authRouter.openapi(refreshRoute, async (c) => {
@@ -173,7 +173,7 @@ authRouter.openapi(refreshRoute, async (c) => {
   if (!refreshToken) throw new AuthError('Missing refresh token');
   const result = await refresh(refreshToken);
   setAuthCookies(c, result);
-  return c.json({ user: result.user }, 200);
+  return c.json(result, 200);
 });
 
 authRouter.openapi(logoutRoute, async (c) => {

@@ -18,105 +18,296 @@ import {
 } from '@repo/design-system/components/ui/select';
 import { Textarea } from '@repo/design-system/components/ui/textarea';
 import { format } from 'date-fns';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  browserTimeZone,
+  useCreateBloodGlucose,
+  useCreateBloodPressure,
+  useCreateMeal,
+  useCreateWeight,
   useUpdateBloodGlucose,
   useUpdateBloodPressure,
   useUpdateMeal,
+  useUpdateWeight,
 } from '../hooks/health.hooks';
+
+type RecordKind = 'bp' | 'glucose' | 'meal' | 'weight';
+
+type RecordFormState = {
+  kind: RecordKind;
+  recordedAt: string;
+  memo: string;
+  systolic: string;
+  diastolic: string;
+  pulse: string;
+  period: 'morning' | 'evening' | 'other';
+  value: string;
+  unit: 'mg_dl' | 'mmol_l';
+  timing: 'fasting' | 'postprandial' | 'random';
+  items: string;
+  estimatedCalories: string;
+};
+
+export type RecordDialogRecord = {
+  id: string;
+  kind: RecordKind;
+  recordedAt: string;
+  memo?: string | null;
+  systolic?: number | null;
+  diastolic?: number | null;
+  pulse?: number | null;
+  period?: 'morning' | 'evening' | 'other';
+  value?: number | null;
+  unit?: 'mg_dl' | 'mmol_l';
+  timing?: 'fasting' | 'postprandial' | 'random';
+  items?: string;
+  estimatedCalories?: number | null;
+};
 
 interface RecordEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  record: any; // Simplified for this implementation
+  record: RecordDialogRecord | null;
+  initialKind?: RecordKind;
 }
 
-export function RecordEditDialog({ open, onOpenChange, record }: RecordEditDialogProps) {
-  const [formData, setFormData] = useState<any>({});
+const kindLabels: Record<RecordKind, string> = {
+  bp: '血圧',
+  glucose: '血糖',
+  meal: '食事',
+  weight: '体重',
+};
 
+const createDefaultState = (kind: RecordKind): RecordFormState => ({
+  kind,
+  recordedAt: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+  memo: '',
+  systolic: '',
+  diastolic: '',
+  pulse: '',
+  period: 'morning',
+  value: '',
+  unit: 'mg_dl',
+  timing: 'fasting',
+  items: '',
+  estimatedCalories: '',
+});
+
+const fromRecord = (record: RecordDialogRecord): RecordFormState => ({
+  kind: record.kind,
+  recordedAt: format(new Date(record.recordedAt), "yyyy-MM-dd'T'HH:mm"),
+  memo: record.memo ?? '',
+  systolic: record.systolic != null ? String(record.systolic) : '',
+  diastolic: record.diastolic != null ? String(record.diastolic) : '',
+  pulse: record.pulse != null ? String(record.pulse) : '',
+  period: record.period ?? 'morning',
+  value: record.value != null ? String(record.value) : '',
+  unit: record.unit ?? 'mg_dl',
+  timing: record.timing ?? 'fasting',
+  items: record.items ?? '',
+  estimatedCalories: record.estimatedCalories != null ? String(record.estimatedCalories) : '',
+});
+
+const toIsoValue = (localValue: string) => new Date(localValue).toISOString();
+const toOptionalNumber = (value: string) => (value.trim() === '' ? undefined : Number(value));
+
+export function RecordEditDialog({
+  open,
+  onOpenChange,
+  record,
+  initialKind = 'weight',
+}: RecordEditDialogProps) {
+  const [formData, setFormData] = useState<RecordFormState>(createDefaultState(initialKind));
+
+  const createBp = useCreateBloodPressure();
   const updateBp = useUpdateBloodPressure();
+  const createGlucose = useCreateBloodGlucose();
   const updateGlucose = useUpdateBloodGlucose();
+  const createMeal = useCreateMeal();
   const updateMeal = useUpdateMeal();
+  const createWeight = useCreateWeight();
+  const updateWeight = useUpdateWeight();
+
+  const isEditMode = Boolean(record?.id);
+  const currentKind = formData.kind;
+  const saveDisabled = useMemo(
+    () =>
+      createBp.isPending ||
+      updateBp.isPending ||
+      createGlucose.isPending ||
+      updateGlucose.isPending ||
+      createMeal.isPending ||
+      updateMeal.isPending ||
+      createWeight.isPending ||
+      updateWeight.isPending,
+    [
+      createBp.isPending,
+      updateBp.isPending,
+      createGlucose.isPending,
+      updateGlucose.isPending,
+      createMeal.isPending,
+      updateMeal.isPending,
+      createWeight.isPending,
+      updateWeight.isPending,
+    ]
+  );
 
   useEffect(() => {
-    if (record) {
-      setFormData({ ...record });
-    }
-  }, [record]);
+    if (!open) return;
 
-  const handleSave = async () => {
+    if (record) {
+      setFormData(fromRecord(record));
+      return;
+    }
+
+    setFormData(createDefaultState(initialKind));
+  }, [initialKind, open, record]);
+
+  const changeKind = (nextKind: RecordKind) => {
+    if (isEditMode) return;
+    setFormData((current) => ({
+      ...createDefaultState(nextKind),
+      recordedAt: current.recordedAt,
+      memo: current.memo,
+    }));
+  };
+
+  const saveRecord = async () => {
     try {
-      if (record.kind === 'bp') {
-        await updateBp.mutateAsync({
-          id: record.id,
-          input: {
-            recordedAt: formData.recordedAt,
-            systolic: Number(formData.systolic),
-            diastolic: Number(formData.diastolic),
-            pulse: formData.pulse ? Number(formData.pulse) : undefined,
-            period: formData.period,
-            memo: formData.memo,
-          },
+      const timeZone = browserTimeZone();
+      const basePayload = {
+        recordedAt: toIsoValue(formData.recordedAt),
+        memo: formData.memo.trim() || undefined,
+      };
+
+      if (isEditMode && record) {
+        if (currentKind === 'bp') {
+          await updateBp.mutateAsync({
+            id: record.id,
+            input: {
+              ...basePayload,
+              systolic: Number(formData.systolic),
+              diastolic: Number(formData.diastolic),
+              pulse: toOptionalNumber(formData.pulse),
+              period: formData.period,
+            },
+          });
+        } else if (currentKind === 'glucose') {
+          await updateGlucose.mutateAsync({
+            id: record.id,
+            input: {
+              ...basePayload,
+              value: Number(formData.value),
+              unit: formData.unit,
+              timing: formData.timing,
+            },
+          });
+        } else if (currentKind === 'meal') {
+          await updateMeal.mutateAsync({
+            id: record.id,
+            input: {
+              ...basePayload,
+              items: formData.items,
+              estimatedCalories: toOptionalNumber(formData.estimatedCalories),
+            },
+          });
+        } else {
+          await updateWeight.mutateAsync({
+            id: record.id,
+            input: {
+              ...basePayload,
+              value: Number(formData.value),
+            },
+          });
+        }
+      } else if (currentKind === 'bp') {
+        await createBp.mutateAsync({
+          ...basePayload,
+          timeZone,
+          systolic: Number(formData.systolic),
+          diastolic: Number(formData.diastolic),
+          pulse: toOptionalNumber(formData.pulse),
+          period: formData.period,
         });
-      } else if (record.kind === 'glucose') {
-        await updateGlucose.mutateAsync({
-          id: record.id,
-          input: {
-            recordedAt: formData.recordedAt,
-            value: Number(formData.value),
-            unit: formData.unit,
-            timing: formData.timing,
-            memo: formData.memo,
-          },
+      } else if (currentKind === 'glucose') {
+        await createGlucose.mutateAsync({
+          ...basePayload,
+          timeZone,
+          value: Number(formData.value),
+          unit: formData.unit,
+          timing: formData.timing,
         });
-      } else if (record.kind === 'meal') {
-        await updateMeal.mutateAsync({
-          id: record.id,
-          input: {
-            recordedAt: formData.recordedAt,
-            items: formData.items,
-            estimatedCalories: formData.estimatedCalories
-              ? Number(formData.estimatedCalories)
-              : undefined,
-            memo: formData.memo,
-          },
+      } else if (currentKind === 'meal') {
+        await createMeal.mutateAsync({
+          ...basePayload,
+          timeZone,
+          items: formData.items,
+          estimatedCalories: toOptionalNumber(formData.estimatedCalories),
+        });
+      } else {
+        await createWeight.mutateAsync({
+          ...basePayload,
+          timeZone,
+          value: Number(formData.value),
         });
       }
+
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to save record:', error);
     }
   };
 
-  if (!record) return null;
+  const title = isEditMode ? '記録の編集' : '新規入力';
+  const description = isEditMode ? '健康記録の内容を修正します。' : '健康記録を入力します。';
+  const saveLabel = isEditMode ? '保存' : '作成';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>記録の編集</DialogTitle>
-          <DialogDescription>健康記録の内容を修正します。</DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          {/* Common Field: Date (Readonly for now as per simplicity or editable) */}
+          {!isEditMode && (
+            <div className="grid gap-2">
+              <Label htmlFor="kind">記録種別</Label>
+              <Select
+                value={currentKind}
+                onValueChange={(value) => changeKind(value as RecordKind)}
+              >
+                <SelectTrigger id="kind">
+                  <SelectValue placeholder="種別を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weight">{kindLabels.weight}</SelectItem>
+                  <SelectItem value="bp">{kindLabels.bp}</SelectItem>
+                  <SelectItem value="glucose">{kindLabels.glucose}</SelectItem>
+                  <SelectItem value="meal">{kindLabels.meal}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {isEditMode && record && (
+            <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+              種別: {kindLabels[record.kind]}
+            </div>
+          )}
+
           <div className="grid gap-2">
             <Label htmlFor="date">日時</Label>
             <Input
               id="date"
               type="datetime-local"
-              value={
-                formData.recordedAt
-                  ? format(new Date(formData.recordedAt), "yyyy-MM-dd'T'HH:mm")
-                  : ''
-              }
-              onChange={(e) =>
-                setFormData({ ...formData, recordedAt: new Date(e.target.value).toISOString() })
-              }
+              value={formData.recordedAt}
+              onChange={(e) => setFormData({ ...formData, recordedAt: e.target.value })}
             />
           </div>
 
-          {record.kind === 'bp' && (
+          {currentKind === 'bp' && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
@@ -124,7 +315,7 @@ export function RecordEditDialog({ open, onOpenChange, record }: RecordEditDialo
                   <Input
                     id="systolic"
                     type="number"
-                    value={formData.systolic || ''}
+                    value={formData.systolic}
                     onChange={(e) => setFormData({ ...formData, systolic: e.target.value })}
                   />
                 </div>
@@ -133,18 +324,32 @@ export function RecordEditDialog({ open, onOpenChange, record }: RecordEditDialo
                   <Input
                     id="diastolic"
                     type="number"
-                    value={formData.diastolic || ''}
+                    value={formData.diastolic}
                     onChange={(e) => setFormData({ ...formData, diastolic: e.target.value })}
                   />
                 </div>
               </div>
               <div className="grid gap-2">
+                <Label htmlFor="pulse">脈拍 (bpm)</Label>
+                <Input
+                  id="pulse"
+                  type="number"
+                  value={formData.pulse}
+                  onChange={(e) => setFormData({ ...formData, pulse: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="period">時間帯</Label>
                 <Select
                   value={formData.period}
-                  onValueChange={(v) => setFormData({ ...formData, period: v })}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      period: value as RecordFormState['period'],
+                    })
+                  }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="period">
                     <SelectValue placeholder="時間帯を選択" />
                   </SelectTrigger>
                   <SelectContent>
@@ -157,24 +362,50 @@ export function RecordEditDialog({ open, onOpenChange, record }: RecordEditDialo
             </>
           )}
 
-          {record.kind === 'glucose' && (
+          {currentKind === 'glucose' && (
             <>
               <div className="grid gap-2">
-                <Label htmlFor="value">血糖値 ({formData.unit})</Label>
+                <Label htmlFor="value">血糖値</Label>
                 <Input
                   id="value"
                   type="number"
-                  value={formData.value || ''}
+                  step="0.1"
+                  value={formData.value}
                   onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="unit">単位</Label>
+                <Select
+                  value={formData.unit}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      unit: value as RecordFormState['unit'],
+                    })
+                  }
+                >
+                  <SelectTrigger id="unit">
+                    <SelectValue placeholder="単位を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mg_dl">mg/dL</SelectItem>
+                    <SelectItem value="mmol_l">mmol/L</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="timing">タイミング</Label>
                 <Select
                   value={formData.timing}
-                  onValueChange={(v) => setFormData({ ...formData, timing: v })}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      timing: value as RecordFormState['timing'],
+                    })
+                  }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="timing">
                     <SelectValue placeholder="タイミングを選択" />
                   </SelectTrigger>
                   <SelectContent>
@@ -187,14 +418,14 @@ export function RecordEditDialog({ open, onOpenChange, record }: RecordEditDialo
             </>
           )}
 
-          {record.kind === 'meal' && (
+          {currentKind === 'meal' && (
             <>
               <div className="grid gap-2">
                 <Label htmlFor="items">内容</Label>
                 <Textarea
                   id="items"
-                  value={formData.label || ''}
-                  onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                  value={formData.items}
+                  onChange={(e) => setFormData({ ...formData, items: e.target.value })}
                   placeholder="何を食べましたか？"
                 />
               </div>
@@ -203,18 +434,31 @@ export function RecordEditDialog({ open, onOpenChange, record }: RecordEditDialo
                 <Input
                   id="calories"
                   type="number"
-                  value={formData.estimatedCalories || ''}
+                  value={formData.estimatedCalories}
                   onChange={(e) => setFormData({ ...formData, estimatedCalories: e.target.value })}
                 />
               </div>
             </>
           )}
 
+          {currentKind === 'weight' && (
+            <div className="grid gap-2">
+              <Label htmlFor="weight">体重 (kg)</Label>
+              <Input
+                id="weight"
+                type="number"
+                step="0.1"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+              />
+            </div>
+          )}
+
           <div className="grid gap-2">
             <Label htmlFor="memo">メモ</Label>
             <Textarea
               id="memo"
-              value={formData.memo || ''}
+              value={formData.memo}
               onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
             />
           </div>
@@ -224,11 +468,8 @@ export function RecordEditDialog({ open, onOpenChange, record }: RecordEditDialo
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             キャンセル
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={updateBp.isPending || updateGlucose.isPending || updateMeal.isPending}
-          >
-            保存
+          <Button onClick={saveRecord} disabled={saveDisabled}>
+            {saveLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

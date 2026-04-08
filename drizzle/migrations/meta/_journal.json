@@ -43,6 +43,27 @@
       "when": 1775530200000,
       "tag": "0005_notification_and_sync_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775536925482,
+      "tag": "0006_greedy_sentry",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775537000000,
+      "tag": "0007_weight_records",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775537010000,
+      "tag": "0008_meal_photo_uri",
+      "breakpoints": true
     }
   ]
 }

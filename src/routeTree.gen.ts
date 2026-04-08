@@ -13,7 +13,6 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthRouteRouteImport } from './routes/health/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HealthIndexRouteImport } from './routes/health/index'
-import { Route as BbsIndexRouteImport } from './routes/bbs/index'
 import { Route as OauthCallbackRouteImport } from './routes/oauth.callback'
 import { Route as HealthSummaryRouteImport } from './routes/health/summary'
 import { Route as HealthSettingsRouteImport } from './routes/health/settings'
@@ -21,7 +20,6 @@ import { Route as HealthReportsRouteImport } from './routes/health/reports'
 import { Route as HealthHistoryRouteImport } from './routes/health/history'
 import { Route as HealthGoalsRouteImport } from './routes/health/goals'
 import { Route as HealthAlertsRouteImport } from './routes/health/alerts'
-import { Route as BbsIdRouteImport } from './routes/bbs/$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -42,11 +40,6 @@ const HealthIndexRoute = HealthIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => HealthRouteRoute,
-} as any)
-const BbsIndexRoute = BbsIndexRouteImport.update({
-  id: '/bbs/',
-  path: '/bbs/',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const OauthCallbackRoute = OauthCallbackRouteImport.update({
   id: '/oauth/callback',
@@ -83,17 +76,11 @@ const HealthAlertsRoute = HealthAlertsRouteImport.update({
   path: '/alerts',
   getParentRoute: () => HealthRouteRoute,
 } as any)
-const BbsIdRoute = BbsIdRouteImport.update({
-  id: '/bbs/$id',
-  path: '/bbs/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/health': typeof HealthRouteRouteWithChildren
   '/login': typeof LoginRoute
-  '/bbs/$id': typeof BbsIdRoute
   '/health/alerts': typeof HealthAlertsRoute
   '/health/goals': typeof HealthGoalsRoute
   '/health/history': typeof HealthHistoryRoute
@@ -101,13 +88,11 @@ export interface FileRoutesByFullPath {
   '/health/settings': typeof HealthSettingsRoute
   '/health/summary': typeof HealthSummaryRoute
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bbs/': typeof BbsIndexRoute
   '/health/': typeof HealthIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/bbs/$id': typeof BbsIdRoute
   '/health/alerts': typeof HealthAlertsRoute
   '/health/goals': typeof HealthGoalsRoute
   '/health/history': typeof HealthHistoryRoute
@@ -115,7 +100,6 @@ export interface FileRoutesByTo {
   '/health/settings': typeof HealthSettingsRoute
   '/health/summary': typeof HealthSummaryRoute
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bbs': typeof BbsIndexRoute
   '/health': typeof HealthIndexRoute
 }
 export interface FileRoutesById {
@@ -123,7 +107,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/health': typeof HealthRouteRouteWithChildren
   '/login': typeof LoginRoute
-  '/bbs/$id': typeof BbsIdRoute
   '/health/alerts': typeof HealthAlertsRoute
   '/health/goals': typeof HealthGoalsRoute
   '/health/history': typeof HealthHistoryRoute
@@ -131,7 +114,6 @@ export interface FileRoutesById {
   '/health/settings': typeof HealthSettingsRoute
   '/health/summary': typeof HealthSummaryRoute
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bbs/': typeof BbsIndexRoute
   '/health/': typeof HealthIndexRoute
 }
 export interface FileRouteTypes {
@@ -140,7 +122,6 @@ export interface FileRouteTypes {
     | '/'
     | '/health'
     | '/login'
-    | '/bbs/$id'
     | '/health/alerts'
     | '/health/goals'
     | '/health/history'
@@ -148,13 +129,11 @@ export interface FileRouteTypes {
     | '/health/settings'
     | '/health/summary'
     | '/oauth/callback'
-    | '/bbs/'
     | '/health/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/bbs/$id'
     | '/health/alerts'
     | '/health/goals'
     | '/health/history'
@@ -162,14 +141,12 @@ export interface FileRouteTypes {
     | '/health/settings'
     | '/health/summary'
     | '/oauth/callback'
-    | '/bbs'
     | '/health'
   id:
     | '__root__'
     | '/'
     | '/health'
     | '/login'
-    | '/bbs/$id'
     | '/health/alerts'
     | '/health/goals'
     | '/health/history'
@@ -177,7 +154,6 @@ export interface FileRouteTypes {
     | '/health/settings'
     | '/health/summary'
     | '/oauth/callback'
-    | '/bbs/'
     | '/health/'
   fileRoutesById: FileRoutesById
 }
@@ -185,9 +161,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HealthRouteRoute: typeof HealthRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
-  BbsIdRoute: typeof BbsIdRoute
   OauthCallbackRoute: typeof OauthCallbackRoute
-  BbsIndexRoute: typeof BbsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -219,13 +193,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/health/'
       preLoaderRoute: typeof HealthIndexRouteImport
       parentRoute: typeof HealthRouteRoute
-    }
-    '/bbs/': {
-      id: '/bbs/'
-      path: '/bbs'
-      fullPath: '/bbs/'
-      preLoaderRoute: typeof BbsIndexRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/oauth/callback': {
       id: '/oauth/callback'
@@ -276,13 +243,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthAlertsRouteImport
       parentRoute: typeof HealthRouteRoute
     }
-    '/bbs/$id': {
-      id: '/bbs/$id'
-      path: '/bbs/$id'
-      fullPath: '/bbs/$id'
-      preLoaderRoute: typeof BbsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -314,9 +274,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HealthRouteRoute: HealthRouteRouteWithChildren,
   LoginRoute: LoginRoute,
-  BbsIdRoute: BbsIdRoute,
   OauthCallbackRoute: OauthCallbackRoute,
-  BbsIndexRoute: BbsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

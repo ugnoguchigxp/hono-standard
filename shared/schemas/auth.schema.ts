@@ -24,6 +24,8 @@ export const registerSchema = z
   .openapi('RegisterInput');
 
 export const authResponseSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
   user: z.object({
     id: z.string(),
     email: z.string(),

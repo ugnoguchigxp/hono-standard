@@ -1,7 +1,5 @@
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
 import {
-  Activity,
-  AlertTriangle,
   BarChart3,
   Bell,
   FileText,

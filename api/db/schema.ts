@@ -1,6 +1,5 @@
 import { sql } from 'drizzle-orm';
 import {
-  type AnyPgColumn,
   boolean,
   date,
   doublePrecision,
@@ -64,40 +63,6 @@ export const userExternalAccounts = pgTable(
       table.externalId
     ),
     userIdIdx: index('uex_user_id_idx').on(table.userId),
-  })
-);
-
-export const threads = pgTable(
-  'threads',
-  {
-    ...commonColumns,
-    title: text('title').notNull(),
-    content: text('content').notNull(),
-    authorId: uuid('author_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-  },
-  (table) => ({
-    authorIdIdx: index('threads_author_id_idx').on(table.authorId),
-  })
-);
-
-export const comments = pgTable(
-  'comments',
-  {
-    ...commonColumns,
-    threadId: uuid('thread_id')
-      .notNull()
-      .references(() => threads.id, { onDelete: 'cascade' }),
-    parentId: uuid('parent_id').references((): AnyPgColumn => comments.id, { onDelete: 'cascade' }),
-    content: text('content').notNull(),
-    authorId: uuid('author_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-  },
-  (table) => ({
-    threadIdIdx: index('comments_thread_id_idx').on(table.threadId),
-    authorIdIdx: index('comments_author_id_idx').on(table.authorId),
   })
 );
 
@@ -179,6 +144,7 @@ export const mealRecords = pgTable(
     ...healthRecordColumns,
     items: text('items').notNull(),
     estimatedCalories: integer('estimated_calories'),
+    photoUri: text('photo_uri'),
   },
   (table) => ({
     userRecordedIdx: index('mr_user_recorded_idx').on(table.userId, table.recordedAt),
@@ -186,6 +152,23 @@ export const mealRecords = pgTable(
       .on(table.userId, table.externalId)
       .where(sql`${table.externalId} IS NOT NULL`),
     userValueHashUnique: uniqueIndex('mr_user_value_hash_uidx')
+      .on(table.userId, table.valueHash)
+      .where(sql`${table.valueHash} IS NOT NULL`),
+  })
+);
+
+export const weightRecords = pgTable(
+  'weight_records',
+  {
+    ...healthRecordColumns,
+    value: doublePrecision('value').notNull(),
+  },
+  (table) => ({
+    userRecordedIdx: index('wr_user_recorded_idx').on(table.userId, table.recordedAt),
+    userExternalUnique: uniqueIndex('wr_user_external_id_uidx')
+      .on(table.userId, table.externalId)
+      .where(sql`${table.externalId} IS NOT NULL`),
+    userValueHashUnique: uniqueIndex('wr_user_value_hash_uidx')
       .on(table.userId, table.valueHash)
       .where(sql`${table.valueHash} IS NOT NULL`),
   })

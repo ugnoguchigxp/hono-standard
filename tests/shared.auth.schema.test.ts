@@ -30,6 +30,8 @@ describe('shared auth schemas', () => {
 
   it('validates auth response schema', () => {
     const parsed = authResponseSchema.parse({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
       user: {
         id: 'user-1',
         email: 'user@example.com',

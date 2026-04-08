@@ -153,7 +153,8 @@ const calculateGoalAchievementRates = async (
   dailySummaries: DailySummarySnapshot[],
   mealCaloriesTotal: number,
   bloodPressureRows: Awaited<ReturnType<typeof Repo.listBloodPressureInRange>>,
-  bloodGlucoseRows: Awaited<ReturnType<typeof Repo.listBloodGlucoseInRange>>
+  bloodGlucoseRows: Awaited<ReturnType<typeof Repo.listBloodGlucoseInRange>>,
+  weightRows: Awaited<ReturnType<typeof Repo.listWeightInRange>>
 ) => {
   const activeGoals = await GoalRepo.listActiveHealthGoalsByUser(userId, weekEnd);
   const averageDailySteps = average(dailySummaries.map((summary) => summary.stepsTotal)) ?? 0;
@@ -165,6 +166,7 @@ const calculateGoalAchievementRates = async (
   const avgDiastolic = average(bloodPressureRows.map((row) => row.diastolic));
   const fastingRows = bloodGlucoseRows.filter((row) => row.timing === 'fasting');
   const postprandialRows = bloodGlucoseRows.filter((row) => row.timing === 'postprandial');
+  const latestWeight = weightRows[0]?.value ?? null;
 
   const rates: number[] = [];
   for (const goal of activeGoals) {
@@ -224,6 +226,14 @@ const calculateGoalAchievementRates = async (
     }
     if (goal.goalType === 'weekly_exercise_days' && goal.targetValue) {
       rates.push(Math.min(100, Math.max(0, (qualifyingActivityDays / goal.targetValue) * 100)));
+      continue;
+    }
+    if (goal.goalType === 'weight_target' && goal.targetValue) {
+      if (latestWeight == null) {
+        rates.push(0);
+      } else {
+        rates.push(Math.min(100, Math.max(0, (goal.targetValue / latestWeight) * 100)));
+      }
     }
   }
 
@@ -243,6 +253,7 @@ const calculateWeeklyReport = async (userId: string, weekStart: string, timeZone
     mealRows,
     bloodPressureRows,
     bloodGlucoseRows,
+    weightRows,
   ] = await Promise.all([
     loadDailySummaryRange(userId, weekStart, weekEnd, timeZone),
     loadDailySummaryRange(
@@ -254,6 +265,7 @@ const calculateWeeklyReport = async (userId: string, weekStart: string, timeZone
     Repo.listMealsInRange(userId, rangeStart, rangeEnd),
     Repo.listBloodPressureInRange(userId, rangeStart, rangeEnd),
     Repo.listBloodGlucoseInRange(userId, rangeStart, rangeEnd),
+    Repo.listWeightInRange(userId, rangeStart, rangeEnd),
   ]);
   const dailySummaries = Array.from({ length: 7 }, (_, index) =>
     currentWeekSummaries.get(Repo.addUtcDays(weekStart, index))
@@ -293,7 +305,8 @@ const calculateWeeklyReport = async (userId: string, weekStart: string, timeZone
     dailySummaries.filter((summary): summary is DailySummarySnapshot => summary != null),
     mealCaloriesTotal,
     bloodPressureRows,
-    bloodGlucoseRows
+    bloodGlucoseRows,
+    weightRows
   );
 
   const previousWeekStepsTotal = previousSummaries.reduce(

@@ -21,7 +21,7 @@ export const healthInputSourceSchema = z
 
 /** 記録種別（ドメイン横断の分類） */
 export const healthRecordKindSchema = z
-  .enum(['activity', 'blood_pressure', 'blood_glucose', 'meal', 'summary', 'sync'])
+  .enum(['activity', 'blood_pressure', 'blood_glucose', 'meal', 'weight', 'summary', 'sync'])
   .openapi('HealthRecordKind');
 
 const optionalMemo = z.string().max(2000).optional();
@@ -81,8 +81,31 @@ export const createMealSchema = healthRecordBaseInputSchema
   .extend({
     items: z.string().min(1).max(4000).openapi({ example: '玄米ごはん、味噌汁、焼き魚' }),
     estimatedCalories: z.number().int().min(0).max(20000).optional().openapi({ example: 450 }),
+    photoUri: z.string().max(4000).optional().openapi({ example: 'file:///tmp/meal.jpg' }),
   })
   .openapi('CreateMealInput');
+
+export const createActivitySchema = healthRecordBaseInputSchema
+  .extend({
+    steps: z.number().int().min(0).max(200_000).optional(),
+    activeMinutes: z
+      .number()
+      .int()
+      .min(0)
+      .max(24 * 60)
+      .optional(),
+    caloriesBurned: z.number().int().min(0).max(20000).optional(),
+  })
+  .refine((d) => d.steps != null || d.activeMinutes != null || d.caloriesBurned != null, {
+    message: 'steps, activeMinutes, caloriesBurned のいずれかは必須です',
+  })
+  .openapi('CreateActivityInput');
+
+export const createWeightSchema = healthRecordBaseInputSchema
+  .extend({
+    value: z.number().finite().positive().max(1000).openapi({ example: 70.2 }),
+  })
+  .openapi('CreateWeightInput');
 
 export const activitySyncItemSchema = healthRecordBaseInputSchema
   .extend({
@@ -148,6 +171,7 @@ export const mealRecordSchema = z
     recordedAt: z.string(),
     items: z.string(),
     estimatedCalories: z.number().int().nullable(),
+    photoUri: z.string().nullable(),
     externalId: z.string().nullable(),
     valueHash: z.string().nullable(),
     inputSource: healthInputSourceSchema,
@@ -157,6 +181,21 @@ export const mealRecordSchema = z
     updatedAt: z.string(),
   })
   .openapi('MealRecord');
+
+export const weightRecordSchema = z
+  .object({
+    id: z.string().uuid(),
+    recordedAt: z.string(),
+    value: z.number(),
+    externalId: z.string().nullable(),
+    valueHash: z.string().nullable(),
+    inputSource: healthInputSourceSchema,
+    syncSource: z.string().nullable(),
+    memo: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .openapi('WeightRecord');
 
 export const activityRecordSchema = z
   .object({
@@ -190,6 +229,16 @@ export const mealCreateResponseSchema = z.object({
   duplicate: z.boolean(),
 });
 
+export const weightCreateResponseSchema = z.object({
+  record: weightRecordSchema,
+  duplicate: z.boolean(),
+});
+
+export const activityCreateResponseSchema = z.object({
+  record: activityRecordSchema,
+  duplicate: z.boolean(),
+});
+
 export const listBloodPressureResponseSchema = z.object({
   records: z.array(bloodPressureRecordSchema),
 });
@@ -200,6 +249,10 @@ export const listBloodGlucoseResponseSchema = z.object({
 
 export const listMealsResponseSchema = z.object({
   records: z.array(mealRecordSchema),
+});
+
+export const listWeightResponseSchema = z.object({
+  records: z.array(weightRecordSchema),
 });
 
 export const listActivityResponseSchema = z.object({
@@ -277,6 +330,7 @@ export const healthGoalTypeSchema = z
     'blood_glucose_postprandial_range',
     'daily_calorie_limit',
     'weekly_exercise_days',
+    'weight_target',
   ])
   .openapi('HealthGoalType');
 
@@ -555,6 +609,7 @@ export const healthExportRecordsSchema = z.object({
   bloodPressure: z.array(bloodPressureRecordSchema),
   bloodGlucose: z.array(bloodGlucoseRecordSchema),
   meals: z.array(mealRecordSchema),
+  weight: z.array(weightRecordSchema),
   activities: z.array(activityRecordSchema),
   goals: z.array(healthGoalRecordSchema),
   alerts: z.array(healthAlertRecordSchema),
@@ -632,6 +687,8 @@ export type HealthRecordKind = z.infer<typeof healthRecordKindSchema>;
 export type CreateBloodPressureInput = z.infer<typeof createBloodPressureSchema>;
 export type CreateBloodGlucoseInput = z.infer<typeof createBloodGlucoseSchema>;
 export type CreateMealInput = z.infer<typeof createMealSchema>;
+export type CreateActivityInput = z.infer<typeof createActivitySchema>;
+export type CreateWeightInput = z.infer<typeof createWeightSchema>;
 export type ActivitySyncBody = z.infer<typeof activitySyncBodySchema>;
 export type CreateHealthGoalInput = z.infer<typeof createHealthGoalSchema>;
 export type UpdateHealthGoalInput = z.infer<typeof updateHealthGoalSchema>;

@@ -54,6 +54,8 @@ describe('auth routes cookie flow', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
       user: { id: 'user-1', email: 'user@example.com' },
     });
 
@@ -102,6 +104,8 @@ describe('auth routes cookie flow', () => {
     expect(authServiceMocks.refresh).toHaveBeenCalledWith('old-refresh-token');
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({
+      accessToken: 'rotated-access',
+      refreshToken: 'rotated-refresh',
       user: { id: 'user-1', email: 'user@example.com' },
     });
 

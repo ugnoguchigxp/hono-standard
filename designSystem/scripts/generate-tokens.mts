@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { 
-  COLOR_TOKENS, 
-  THEME_DEFINITIONS, 
-  THEME_AXES, 
-  getAllThemePermutations,
-  type ThemeAxes 
-} from '../src/lib/design-tokens.js';
 import { getAdapterForVersion } from '../pencil/adapters/index.js';
+import {
+  COLOR_TOKENS,
+  getAllThemePermutations,
+  THEME_AXES,
+  THEME_DEFINITIONS,
+  type ThemeAxes,
+} from '../src/lib/design-tokens.js';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const designSystemDir = path.resolve(scriptDir, '..');
@@ -18,7 +18,9 @@ const penPath = path.join(designSystemDir, 'pencil', 'designSystem.pen');
 // --- Utilities ---
 
 function hexToHsl(hex: string): string {
-  let r = 0, g = 0, b = 0;
+  let r = 0,
+    g = 0,
+    b = 0;
   hex = hex.replace('#', '');
   if (hex.length === 3) {
     r = parseInt(hex[0] + hex[0], 16);
@@ -30,17 +32,28 @@ function hexToHsl(hex: string): string {
     b = parseInt(hex.substring(4, 6), 16);
   }
 
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0, l = (max + min) / 2;
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
+  let h = 0,
+    s = 0,
+    l = (max + min) / 2;
 
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
     }
     h /= 6;
   }
@@ -52,10 +65,10 @@ function normalizeHexForPen(hex: string): string {
   hex = hex.replace('#', '').toLowerCase();
   if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
   if (hex.length === 6) hex += 'ff';
-  return '#' + hex;
+  return `#${hex}`;
 }
 
-/** 
+/**
  * 与えられた軸の組合せに最適なトークン値を検索。
  * 特徴が一致する度が最も高いものを選択。
  */
@@ -68,16 +81,19 @@ function resolveTokenValue(token: any, axes: ThemeAxes): string {
     if (t.mode && t.mode === axes.mode) score += 10;
     if (t.base && t.base === axes.base) score += 5;
     if (t.accent && t.accent === axes.accent) score += 5;
-    
+
     // 矛盾がある場合は除外 (-1)
     if (t.mode && t.mode !== axes.mode) score = -1;
     if (t.base && t.base !== axes.base) score = -1;
     if (t.accent && t.accent !== axes.accent) score = -1;
-    
+
     return { value: t.value, score };
   });
 
-  const best = scored.reduce((prev: any, curr: any) => (curr.score > prev.score ? curr : prev), { value: token.base, score: 0 });
+  const best = scored.reduce((prev: any, curr: any) => (curr.score > prev.score ? curr : prev), {
+    value: token.base,
+    score: 0,
+  });
   return best.value;
 }
 
@@ -89,10 +105,13 @@ function generateCss() {
 
   // 1. Static Themes (Explicitly defined in THEME_DEFINITIONS like tokyo-night)
   for (const [themeKey, theme] of Object.entries(THEME_DEFINITIONS)) {
-    const selector = themeKey === 'light' ? ':root, html.theme-light' : 
-                     themeKey === 'dark' ? 'html.theme-dark, .dark' : 
-                     `html.${theme.className}`;
-    
+    const selector =
+      themeKey === 'light'
+        ? ':root, html.theme-light'
+        : themeKey === 'dark'
+          ? 'html.theme-dark, .dark'
+          : `html.${theme.className}`;
+
     cssContent += `@layer base {\n  ${selector} {\n`;
     for (const [tokenName, token] of Object.entries(COLOR_TOKENS)) {
       let value = resolveTokenValue(token, theme.axes as any);
@@ -109,14 +128,14 @@ function generateCss() {
   for (const axes of allPerms) {
     // skip base/neutral/default if it matches light/dark exactly (too many redundant classes)
     const isBase = axes.base === 'Neutral' && axes.accent === 'Default';
-    if (isBase) continue; 
+    if (isBase) continue;
 
     const className = `theme-${axes.mode?.toLowerCase()}-${axes.base?.toLowerCase()}-${axes.accent?.toLowerCase()}`;
-    
+
     cssContent += `@layer base {\n  html.${className} {\n`;
     for (const [tokenName, token] of Object.entries(COLOR_TOKENS)) {
       const value = resolveTokenValue(token, axes);
-      // Only output if it differs from the mode's basic value? 
+      // Only output if it differs from the mode's basic value?
       // Actually simpler to just output all for now, but filter redundant themes.
       cssContent += `    --${tokenName}: ${hexToHsl(value)};\n`;
     }
@@ -132,11 +151,13 @@ function generateCss() {
   let newCss = '';
   if (existingCss.includes(startMarker) && existingCss.includes(endMarker)) {
     newCss = existingCss.replace(
-      new RegExp(`${startMarker.replace(/\*/g, '\\*')}[\\s\\S]*?${endMarker.replace(/\*/g, '\\*')}`),
+      new RegExp(
+        `${startMarker.replace(/\*/g, '\\*')}[\\s\\S]*?${endMarker.replace(/\*/g, '\\*')}`
+      ),
       cssContent
     );
   } else {
-    newCss = existingCss + '\n\n' + cssContent;
+    newCss = `${existingCss}\n\n${cssContent}`;
   }
 
   fs.writeFileSync(cssPath, newCss, 'utf8');
@@ -171,11 +192,15 @@ function generatePen() {
 
     normalizedVariables[tokenName] = {
       type: 'color',
-      value: valueEntries.length === 1 ? valueEntries[0].value : valueEntries
+      value: valueEntries.length === 1 ? valueEntries[0].value : valueEntries,
     };
   }
 
-  const updatedPen = adapter.updateVariablesAndThemes(rawPen, normalizedVariables, THEME_AXES as any);
+  const updatedPen = adapter.updateVariablesAndThemes(
+    rawPen,
+    normalizedVariables,
+    THEME_AXES as any
+  );
 
   fs.writeFileSync(penPath, JSON.stringify(updatedPen, null, 2), 'utf8');
   console.log(`✅ Patched Pencil via ${adapter.supportedVersion} adapter: pencil/designSystem.pen`);

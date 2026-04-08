@@ -1,15 +1,23 @@
 import { createHash } from 'node:crypto';
 import type {
   ActivitySyncBody,
+  CreateActivityInput,
   CreateBloodGlucoseInput,
   CreateBloodPressureInput,
   CreateHealthGoalInput,
   CreateMealInput,
+  CreateWeightInput,
   UpdateHealthGoalInput,
 } from '../../../shared/schemas/health.schema';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors';
 import { isUniqueViolation } from '../../lib/pg-errors';
-import type { ActivityRow, BloodGlucoseRow, BloodPressureRow, MealRow } from './health.repository';
+import type {
+  ActivityRow,
+  BloodGlucoseRow,
+  BloodPressureRow,
+  MealRow,
+  WeightRow,
+} from './health.repository';
 import * as Repo from './health.repository';
 import type { HealthGoalRow } from './health-goals.repository';
 import * as GoalRepo from './health-goals.repository';
@@ -73,6 +81,27 @@ export const hashMeal = (userId: string, input: CreateMealInput): string =>
     })
   );
 
+export const hashActivity = (userId: string, input: CreateActivityInput): string =>
+  sha256Hex(
+    stableSerialize({
+      u: userId,
+      t: new Date(input.recordedAt).toISOString(),
+      steps: input.steps ?? null,
+      am: input.activeMinutes ?? null,
+      cb: input.caloriesBurned ?? null,
+      memo: input.memo ?? null,
+    })
+  );
+
+export const hashWeight = (userId: string, input: CreateWeightInput): string =>
+  sha256Hex(
+    stableSerialize({
+      u: userId,
+      t: new Date(input.recordedAt).toISOString(),
+      value: input.value,
+    })
+  );
+
 export const hashActivityItem = (
   userId: string,
   item: ActivitySyncBody['items'][number],
@@ -127,6 +156,20 @@ const mapMeal = (r: MealRow) => ({
   recordedAt: toIso(r.recordedAt),
   items: r.items,
   estimatedCalories: r.estimatedCalories,
+  photoUri: r.photoUri,
+  externalId: r.externalId,
+  valueHash: r.valueHash,
+  inputSource: r.inputSource as 'manual' | 'device' | 'import' | 'api',
+  syncSource: r.syncSource,
+  memo: r.memo,
+  createdAt: toIso(r.createdAt),
+  updatedAt: toIso(r.updatedAt),
+});
+
+const mapWeight = (r: WeightRow) => ({
+  id: r.id,
+  recordedAt: toIso(r.recordedAt),
+  value: r.value,
   externalId: r.externalId,
   valueHash: r.valueHash,
   inputSource: r.inputSource as 'manual' | 'device' | 'import' | 'api',
@@ -355,6 +398,19 @@ const recalculateDerivedHealthData = async (
   await refreshHealthInsightsForDate(userId, date, timeZone);
 };
 
+const recalculateDerivedHealthDataForDays = async (
+  userId: string,
+  days: Array<{ date: string; timeZone?: string | null }>
+) => {
+  const seen = new Set<string>();
+  for (const { date, timeZone } of days) {
+    const key = `${date}::${timeZone ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    await recalculateDerivedHealthData(userId, date, timeZone);
+  }
+};
+
 export const createBloodPressure = async (userId: string, input: CreateBloodPressureInput) => {
   const timeZone = input.timeZone ?? 'UTC';
   const valueHash = input.valueHash ?? hashBloodPressure(userId, input);
@@ -423,6 +479,7 @@ export const updateBloodPressure = async (
   if (!existing) throw new NotFoundError('Blood pressure record not found');
   if (existing.userId !== userId)
     throw new ForbiddenError('Cannot access another user health data');
+  const previousDay = toLocalDateString(existing.recordedAt, existing.timeZone);
   const timeZone = input.timeZone ?? existing.timeZone;
   const row = await Repo.updateBloodPressure(id, {
     recordedAt: input.recordedAt ? new Date(input.recordedAt) : undefined,
@@ -435,7 +492,10 @@ export const updateBloodPressure = async (
   });
   if (!row) throw new Error('updateBloodPressure failed');
   const day = toLocalDateString(row.recordedAt, timeZone);
-  await recalculateDerivedHealthData(userId, day, timeZone);
+  await recalculateDerivedHealthDataForDays(userId, [
+    { date: previousDay, timeZone: existing.timeZone },
+    { date: day, timeZone },
+  ]);
   return mapBp(row);
 };
 
@@ -512,6 +572,7 @@ export const updateBloodGlucose = async (
   if (!existing) throw new NotFoundError('Blood glucose record not found');
   if (existing.userId !== userId)
     throw new ForbiddenError('Cannot access another user health data');
+  const previousDay = toLocalDateString(existing.recordedAt, existing.timeZone);
   const timeZone = input.timeZone ?? existing.timeZone;
   const row = await Repo.updateBloodGlucose(id, {
     recordedAt: input.recordedAt ? new Date(input.recordedAt) : undefined,
@@ -523,7 +584,10 @@ export const updateBloodGlucose = async (
   });
   if (!row) throw new Error('updateBloodGlucose failed');
   const day = toLocalDateString(row.recordedAt, timeZone);
-  await recalculateDerivedHealthData(userId, day, timeZone);
+  await recalculateDerivedHealthDataForDays(userId, [
+    { date: previousDay, timeZone: existing.timeZone },
+    { date: day, timeZone },
+  ]);
   return mapG(row);
 };
 
@@ -556,6 +620,7 @@ export const createMeal = async (userId: string, input: CreateMealInput) => {
       memo: input.memo ?? null,
       items: input.items,
       estimatedCalories: input.estimatedCalories ?? null,
+      photoUri: input.photoUri ?? null,
     });
     if (!row) throw new Error('insertMeal returned no row');
     const day = toLocalDateString(row.recordedAt, timeZone);
@@ -589,18 +654,182 @@ export const updateMeal = async (userId: string, id: string, input: Partial<Crea
   if (existing.userId !== userId)
     throw new ForbiddenError('Cannot access another user health data');
 
+  const previousDay = toLocalDateString(existing.recordedAt, existing.timeZone);
   const timeZone = input.timeZone ?? existing.timeZone;
   const row = await Repo.updateMeal(id, {
     recordedAt: input.recordedAt ? new Date(input.recordedAt) : undefined,
     timeZone,
     items: input.items,
     estimatedCalories: input.estimatedCalories,
+    photoUri: input.photoUri,
     memo: input.memo,
   });
   if (!row) throw new Error('updateMeal failed');
   const day = toLocalDateString(row.recordedAt, timeZone);
-  await recalculateDerivedHealthData(userId, day, timeZone);
+  await recalculateDerivedHealthDataForDays(userId, [
+    { date: previousDay, timeZone: existing.timeZone },
+    { date: day, timeZone },
+  ]);
   return mapMeal(row);
+};
+
+export const createActivity = async (userId: string, input: CreateActivityInput) => {
+  const timeZone = input.timeZone ?? 'UTC';
+  const valueHash = input.valueHash ?? hashActivity(userId, input);
+  const existing = await Repo.findActivityByExternalOrHash(userId, input.externalId, valueHash);
+  if (existing) {
+    return { record: mapAct(existing), duplicate: true as const };
+  }
+  try {
+    const row = await Repo.insertActivity({
+      userId,
+      recordedAt: new Date(input.recordedAt),
+      timeZone,
+      externalId: input.externalId ?? null,
+      valueHash,
+      inputSource: input.inputSource,
+      syncSource: input.syncSource ?? null,
+      memo: input.memo ?? null,
+      steps: input.steps ?? null,
+      activeMinutes: input.activeMinutes ?? null,
+      caloriesBurned: input.caloriesBurned ?? null,
+    });
+    if (!row) throw new Error('insertActivity returned no row');
+    const day = toLocalDateString(row.recordedAt, timeZone);
+    await recalculateDerivedHealthData(userId, day, timeZone);
+    return { record: mapAct(row), duplicate: false as const };
+  } catch (e) {
+    if (!isUniqueViolation(e)) throw e;
+    const row = await Repo.findActivityByExternalOrHash(userId, input.externalId, valueHash);
+    if (!row) throw e;
+    return { record: mapAct(row), duplicate: true as const };
+  }
+};
+
+export const updateActivity = async (
+  userId: string,
+  id: string,
+  input: Partial<CreateActivityInput>
+) => {
+  const existing = await Repo.findActivityById(id);
+  if (!existing) throw new NotFoundError('Activity record not found');
+  if (existing.userId !== userId)
+    throw new ForbiddenError('Cannot access another user health data');
+  const previousDay = toLocalDateString(existing.recordedAt, existing.timeZone);
+  const timeZone = input.timeZone ?? existing.timeZone;
+  const row = await Repo.updateActivity(id, {
+    recordedAt: input.recordedAt ? new Date(input.recordedAt) : undefined,
+    timeZone,
+    steps: input.steps,
+    activeMinutes: input.activeMinutes,
+    caloriesBurned: input.caloriesBurned,
+    memo: input.memo,
+  });
+  if (!row) throw new Error('updateActivity failed');
+  const day = toLocalDateString(row.recordedAt, timeZone);
+  await recalculateDerivedHealthDataForDays(userId, [
+    { date: previousDay, timeZone: existing.timeZone },
+    { date: day, timeZone },
+  ]);
+  return mapAct(row);
+};
+
+export const deleteActivity = async (userId: string, id: string) => {
+  const existing = await Repo.findActivityById(id);
+  if (!existing) throw new NotFoundError('Activity record not found');
+  if (existing.userId !== userId)
+    throw new ForbiddenError('Cannot access another user health data');
+  await Repo.deleteActivity(id);
+  const day = toLocalDateString(existing.recordedAt, existing.timeZone);
+  await recalculateDerivedHealthData(userId, day, existing.timeZone);
+};
+
+export const createWeight = async (userId: string, input: CreateWeightInput) => {
+  const timeZone = input.timeZone ?? 'UTC';
+  const valueHash = input.valueHash ?? hashWeight(userId, input);
+  const existing = await Repo.findWeightByExternalOrHash(userId, input.externalId, valueHash);
+  if (existing) {
+    return { record: mapWeight(existing), duplicate: true as const };
+  }
+  try {
+    const row = await Repo.insertWeight({
+      userId,
+      recordedAt: new Date(input.recordedAt),
+      timeZone,
+      externalId: input.externalId ?? null,
+      valueHash,
+      inputSource: input.inputSource,
+      syncSource: input.syncSource ?? null,
+      memo: input.memo ?? null,
+      value: input.value,
+    });
+    if (!row) throw new Error('insertWeight returned no row');
+    const day = toLocalDateString(row.recordedAt, timeZone);
+    await recalculateDerivedHealthData(userId, day, timeZone);
+    return { record: mapWeight(row), duplicate: false as const };
+  } catch (e) {
+    if (!isUniqueViolation(e)) throw e;
+    const row = await Repo.findWeightByExternalOrHash(userId, input.externalId, valueHash);
+    if (!row) throw e;
+    return { record: mapWeight(row), duplicate: true as const };
+  }
+};
+
+export const listWeight = async (
+  userId: string,
+  from?: string,
+  to?: string,
+  timeZone?: string | null
+) => {
+  const toStr = to ?? defaultRangeTo(timeZone);
+  const fromStr = from ?? defaultRangeFrom(toStr);
+  const fromDate = Repo.getLocalDayRange(fromStr, timeZone).start;
+  const toExclusive = Repo.getLocalDayRange(toStr, timeZone).endExclusive;
+  const rows = await Repo.listWeightInRange(userId, fromDate, toExclusive);
+  return { records: rows.map(mapWeight) };
+};
+
+export const getWeightById = async (userId: string, id: string) => {
+  const row = await Repo.findWeightById(id);
+  if (!row) throw new NotFoundError('Weight record not found');
+  if (row.userId !== userId) throw new ForbiddenError('Cannot access another user health data');
+  return mapWeight(row);
+};
+
+export const updateWeight = async (
+  userId: string,
+  id: string,
+  input: Partial<CreateWeightInput>
+) => {
+  const existing = await Repo.findWeightById(id);
+  if (!existing) throw new NotFoundError('Weight record not found');
+  if (existing.userId !== userId)
+    throw new ForbiddenError('Cannot access another user health data');
+  const previousDay = toLocalDateString(existing.recordedAt, existing.timeZone);
+  const timeZone = input.timeZone ?? existing.timeZone;
+  const row = await Repo.updateWeight(id, {
+    recordedAt: input.recordedAt ? new Date(input.recordedAt) : undefined,
+    timeZone,
+    value: input.value,
+    memo: input.memo,
+  });
+  if (!row) throw new Error('updateWeight failed');
+  const day = toLocalDateString(row.recordedAt, timeZone);
+  await recalculateDerivedHealthDataForDays(userId, [
+    { date: previousDay, timeZone: existing.timeZone },
+    { date: day, timeZone },
+  ]);
+  return mapWeight(row);
+};
+
+export const deleteWeight = async (userId: string, id: string) => {
+  const existing = await Repo.findWeightById(id);
+  if (!existing) throw new NotFoundError('Weight record not found');
+  if (existing.userId !== userId)
+    throw new ForbiddenError('Cannot access another user health data');
+  await Repo.deleteWeight(id);
+  const day = toLocalDateString(existing.recordedAt, existing.timeZone);
+  await recalculateDerivedHealthData(userId, day, existing.timeZone);
 };
 
 export const deleteMeal = async (userId: string, id: string) => {
@@ -857,6 +1086,7 @@ export const getHealthGoalAchievements = async (
     goalTypes.has('blood_glucose_fasting_range') ||
     goalTypes.has('blood_glucose_postprandial_range');
   const hasWeeklyExerciseGoal = goalTypes.has('weekly_exercise_days');
+  const hasWeightGoal = goalTypes.has('weight_target');
   const currentMealRows = hasCalorieGoal
     ? await Repo.listMealsInRange(
         userId,
@@ -866,6 +1096,13 @@ export const getHealthGoalAchievements = async (
     : [];
   const currentGlucoseRows = hasGlucoseGoal
     ? await Repo.listBloodGlucoseInRange(
+        userId,
+        Repo.getLocalDayRange(date, timeZone).start,
+        Repo.getLocalDayRange(date, timeZone).endExclusive
+      )
+    : [];
+  const currentWeightRows = hasWeightGoal
+    ? await Repo.listWeightInRange(
         userId,
         Repo.getLocalDayRange(date, timeZone).start,
         Repo.getLocalDayRange(date, timeZone).endExclusive
@@ -930,6 +1167,16 @@ export const getHealthGoalAchievements = async (
         currentValue != null
           ? `latest ${currentValue} (${min}-${max})`
           : `no ${timing} glucose record`;
+    } else if (goal.goalType === 'weight_target') {
+      const latestWeight = currentWeightRows[0]?.value ?? null;
+      currentValue = latestWeight;
+      const target = goal.targetValue ?? 0;
+      achieved = currentValue != null ? currentValue <= target : false;
+      achievementRate =
+        currentValue != null && target > 0
+          ? clampPercentage((target / Math.max(currentValue, 1)) * 100)
+          : 0;
+      details = currentValue != null ? `latest ${currentValue}/${target}` : 'no weight record';
     } else if (goal.goalType === 'weekly_exercise_days') {
       const summaryMap = weeklySummaries ?? new Map();
       const start = Repo.addUtcDays(date, -6);

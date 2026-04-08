@@ -23,7 +23,7 @@ describe('Dialog', () => {
           </DialogHeader>
           <div>Content</div>
           <DialogFooter>
-            <button>Save</button>
+            <button type="button">Save</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
