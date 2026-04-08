@@ -386,6 +386,38 @@ export function useReminderSettings() {
   });
 }
 
+export function useHealthProfile() {
+  return useQuery({
+    queryKey: ['health', 'profile'],
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const res = await healthRpc.profile.$get();
+      if (!res.ok) throw new Error('Failed to fetch health profile');
+      return res.json();
+    },
+  });
+}
+
+export function useUpdateHealthProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Record<string, unknown>) => {
+      const res = await healthRpc.profile.$put({
+        json: input,
+      });
+      if (!res.ok) throw new Error('Failed to update health profile');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['health', 'profile'] });
+      queryClient.invalidateQueries({ queryKey: ['health', 'weights'] });
+      queryClient.invalidateQueries({ queryKey: ['health', 'goals'] });
+      queryClient.invalidateQueries({ queryKey: ['health', 'goal-achievements'] });
+    },
+  });
+}
+
 export function useUpdateReminderSetting() {
   const queryClient = useQueryClient();
   return useMutation({

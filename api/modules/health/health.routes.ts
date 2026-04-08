@@ -16,6 +16,7 @@ import {
   dailyActivityResponseSchema,
   dailySummaryResponseSchema,
   dateQuerySchema,
+  healthProfileSchema,
   listActivityResponseSchema,
   listBloodGlucoseResponseSchema,
   listBloodPressureResponseSchema,
@@ -24,6 +25,7 @@ import {
   mealCreateResponseSchema,
   mealRecordSchema,
   summaryDateQuerySchema,
+  updateHealthProfileSchema,
   weeklySummaryQuerySchema,
   weeklySummaryResponseSchema,
   weightCreateResponseSchema,
@@ -471,6 +473,39 @@ const getSummaryMonthlyRoute = createRoute({
   },
 });
 
+const getHealthProfileRoute = createRoute({
+  method: 'get',
+  path: '/profile',
+  responses: {
+    200: {
+      description: '健康プロフィール',
+      content: {
+        'application/json': { schema: healthProfileSchema },
+      },
+    },
+  },
+});
+
+const putHealthProfileRoute = createRoute({
+  method: 'put',
+  path: '/profile',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: updateHealthProfileSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: '更新後の健康プロフィール',
+      content: {
+        'application/json': { schema: healthProfileSchema },
+      },
+    },
+  },
+});
+
 const putBloodPressureRoute = createRoute({
   method: 'put',
   path: '/vitals/blood-pressure/{id}',
@@ -727,6 +762,21 @@ protectedHealth.openapi(getSummaryMonthlyRoute, async (c) => {
   if (!user) throw new AuthError('Unauthorized');
   const q = c.req.valid('query');
   const data = await HealthService.getMonthlySummary(user.userId, q.yearMonth);
+  return c.json(data, 200);
+});
+
+protectedHealth.openapi(getHealthProfileRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const data = await HealthService.getHealthProfile(user.userId);
+  return c.json(data, 200);
+});
+
+protectedHealth.openapi(putHealthProfileRoute, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Unauthorized');
+  const body = c.req.valid('json');
+  const data = await HealthService.updateHealthProfile(user.userId, body);
   return c.json(data, 200);
 });
 

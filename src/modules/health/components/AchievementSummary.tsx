@@ -1,7 +1,6 @@
-import { Badge } from '@repo/design-system/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/design-system/components/ui/card';
-import { Progress } from '@repo/design-system/components/ui/progress';
+import { Badge, Card, CardContent, CardHeader, CardTitle, ProgressBar } from '@repo/design-system';
 import { CheckCircle2, Circle, Target } from 'lucide-react';
+import type { AchievementItem } from '../../../types/health.types';
 import { useHealthGoalAchievements } from '../hooks/health.hooks';
 
 export function AchievementSummary() {
@@ -21,7 +20,7 @@ export function AchievementSummary() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {data.items.map((item: any) => (
+        {data.items.map((item: AchievementItem) => (
           <div key={item.goal.id} className="space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -46,7 +45,7 @@ export function AchievementSummary() {
                 )}
               </div>
             </div>
-            <Progress value={item.achievementRate} className="h-1.5" />
+            <ProgressBar value={item.achievementRate} className="h-1.5" />
             {item.details && (
               <p className="text-[10px] text-muted-foreground/60 italic lowercase">
                 {item.details}
@@ -66,7 +65,7 @@ function getGoalLabel(type: string): string {
     blood_pressure_diastolic_max: '最低血圧 (上限)',
     blood_glucose_fasting_range: '空腹時血糖 (範囲)',
     blood_glucose_postprandial_range: '食後血糖 (範囲)',
-    daily_calorie_limit: '摂取カロリー (制限)',
+    daily_calorie_limit: '1日トータル摂取カロリー (上限)',
     weekly_exercise_days: '週の運動日数',
   };
   return labels[type] || type;

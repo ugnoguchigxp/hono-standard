@@ -8,9 +8,15 @@ import type {
   CreateMealInput,
   CreateWeightInput,
   UpdateHealthGoalInput,
+  UpdateHealthProfileInput,
 } from '../../../shared/schemas/health.schema';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors';
 import { isUniqueViolation } from '../../lib/pg-errors';
+import {
+  findById as findUserById,
+  type InsertUser,
+  update as updateUser,
+} from '../../services/user.service';
 import type {
   ActivityRow,
   BloodGlucoseRow,
@@ -409,6 +415,55 @@ const recalculateDerivedHealthDataForDays = async (
     seen.add(key);
     await recalculateDerivedHealthData(userId, date, timeZone);
   }
+};
+
+export const getHealthProfile = async (userId: string) => {
+  const user = await findUserById(userId);
+  if (!user) throw new NotFoundError('User not found');
+
+  const latestWeight = await Repo.findLatestWeightByUser(userId);
+  const latestWeightKg: number | null = latestWeight?.value ?? null;
+  const age = user.age ?? null;
+  const gender: 'male' | 'female' | null =
+    user.gender === 'male' || user.gender === 'female' ? user.gender : null;
+  const heightCm = user.heightCm ?? null;
+  const activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active' | null =
+    user.activityLevel === 'sedentary' ||
+    user.activityLevel === 'light' ||
+    user.activityLevel === 'moderate' ||
+    user.activityLevel === 'active' ||
+    user.activityLevel === 'very_active'
+      ? user.activityLevel
+      : null;
+
+  return {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    age,
+    gender,
+    heightCm,
+    activityLevel,
+    latestWeightKg,
+    bmr: null,
+    recommendedDailyCalorieGoal: null,
+    updatedAt: user.updatedAt?.toISOString() ?? null,
+  };
+};
+
+export const updateHealthProfile = async (userId: string, input: UpdateHealthProfileInput) => {
+  const patch: Partial<InsertUser> = {};
+  if ('age' in input) patch.age = input.age ?? null;
+  if ('gender' in input) patch.gender = input.gender ?? null;
+  if ('heightCm' in input) patch.heightCm = input.heightCm ?? null;
+  if ('activityLevel' in input) patch.activityLevel = input.activityLevel ?? null;
+
+  if (Object.keys(patch).length > 0) {
+    const user = await updateUser(userId, patch);
+    if (!user) throw new NotFoundError('User not found');
+  }
+
+  return getHealthProfile(userId);
 };
 
 export const createBloodPressure = async (userId: string, input: CreateBloodPressureInput) => {

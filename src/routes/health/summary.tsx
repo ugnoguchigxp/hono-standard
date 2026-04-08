@@ -61,7 +61,7 @@ function HealthSummary() {
     <div className="slide-in-from-bottom-4 animate-in space-y-8 duration-700">
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">週次・月次サマリ</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">週次・月次サマリ</h1>
           <p className="text-sm italic text-muted-foreground">
             API: weekly / monthly を表示します。
           </p>
@@ -70,7 +70,7 @@ function HealthSummary() {
 
       <section className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-foreground">
             週次（{weekly?.weekStart} 〜 {weekly?.weekEnd}）
           </h2>
           <div className="flex items-center gap-1 rounded-xl border bg-muted/30 p-1">
@@ -114,7 +114,9 @@ function HealthSummary() {
 
       <section className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">月次 {format(monthAnchor, 'yyyy年 M月')}</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            月次 {format(monthAnchor, 'yyyy年 M月')}
+          </h2>
           <div className="flex items-center gap-1 rounded-xl border bg-muted/30 p-1">
             <button
               type="button"

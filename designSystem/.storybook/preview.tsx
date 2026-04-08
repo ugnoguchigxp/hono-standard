@@ -1,150 +1,160 @@
 import type { Preview } from '@storybook/react-vite';
-import '../src/styles.css';
-import {
-  applyColorTheme,
-  applyDensityAndScaleTokens,
-  COLOR_THEME_PRESETS,
-  type ColorThemeKey,
-  DENSITY_PRESETS,
-  DESIGN_TOKEN_DEFAULTS,
-  type DensityKey,
-  FONT_SCALE_PRESETS,
-  type FontScaleKey,
-  RADIUS_PRESETS,
-  type RadiusKey,
-  SHADOW_PRESETS,
-  type ShadowKey,
-} from '../src/lib/design-tokens';
+import React from 'react';
 
-function ensureKey<T extends string>(
-  value: unknown,
-  options: Readonly<Record<T, unknown>>,
-  fallback: T
-): T {
-  if (typeof value === 'string' && value in options) {
-    return value as T;
-  }
-  return fallback;
-}
+import '../src/styles/index.css';
+import i18next from 'i18next';
+import { I18nextProvider, initReactI18next } from 'react-i18next';
+
+// Provide global t/log for components that assume i18n/logger
+// (design-system is consumed standalone in Storybook)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type GlobalFallbacks = {
+  t?: (key: string, fallback?: string) => string;
+  log?: {
+    info: (...args: unknown[]) => void;
+    warn: (...args: unknown[]) => void;
+    error: (...args: unknown[]) => void;
+    debug: (...args: unknown[]) => void;
+  };
+};
+
+const g = globalThis as unknown as GlobalFallbacks;
+g.t = (key: string, fallback?: string) => fallback ?? key;
+g.log = {
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+};
+
+const i18n = i18next.createInstance();
+void i18n.use(initReactI18next).init({
+  lng: 'ja',
+  fallbackLng: 'ja',
+  resources: {},
+  interpolation: { escapeValue: false },
+  react: { useSuspense: false },
+});
 
 const preview: Preview = {
   parameters: {
+    actions: { argTypesRegex: '^on[A-Z].*' },
+    options: {
+      storySort: {
+        method: 'alphabetical',
+        locales: 'en-US',
+      },
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,
         date: /Date$/i,
       },
     },
-    layout: 'centered',
+    backgrounds: { disabled: true },
+    layout: 'fullscreen',
   },
   globalTypes: {
-    colorTheme: {
-      name: 'Theme',
-      defaultValue: DESIGN_TOKEN_DEFAULTS.colorTheme,
+    theme: {
+      description: 'Global theme for components',
+      defaultValue: 'light',
       toolbar: {
+        title: 'Theme',
+        icon: 'paintbrush',
+        items: [
+          { value: 'light', title: 'Light' },
+          { value: 'dark', title: 'Dark' },
+          { value: 'tokyonight', title: 'Tokyo Night' },
+          { value: 'eclipse', title: 'Eclipse' },
+          { value: 'macosclassic', title: 'macOS Classic' },
+          { value: 'fire', title: 'Fire' },
+          { value: 'classicterminal', title: 'Classic Terminal' },
+          { value: 'sakurabloom', title: 'Sakura Bloom' },
+          { value: 'leafmint', title: 'Leaf Mint' },
+          { value: 'lattecream', title: 'Latte Cream' },
+          { value: 'sunshineOrange', title: 'Sunshine Orange' },
+        ],
         dynamicTitle: true,
-        icon: 'mirror',
-        items: Object.entries(COLOR_THEME_PRESETS).map(([value, meta]) => ({
-          value,
-          title: meta.label,
-        })),
-      },
-    },
-    fontScale: {
-      name: 'Font',
-      defaultValue: DESIGN_TOKEN_DEFAULTS.fontScale,
-      toolbar: {
-        dynamicTitle: true,
-        icon: 'paragraph',
-        items: Object.entries(FONT_SCALE_PRESETS).map(([value, meta]) => ({
-          value,
-          title: meta.label,
-        })),
       },
     },
     density: {
-      name: 'Density',
-      defaultValue: DESIGN_TOKEN_DEFAULTS.density,
+      description: 'UI Density',
+      defaultValue: 'normal',
       toolbar: {
+        title: 'Density',
+        icon: 'expand',
+        items: [
+          { value: 'compact', title: 'Compact' },
+          { value: 'normal', title: 'Normal' },
+          { value: 'spacious', title: 'Spacious' },
+        ],
         dynamicTitle: true,
-        icon: 'component',
-        items: Object.entries(DENSITY_PRESETS).map(([value, meta]) => ({
-          value,
-          title: meta.label,
-        })),
       },
     },
     radius: {
-      name: 'Radius',
-      defaultValue: DESIGN_TOKEN_DEFAULTS.radius,
+      description: 'Border Radius',
+      defaultValue: '0.5',
       toolbar: {
-        dynamicTitle: true,
+        title: 'Radius',
         icon: 'circlehollow',
-        items: Object.entries(RADIUS_PRESETS).map(([value, meta]) => ({
-          value,
-          title: meta.label,
-        })),
+        items: [
+          { value: '0', title: '0' },
+          { value: '0.3', title: '0.3' },
+          { value: '0.5', title: '0.5' },
+          { value: '0.75', title: '0.75' },
+          { value: '1.0', title: '1.0' },
+        ],
+        dynamicTitle: true,
       },
     },
-    shadow: {
-      name: 'Shadow',
-      defaultValue: DESIGN_TOKEN_DEFAULTS.shadow,
+    tabletMode: {
+      description: 'Tablet Mode (Touch Optimized)',
+      defaultValue: 'false',
       toolbar: {
+        title: 'Tablet',
+        icon: 'tablet',
+        items: [
+          { value: 'false', title: 'Off' },
+          { value: 'true', title: 'On' },
+        ],
         dynamicTitle: true,
-        icon: 'circle',
-        items: Object.entries(SHADOW_PRESETS).map(([value, meta]) => ({
-          value,
-          title: meta.label,
-        })),
       },
     },
   },
   decorators: [
     (Story, context) => {
-      const colorTheme = ensureKey<ColorThemeKey>(
-        context.globals.colorTheme,
-        COLOR_THEME_PRESETS,
-        DESIGN_TOKEN_DEFAULTS.colorTheme
-      );
-      const fontScale = ensureKey<FontScaleKey>(
-        context.globals.fontScale,
-        FONT_SCALE_PRESETS,
-        DESIGN_TOKEN_DEFAULTS.fontScale
-      );
-      const density = ensureKey<DensityKey>(
-        context.globals.density,
-        DENSITY_PRESETS,
-        DESIGN_TOKEN_DEFAULTS.density
-      );
-      const radius = ensureKey<RadiusKey>(
-        context.globals.radius,
-        RADIUS_PRESETS,
-        DESIGN_TOKEN_DEFAULTS.radius
-      );
-      const shadow = ensureKey<ShadowKey>(
-        context.globals.shadow,
-        SHADOW_PRESETS,
-        DESIGN_TOKEN_DEFAULTS.shadow
-      );
+      const theme = context.globals.theme || 'light';
+      const density = context.globals.density || 'normal';
+      const radius = context.globals.radius || '0.5';
+      const tabletMode = context.globals.tabletMode || 'false';
 
-      applyColorTheme(colorTheme);
-      applyDensityAndScaleTokens({
-        fontScale,
-        density,
-        radius,
-        shadow,
-      });
-
-      const isFullscreen = context.parameters.layout === 'fullscreen';
+      // Apply settings to document root for global effect
+      React.useEffect(() => {
+        const root = document.documentElement;
+        root.setAttribute('data-theme', theme);
+        root.setAttribute('data-density', density);
+        if (tabletMode === 'true') {
+          root.setAttribute('data-tablet-mode', 'true');
+        } else {
+          root.removeAttribute('data-tablet-mode');
+        }
+        root.style.setProperty('--radius', `${radius}rem`);
+      }, [theme, density, radius, tabletMode]);
 
       return (
-        <div
-          className={`theme min-h-screen w-full bg-background text-foreground ${
-            isFullscreen ? '' : 'p-6'
-          }`}
-        >
-          <Story />
-        </div>
+        <I18nextProvider i18n={i18n}>
+          <div
+            style={{
+              minHeight: '100vh',
+              width: '100%',
+              backgroundColor: 'var(--color-background)',
+              color: 'var(--color-foreground)',
+              padding: '1rem',
+            }}
+          >
+            <Story />
+          </div>
+        </I18nextProvider>
       );
     },
   ],

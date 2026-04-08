@@ -1,27 +1,27 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { StorybookConfig } from '@storybook/react-vite';
 
-const dirname = path.dirname(fileURLToPath(import.meta.url));
-
 const config: StorybookConfig = {
-  stories: ['../src/**/*.stories.@(ts|tsx|mdx)'],
-  addons: ['@storybook/addon-docs', '@storybook/addon-a11y'],
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  addons: [
+    '@storybook/addon-links',
+    '@storybook/addon-docs',
+    '@storybook/addon-vitest',
+    '@storybook/addon-a11y',
+  ],
+
   framework: {
     name: '@storybook/react-vite',
     options: {},
   },
-  docs: {
-    autodocs: 'tag',
-  },
-  async viteFinal(baseConfig) {
+
+  viteFinal: async (config) => {
     return {
-      ...baseConfig,
+      ...config,
       resolve: {
-        ...baseConfig.resolve,
+        ...config.resolve,
         alias: {
-          ...baseConfig.resolve?.alias,
-          '@': path.resolve(dirname, '../src'),
+          ...config.resolve?.alias,
+          '@': '/src',
         },
       },
     };

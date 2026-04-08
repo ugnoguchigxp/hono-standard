@@ -304,6 +304,16 @@ export const findWeightById = async (id: string) => {
   return row ?? null;
 };
 
+export const findLatestWeightByUser = async (userId: string) => {
+  const [row] = await db
+    .select()
+    .from(weightRecords)
+    .where(eq(weightRecords.userId, userId))
+    .orderBy(desc(weightRecords.recordedAt))
+    .limit(1);
+  return row ?? null;
+};
+
 export const updateWeight = async (
   id: string,
   values: Partial<typeof weightRecords.$inferInsert>

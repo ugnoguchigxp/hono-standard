@@ -11,13 +11,10 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@api/*": ["./api/*"],
-      "@repo/design-system": ["./designSystem/src"],
-      "@repo/design-system/*": ["./designSystem/src/*"],
-      "@repo/design-system/pencil": ["./designSystem/pencil"]
+      "@api/*": ["./api/*"]
     },
     "types": ["node", "vite/client"]
   },
   "include": ["src/**/*", "api/**/*", "shared/**/*"],
-  "exclude": ["node_modules", "dist", "drizzle"]
+  "exclude": ["node_modules", "dist", "drizzle", "designSystem/**/*"]
 }

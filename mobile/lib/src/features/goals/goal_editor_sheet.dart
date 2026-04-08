@@ -41,6 +41,7 @@ Future<GoalEditorPayload?> showGoalEditorSheet(
   BuildContext context, {
   required List<String> allowedGoalTypes,
   Map<String, dynamic>? goal,
+  Map<String, dynamic>? profile,
 }) {
   return showModalBottomSheet<GoalEditorPayload>(
     context: context,
@@ -49,6 +50,7 @@ Future<GoalEditorPayload?> showGoalEditorSheet(
     builder: (context) => GoalEditorSheet(
       allowedGoalTypes: allowedGoalTypes,
       goal: goal,
+      profile: profile,
     ),
   );
 }
@@ -58,10 +60,12 @@ class GoalEditorSheet extends StatefulWidget {
     super.key,
     required this.allowedGoalTypes,
     this.goal,
+    this.profile,
   });
 
   final List<String> allowedGoalTypes;
   final Map<String, dynamic>? goal;
+  final Map<String, dynamic>? profile;
 
   @override
   State<GoalEditorSheet> createState() => _GoalEditorSheetState();
@@ -82,15 +86,22 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
   @override
   void initState() {
     super.initState();
-    _goalType = widget.goal?['goalType'] as String? ?? widget.allowedGoalTypes.first;
+    _goalType =
+        widget.goal?['goalType'] as String? ?? widget.allowedGoalTypes.first;
     _startsOnController = TextEditingController(
-      text: widget.goal?['startsOn'] as String? ?? DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      text: widget.goal?['startsOn'] as String? ??
+          DateFormat('yyyy-MM-dd').format(DateTime.now()),
     );
-    _endsOnController = TextEditingController(text: widget.goal?['endsOn'] as String? ?? '');
-    _targetValueController = TextEditingController(text: widget.goal?['targetValue']?.toString() ?? '');
-    _targetMinController = TextEditingController(text: widget.goal?['targetMin']?.toString() ?? '');
-    _targetMaxController = TextEditingController(text: widget.goal?['targetMax']?.toString() ?? '');
-    _memoController = TextEditingController(text: widget.goal?['memo'] as String? ?? '');
+    _endsOnController =
+        TextEditingController(text: widget.goal?['endsOn'] as String? ?? '');
+    _targetValueController = TextEditingController(
+        text: widget.goal?['targetValue']?.toString() ?? '');
+    _targetMinController = TextEditingController(
+        text: widget.goal?['targetMin']?.toString() ?? '');
+    _targetMaxController = TextEditingController(
+        text: widget.goal?['targetMax']?.toString() ?? '');
+    _memoController =
+        TextEditingController(text: widget.goal?['memo'] as String? ?? '');
     _isActive = widget.goal?['isActive'] != false;
     _hasEndsOn = (widget.goal?['endsOn'] as String?)?.isNotEmpty == true;
   }
@@ -107,11 +118,17 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
   }
 
   bool get _requiresRange =>
-      _goalType == 'blood_glucose_fasting_range' || _goalType == 'blood_glucose_postprandial_range';
+      _goalType == 'blood_glucose_fasting_range' ||
+      _goalType == 'blood_glucose_postprandial_range';
 
-  String get _period => _goalType == 'weekly_exercise_days' ? 'weekly' : 'daily';
+  String get _period =>
+      _goalType == 'weekly_exercise_days' ? 'weekly' : 'daily';
 
-  Future<void> _pickDate(TextEditingController controller, {DateTime? initialDate}) async {
+  _CalorieRecommendation get _calorieRecommendation =>
+      _computeCalorieRecommendation(widget.profile);
+
+  Future<void> _pickDate(TextEditingController controller,
+      {DateTime? initialDate}) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate ?? DateTime.now(),
@@ -133,12 +150,18 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
           ? _endsOnController.text.trim()
           : null,
       isActive: _isActive,
-      memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
+      memo: _memoController.text.trim().isEmpty
+          ? null
+          : _memoController.text.trim(),
       targetValue: _requiresRange
           ? null
           : double.tryParse(_targetValueController.text.trim()),
-      targetMin: _requiresRange ? double.tryParse(_targetMinController.text.trim()) : null,
-      targetMax: _requiresRange ? double.tryParse(_targetMaxController.text.trim()) : null,
+      targetMin: _requiresRange
+          ? double.tryParse(_targetMinController.text.trim())
+          : null,
+      targetMax: _requiresRange
+          ? double.tryParse(_targetMaxController.text.trim())
+          : null,
     );
     Navigator.of(context).pop(payload);
   }
@@ -194,13 +217,15 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
                         ),
                       )
                       .toList(),
-                  onChanged: (value) => setState(() => _goalType = value ?? _goalType),
+                  onChanged: (value) =>
+                      setState(() => _goalType = value ?? _goalType),
                 ),
                 const SizedBox(height: 12),
               ] else
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
@@ -213,6 +238,7 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
                 children: [
                   Expanded(
                     child: TextFormField(
+                      key: const Key('goal_starts_on_field'),
                       controller: _startsOnController,
                       readOnly: true,
                       decoration: const InputDecoration(
@@ -225,6 +251,7 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
+                      key: const Key('goal_ends_on_field'),
                       controller: _endsOnController,
                       readOnly: true,
                       enabled: _hasEndsOn,
@@ -232,7 +259,9 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
                         labelText: '終了日',
                         border: OutlineInputBorder(),
                       ),
-                      onTap: _hasEndsOn ? () => _pickDate(_endsOnController) : null,
+                      onTap: _hasEndsOn
+                          ? () => _pickDate(_endsOnController)
+                          : null,
                     ),
                   ),
                 ],
@@ -244,11 +273,16 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
                 onChanged: (value) => setState(() => _hasEndsOn = value),
               ),
               const SizedBox(height: 12),
+              if (_goalType == 'daily_calorie_limit') ...[
+                _CalorieInfoCard(recommendation: _calorieRecommendation),
+                const SizedBox(height: 12),
+              ],
               if (_requiresRange) ...[
                 Row(
                   children: [
                     Expanded(
                       child: TextFormField(
+                        key: const Key('goal_target_min_field'),
                         controller: _targetMinController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -262,6 +296,7 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
+                        key: const Key('goal_target_max_field'),
                         controller: _targetMaxController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -276,17 +311,20 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
                 ),
               ] else ...[
                 TextFormField(
+                  key: const Key('goal_target_value_field'),
                   controller: _targetValueController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: '目標値',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => (value == null || value.isEmpty) ? '必須です' : null,
+                  validator: (value) =>
+                      (value == null || value.isEmpty) ? '必須です' : null,
                 ),
               ],
               const SizedBox(height: 12),
               TextFormField(
+                key: const Key('goal_memo_field'),
                 controller: _memoController,
                 maxLines: 3,
                 decoration: const InputDecoration(
@@ -303,6 +341,7 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
               ),
               const SizedBox(height: 20),
               FilledButton(
+                key: const Key('goal_save_button'),
                 onPressed: _save,
                 child: Text(widget.goal == null ? '作成' : '更新'),
               ),
@@ -326,7 +365,7 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
       case 'blood_glucose_postprandial_range':
         return '血糖 食後範囲';
       case 'daily_calorie_limit':
-        return '摂取カロリー上限';
+        return '1日トータル摂取カロリー上限';
       case 'weekly_exercise_days':
         return '週次運動日数';
       case 'weight_target':
@@ -335,4 +374,113 @@ class _GoalEditorSheetState extends State<GoalEditorSheet> {
         return type;
     }
   }
+}
+
+class _CalorieRecommendation {
+  const _CalorieRecommendation({required this.bmr, required this.tdee});
+
+  final int? bmr;
+  final int? tdee;
+}
+
+class _CalorieInfoCard extends StatelessWidget {
+  const _CalorieInfoCard({required this.recommendation});
+
+  final _CalorieRecommendation recommendation;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '食事目標の目安',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '基礎代謝 (BMR): ${recommendation.bmr != null ? '${recommendation.bmr} kcal/日' : '算出不可'}',
+            ),
+            Text(
+              '総消費カロリー (TDEE): ${recommendation.tdee != null ? '${recommendation.tdee} kcal/日' : '算出不可'}',
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '食事目標は TDEE を基準に調整してください。',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+_CalorieRecommendation _computeCalorieRecommendation(
+    Map<String, dynamic>? profile) {
+  final weightKg = (profile?['latestWeightKg'] as num?)?.toDouble();
+  final heightCm = (profile?['heightCm'] as num?)?.toDouble();
+  final age = profile?['age'] as int?;
+  final gender = profile?['gender'] as String?;
+  final activityLevel = profile?['activityLevel'] as String?;
+
+  final bmr = _calculateBmr(
+    weightKg: weightKg,
+    heightCm: heightCm,
+    age: age,
+    gender: gender,
+  );
+  final tdee = _calculateTdee(
+    weightKg: weightKg,
+    heightCm: heightCm,
+    age: age,
+    gender: gender,
+    activityLevel: activityLevel,
+  );
+  return _CalorieRecommendation(bmr: bmr, tdee: tdee);
+}
+
+int? _calculateBmr({
+  required double? weightKg,
+  required double? heightCm,
+  required int? age,
+  required String? gender,
+}) {
+  if (weightKg == null || heightCm == null || age == null) return null;
+  if (gender != 'male' && gender != 'female') return null;
+  final s = gender == 'male' ? 5 : -161;
+  return (10 * weightKg + 6.25 * heightCm - 5 * age + s).round();
+}
+
+int? _calculateTdee({
+  required double? weightKg,
+  required double? heightCm,
+  required int? age,
+  required String? gender,
+  required String? activityLevel,
+}) {
+  final bmr = _calculateBmr(
+    weightKg: weightKg,
+    heightCm: heightCm,
+    age: age,
+    gender: gender,
+  );
+  if (bmr == null || activityLevel == null) return null;
+  const multiplier = {
+    'sedentary': 1.2,
+    'light': 1.375,
+    'moderate': 1.55,
+    'active': 1.725,
+    'very_active': 1.9,
+  };
+  final factor = multiplier[activityLevel];
+  if (factor == null) return null;
+  return (bmr * factor).round();
 }

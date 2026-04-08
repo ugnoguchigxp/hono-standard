@@ -1,6 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:fquery/fquery.dart';
+import 'package:fquery_core/fquery_core.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/query/health_query_keys.dart';
 import '../../core/session/app_controller.dart';
 import '../records/record_editor_sheet.dart';
 
@@ -17,19 +21,6 @@ class _SummaryScreenState extends State<SummaryScreen> {
   late DateTime _from = DateTime.now().subtract(const Duration(days: 30));
   late DateTime _to = DateTime.now();
   String _filter = 'all';
-  Future<List<_TimelineRow>>? _snapshot;
-
-  @override
-  void initState() {
-    super.initState();
-    _reload();
-  }
-
-  void _reload() {
-    setState(() {
-      _snapshot = _loadRows();
-    });
-  }
 
   Future<List<_TimelineRow>> _loadRows() async {
     final from = DateFormat('yyyy-MM-dd').format(_from);
@@ -141,6 +132,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
   }
 
   Future<void> _pickFromDate() async {
+    final cache = CacheProvider.get(context);
     final picked = await showDatePicker(
       context: context,
       initialDate: _from,
@@ -149,11 +141,12 @@ class _SummaryScreenState extends State<SummaryScreen> {
     );
     if (picked != null) {
       setState(() => _from = picked);
-      _reload();
+      cache.invalidateQueries(['health']);
     }
   }
 
   Future<void> _pickToDate() async {
+    final cache = CacheProvider.get(context);
     final picked = await showDatePicker(
       context: context,
       initialDate: _to,
@@ -162,32 +155,35 @@ class _SummaryScreenState extends State<SummaryScreen> {
     );
     if (picked != null) {
       setState(() => _to = picked);
-      _reload();
+      cache.invalidateQueries(['health']);
     }
   }
 
   Future<void> _createRecord() async {
+    final cache = CacheProvider.get(context);
     final kind = _filter == 'all' || _filter == 'activity' ? 'weight' : _filter;
     final saved = await showRecordEditorSheet(
       context,
       controller: widget.controller,
       initialKind: kind,
     );
-    if (saved) _reload();
+    if (saved) cache.invalidateQueries(['health']);
   }
 
   Future<void> _editRecord(_TimelineRow row) async {
     if (row.kind == 'activity') return;
+    final cache = CacheProvider.get(context);
     final saved = await showRecordEditorSheet(
       context,
       controller: widget.controller,
       record: row.record,
       initialKind: row.kind,
     );
-    if (saved) _reload();
+    if (saved) cache.invalidateQueries(['health']);
   }
 
   Future<void> _deleteRecord(_TimelineRow row) async {
+    final cache = CacheProvider.get(context);
     final shouldDelete = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -219,7 +215,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
       } else if (row.kind == 'weight') {
         await api.deleteWeight(row.record['id'] as String);
       }
-      _reload();
+      cache.invalidateQueries(['health']);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -230,135 +226,161 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async => _reload(),
-      child: FutureBuilder<List<_TimelineRow>>(
-        future: _snapshot,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return ListView(
-              padding: const EdgeInsets.all(20),
-              children: [Text('読み込み失敗: ${snapshot.error}')],
-            );
-          }
-
-          final rows = snapshot.data ?? const <_TimelineRow>[];
-          final filtered = _filter == 'all'
-              ? rows
-              : rows.where((row) => row.kind == _filter).toList();
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '履歴',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  FilledButton.icon(
-                    onPressed: _createRecord,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('新規入力'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '血圧・血糖・食事・体重・運動を日付順に表示します。',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final entry in const [
-                    'all',
-                    'blood_pressure',
-                    'blood_glucose',
-                    'meal',
-                    'weight',
-                    'activity',
-                  ])
-                    FilterChip(
-                      selected: _filter == entry,
-                      label: Text(entry == 'all' ? 'すべて' : _kindLabel(entry)),
-                      onSelected: (_) => setState(() => _filter = entry),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  SizedBox(
-                    width: 170,
-                    child: OutlinedButton(
-                      onPressed: _pickFromDate,
-                      child: Text('開始: ${DateFormat('MM/dd').format(_from)}'),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 170,
-                    child: OutlinedButton(
-                      onPressed: _pickToDate,
-                      child: Text('終了: ${DateFormat('MM/dd').format(_to)}'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (filtered.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 60),
-                  child: Center(child: Text('この条件の記録はありません。')),
-                )
-              else
-                ...filtered.map(
-                  (row) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Card(
-                      elevation: 0,
-                      child: ListTile(
-                        onTap: () => _editRecord(row),
-                        leading: CircleAvatar(
-                          child: Text(_kindLabel(row.kind).substring(0, 1)),
-                        ),
-                        title: Text(row.title),
-                        subtitle: Text(
-                          '${DateFormat('yyyy/MM/dd HH:mm').format(row.recordedAt)}\n${row.subtitle}',
-                        ),
-                        isThreeLine: row.subtitle.isNotEmpty,
-                        trailing: row.kind == 'activity'
-                            ? const Icon(Icons.north_east_rounded)
-                            : Wrap(
-                                spacing: 4,
-                                children: [
-                                  IconButton(
-                                    onPressed: () => _editRecord(row),
-                                    icon: const Icon(Icons.edit_rounded),
-                                  ),
-                                  IconButton(
-                                    onPressed: () => _deleteRecord(row),
-                                    icon: const Icon(Icons.delete_rounded),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
+    return QueryBuilder<List<_TimelineRow>, DioException>(
+      options: QueryOptions<List<_TimelineRow>, DioException>(
+        queryKey: healthTimelineQuery(
+          DateFormat('yyyy-MM-dd').format(_from),
+          DateFormat('yyyy-MM-dd').format(_to),
+        ),
+        queryFn: _loadRows,
       ),
+      builder: (context, result) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            await result.refetch();
+          },
+          child: _buildBody(context, result),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    QueryResult<List<_TimelineRow>, DioException> result,
+  ) {
+    if (result.isLoading) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: const [
+          SizedBox(height: 120),
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
+    }
+    if (result.isError || result.data == null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [Text('読み込み失敗: ${result.error}')],
+      );
+    }
+
+    final rows = result.data ?? const <_TimelineRow>[];
+    final filtered =
+        _filter == 'all' ? rows : rows.where((row) => row.kind == _filter).toList();
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '履歴',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: _createRecord,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('新規入力'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '血圧・血糖・食事・体重・運動を日付順に表示します。',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final entry in const [
+              'all',
+              'blood_pressure',
+              'blood_glucose',
+              'meal',
+              'weight',
+              'activity',
+            ])
+              FilterChip(
+                selected: _filter == entry,
+                label: Text(entry == 'all' ? 'すべて' : _kindLabel(entry)),
+                onSelected: (_) => setState(() => _filter = entry),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: 170,
+              child: OutlinedButton(
+                onPressed: _pickFromDate,
+                child: Text('開始: ${DateFormat('MM/dd').format(_from)}'),
+              ),
+            ),
+            SizedBox(
+              width: 170,
+              child: OutlinedButton(
+                onPressed: _pickToDate,
+                child: Text('終了: ${DateFormat('MM/dd').format(_to)}'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (filtered.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 60),
+            child: Center(child: Text('この条件の記録はありません。')),
+          )
+        else
+          ...filtered.map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Card(
+                elevation: 0,
+                child: ListTile(
+                  onTap: row.kind == 'activity' ? null : () => _editRecord(row),
+                  leading: CircleAvatar(
+                    child: Text(_kindLabel(row.kind).substring(0, 1)),
+                  ),
+                  title: Text(row.title),
+                  subtitle: Text(
+                    '${DateFormat('yyyy/MM/dd HH:mm').format(row.recordedAt)}\n${row.subtitle}',
+                  ),
+                  isThreeLine: row.subtitle.isNotEmpty,
+                  trailing: row.kind == 'activity'
+                      ? const Icon(Icons.north_east_rounded)
+                      : Wrap(
+                          spacing: 4,
+                          children: [
+                            IconButton(
+                              onPressed: () => _editRecord(row),
+                              icon: const Icon(Icons.edit_rounded),
+                            ),
+                            IconButton(
+                              onPressed: () => _deleteRecord(row),
+                              icon: const Icon(Icons.delete_rounded),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -197,6 +197,29 @@ class HealthApiClient {
     return _map(res.data);
   }
 
+  Future<Map<String, dynamic>> getHealthProfile() async {
+    final res = await _request<Map<String, dynamic>>(
+      () => _dio.get<Map<String, dynamic>>(
+        '/api/v1/health/profile',
+        options: Options(headers: _authHeaders()),
+      ),
+      authorized: true,
+    );
+    return _map(res.data);
+  }
+
+  Future<Map<String, dynamic>> updateHealthProfile(Map<String, dynamic> body) async {
+    final res = await _request<Map<String, dynamic>>(
+      () => _dio.put<Map<String, dynamic>>(
+        '/api/v1/health/profile',
+        data: body,
+        options: Options(headers: _authHeaders()),
+      ),
+      authorized: true,
+    );
+    return _map(res.data);
+  }
+
   Future<Map<String, dynamic>> registerNotificationDevice(Map<String, dynamic> body) async {
     final res = await _request<Map<String, dynamic>>(
       () => _dio.post<Map<String, dynamic>>(

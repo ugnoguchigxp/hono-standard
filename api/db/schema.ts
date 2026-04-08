@@ -26,6 +26,10 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash'),
   name: text('name').notNull(),
+  age: integer('age'),
+  gender: text('gender'),
+  heightCm: doublePrecision('height_cm'),
+  activityLevel: text('activity_level'),
   isActive: boolean('is_active').default(true).notNull(),
 });
 

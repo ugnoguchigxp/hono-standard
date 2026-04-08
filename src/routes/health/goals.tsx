@@ -17,6 +17,7 @@ import {
   useHealthGoals,
   useUpdateHealthGoal,
 } from '../../modules/health/hooks/health.hooks';
+import type { HealthGoal } from '../../types/health.types';
 
 export const Route = createFileRoute('/health/goals')({
   component: HealthGoals,
@@ -27,7 +28,7 @@ function HealthGoals() {
   const deleteGoal = useDeleteHealthGoal();
   const updateGoal = useUpdateHealthGoal();
 
-  const [selectedGoal, setSelectedGoal] = useState<any>(null);
+  const [selectedGoal, setSelectedGoal] = useState<HealthGoal | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleAdd = () => {
@@ -35,7 +36,7 @@ function HealthGoals() {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (goal: any) => {
+  const handleEdit = (goal: HealthGoal) => {
     setSelectedGoal(goal);
     setIsDialogOpen(true);
   };
@@ -45,7 +46,7 @@ function HealthGoals() {
     await deleteGoal.mutateAsync(id);
   };
 
-  const handleToggleActive = async (goal: any) => {
+  const handleToggleActive = async (goal: HealthGoal) => {
     await updateGoal.mutateAsync({
       id: goal.id,
       input: { isActive: !goal.isActive },
@@ -58,7 +59,7 @@ function HealthGoals() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">健康目標</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">健康目標</h1>
           <p className="text-muted-foreground">日々の健康維持のための目標値を管理します。</p>
         </div>
         <Button onClick={handleAdd}>
@@ -68,7 +69,7 @@ function HealthGoals() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {data?.records?.map((goal: any) => (
+        {(data?.records as HealthGoal[] | undefined)?.map((goal) => (
           <Card key={goal.id} className={goal.isActive ? 'border-primary/20' : 'opacity-70'}>
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
@@ -150,7 +151,7 @@ function getGoalLabel(type: string): string {
     blood_pressure_diastolic_max: '最低血圧 (上限)',
     blood_glucose_fasting_range: '空腹時血糖 (範囲)',
     blood_glucose_postprandial_range: '食後血糖 (範囲)',
-    daily_calorie_limit: '摂取カロリー (上限)',
+    daily_calorie_limit: '1日トータル摂取カロリー (上限)',
     weekly_exercise_days: '週の運動日数',
   };
   return labels[type] || type;

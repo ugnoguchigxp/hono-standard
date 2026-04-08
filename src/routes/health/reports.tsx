@@ -30,7 +30,7 @@ function HealthReports() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">週次レポート</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">週次レポート</h1>
           <p className="text-muted-foreground">週間累計データと健康状態の要約を確認します。</p>
         </div>
         <div className="flex items-center gap-2">

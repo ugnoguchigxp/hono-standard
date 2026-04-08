@@ -64,6 +64,20 @@
       "when": 1775537010000,
       "tag": "0008_meal_photo_uri",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775537020000,
+      "tag": "0009_user_health_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1775537030000,
+      "tag": "0010_user_activity_level",
+      "breakpoints": true
     }
   ]
 }

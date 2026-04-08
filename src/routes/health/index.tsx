@@ -73,7 +73,7 @@ function HealthDashboard() {
   return (
     <div className="fade-in animate-in space-y-8 duration-700">
       <header>
-        <h1 className="mb-1 text-3xl font-bold tracking-tight">今日のサマリ</h1>
+        <h1 className="mb-1 text-3xl font-bold tracking-tight text-foreground">今日のサマリ</h1>
         <p className="italic text-muted-foreground">
           {format(new Date(), 'M月 d日')} — 歩数・血圧・血糖・食事の概要です。
         </p>
@@ -133,7 +133,7 @@ function HealthDashboard() {
               {alertRows.map((alert) => (
                 <div key={alert.id} className="rounded-lg border bg-background/80 p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">{alert.title}</p>
+                    <p className="text-sm font-semibold text-foreground">{alert.title}</p>
                     <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                       {alert.severity}
                     </span>
@@ -153,17 +153,19 @@ function HealthDashboard() {
           </h2>
           {weeklyReport?.report ? (
             <div className="space-y-3">
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-semibold text-foreground">
                 {weeklyReport.report.weekStart} - {weeklyReport.report.weekEnd}
               </p>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-lg bg-background/80 p-3">
                   <p className="text-xs text-muted-foreground">歩数合計</p>
-                  <p className="font-semibold">{weeklyReport.report.stepsTotal.toLocaleString()}</p>
+                  <p className="font-semibold text-foreground">
+                    {weeklyReport.report.stepsTotal.toLocaleString()}
+                  </p>
                 </div>
                 <div className="rounded-lg bg-background/80 p-3">
                   <p className="text-xs text-muted-foreground">目標達成率</p>
-                  <p className="font-semibold">
+                  <p className="font-semibold text-foreground">
                     {weeklyReport.report.goalAchievementRateAverage != null
                       ? `${Math.round(weeklyReport.report.goalAchievementRateAverage)}%`
                       : '—'}

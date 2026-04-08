@@ -1,5 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:fquery/fquery.dart';
+import 'package:fquery_core/fquery_core.dart';
 
+import '../../core/query/health_query_keys.dart';
 import '../../core/session/app_controller.dart';
 
 class AuthScreenView extends StatefulWidget {
@@ -17,7 +21,6 @@ class _AuthScreenViewState extends State<AuthScreenView> {
   final _registerNameController = TextEditingController();
   final _registerEmailController = TextEditingController();
   final _registerPasswordController = TextEditingController();
-  late final Future<Map<String, dynamic>> _methodsFuture = widget.controller.api.getAuthMethods();
 
   bool _isSubmitting = false;
   String? _error;
@@ -43,7 +46,7 @@ class _AuthScreenViewState extends State<AuthScreenView> {
         password: _loginPasswordController.text,
       );
     } catch (error) {
-      setState(() => _error = error.toString());
+      setState(() => _error = _friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -61,7 +64,7 @@ class _AuthScreenViewState extends State<AuthScreenView> {
         password: _registerPasswordController.text,
       );
     } catch (error) {
-      setState(() => _error = error.toString());
+      setState(() => _error = _friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -96,7 +99,7 @@ class _AuthScreenViewState extends State<AuthScreenView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _Header(methodsFuture: _methodsFuture),
+                        _Header(controller: widget.controller),
                         const SizedBox(height: 24),
                         if (_error != null) ...[
                           DecoratedBox(
@@ -108,7 +111,8 @@ class _AuthScreenViewState extends State<AuthScreenView> {
                               padding: const EdgeInsets.all(12),
                               child: Text(
                                 _error!,
-                                style: TextStyle(color: scheme.onErrorContainer),
+                                style:
+                                    TextStyle(color: scheme.onErrorContainer),
                               ),
                             ),
                           ),
@@ -131,14 +135,16 @@ class _AuthScreenViewState extends State<AuthScreenView> {
                                   children: [
                                     _LoginForm(
                                       emailController: _loginEmailController,
-                                      passwordController: _loginPasswordController,
+                                      passwordController:
+                                          _loginPasswordController,
                                       isSubmitting: _isSubmitting,
                                       onSubmit: _submitLogin,
                                     ),
                                     _RegisterForm(
                                       nameController: _registerNameController,
                                       emailController: _registerEmailController,
-                                      passwordController: _registerPasswordController,
+                                      passwordController:
+                                          _registerPasswordController,
                                       isSubmitting: _isSubmitting,
                                       onSubmit: _submitRegister,
                                     ),
@@ -162,17 +168,59 @@ class _AuthScreenViewState extends State<AuthScreenView> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.methodsFuture});
+  const _Header({required this.controller});
 
-  final Future<Map<String, dynamic>> methodsFuture;
+  final AppController controller;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return FutureBuilder<Map<String, dynamic>>(
-      future: methodsFuture,
-      builder: (context, snapshot) {
-        final methods = snapshot.data ?? const <String, dynamic>{};
+    return QueryBuilder<Map<String, dynamic>, DioException>(
+      options: QueryOptions<Map<String, dynamic>, DioException>(
+        queryKey: authMethodsQuery(),
+        queryFn: () => controller.api.getAuthMethods(),
+      ),
+      builder: (context, result) {
+        if (result.isLoading) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: LinearProgressIndicator(),
+          );
+        }
+        if (result.isError || result.data == null) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hono Health',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Web と同じ健康記録 API に接続します。',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    '認証方式の取得に失敗しました。Hono が起動していない可能性があります。',
+                    style: TextStyle(color: scheme.onErrorContainer),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        final methods = result.data ?? const <String, dynamic>{};
         final localEnabled = methods['local'] != false;
         final authMode = methods['authMode'] as String? ?? 'local';
 
@@ -181,7 +229,10 @@ class _Header extends StatelessWidget {
           children: [
             Text(
               'Hono Health',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
@@ -197,13 +248,12 @@ class _Header extends StatelessWidget {
                   avatar: Icon(
                     localEnabled ? Icons.lock_open_rounded : Icons.lock_rounded,
                     size: 18,
-                    color: localEnabled ? scheme.primary : scheme.onSurfaceVariant,
+                    color:
+                        localEnabled ? scheme.primary : scheme.onSurfaceVariant,
                   ),
                   label: Text(localEnabled ? 'ローカル認証' : 'ローカル認証無効'),
                 ),
                 Chip(label: Text('auth mode: $authMode')),
-                if (snapshot.connectionState == ConnectionState.waiting)
-                  const Chip(label: Text('認証方式を確認中')),
               ],
             ),
             const SizedBox(height: 12),
@@ -236,6 +286,7 @@ class _LoginForm extends StatelessWidget {
       padding: const EdgeInsets.only(top: 20),
       children: [
         TextField(
+          key: const Key('auth_login_email'),
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(
@@ -245,6 +296,7 @@ class _LoginForm extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         TextField(
+          key: const Key('auth_login_password'),
           controller: passwordController,
           obscureText: true,
           decoration: const InputDecoration(
@@ -254,6 +306,7 @@ class _LoginForm extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         FilledButton(
+          key: const Key('auth_login_button'),
           onPressed: isSubmitting ? null : onSubmit,
           child: Text(isSubmitting ? 'ログイン中…' : 'ログイン'),
         ),
@@ -283,6 +336,7 @@ class _RegisterForm extends StatelessWidget {
       padding: const EdgeInsets.only(top: 20),
       children: [
         TextField(
+          key: const Key('auth_register_name'),
           controller: nameController,
           decoration: const InputDecoration(
             labelText: '表示名',
@@ -291,6 +345,7 @@ class _RegisterForm extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         TextField(
+          key: const Key('auth_register_email'),
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(
@@ -300,6 +355,7 @@ class _RegisterForm extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         TextField(
+          key: const Key('auth_register_password'),
           controller: passwordController,
           obscureText: true,
           decoration: const InputDecoration(
@@ -309,10 +365,24 @@ class _RegisterForm extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         FilledButton.tonal(
+          key: const Key('auth_register_button'),
           onPressed: isSubmitting ? null : onSubmit,
           child: Text(isSubmitting ? '登録中…' : '新規登録'),
         ),
       ],
     );
   }
+}
+
+String _friendlyErrorMessage(Object error) {
+  if (error is DioException && error.response == null) {
+    return 'サーバーに接続できません。Hono が起動しているか確認してください。';
+  }
+  if (error is DioException) {
+    final statusCode = error.response?.statusCode;
+    if (statusCode != null) {
+      return 'ログインに失敗しました (HTTP $statusCode)';
+    }
+  }
+  return error.toString();
 }

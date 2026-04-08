@@ -1,6 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:fquery/fquery.dart';
+import 'package:fquery_core/fquery_core.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/query/health_query_keys.dart';
 import '../../core/session/app_controller.dart';
 import 'metric_detail_screen.dart';
 
@@ -14,19 +18,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Future<Map<String, dynamic>>? _snapshot;
-
-  @override
-  void initState() {
-    super.initState();
-    _reload();
-  }
-
-  void _reload() {
-    setState(() {
-      _snapshot = _loadSnapshot();
-    });
-  }
 
   Future<Map<String, dynamic>> _loadSnapshot() async {
     final now = DateTime.now();
@@ -54,7 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-    _reload();
   }
 
   num _overallScore(Map<String, dynamic> summary, Map<String, dynamic>? latestWeight) {
@@ -79,45 +69,63 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async => _reload(),
-      child: FutureBuilder<Map<String, dynamic>>(
-        future: _snapshot,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return ListView(
-              padding: const EdgeInsets.all(20),
-              children: [Text('読み込み失敗: ${snapshot.error}')],
-            );
-          }
-
-          final data = snapshot.data ?? const <String, dynamic>{};
-          final summary = (data['summary'] as Map<String, dynamic>? ?? const {});
-          final weights = (data['weights'] as Map<String, dynamic>? ?? const {});
-          final latestWeight = ((weights['records'] as List<dynamic>? ?? const [])
-                  .cast<Map<String, dynamic>>()
-                  .isNotEmpty)
-              ? (weights['records'] as List<dynamic>).first as Map<String, dynamic>
-              : null;
-          final overallScore = _overallScore(summary, latestWeight);
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            children: [
-              _SummaryScoreCard(score: overallScore),
-              const SizedBox(height: 16),
-              _MetricGrid(
-                summary: summary,
-                latestWeight: latestWeight,
-                onOpenDetail: _openDetail,
-              ),
-            ],
-          );
-        },
+    return QueryBuilder<Map<String, dynamic>, DioException>(
+      options: QueryOptions<Map<String, dynamic>, DioException>(
+        queryKey: healthDashboardQuery(),
+        queryFn: _loadSnapshot,
       ),
+      builder: (context, result) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            await result.refetch();
+          },
+          child: _buildBody(result),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(QueryResult<Map<String, dynamic>, DioException> result) {
+    if (result.isLoading) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: const [
+          SizedBox(height: 120),
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
+    }
+    if (result.isError || result.data == null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [Text('読み込み失敗: ${result.error}')],
+      );
+    }
+
+    final data = result.data ?? const <String, dynamic>{};
+    final summary = (data['summary'] as Map<String, dynamic>? ?? const {});
+    final weights = (data['weights'] as Map<String, dynamic>? ?? const {});
+    final latestWeight = ((weights['records'] as List<dynamic>? ?? const [])
+            .cast<Map<String, dynamic>>()
+            .isNotEmpty)
+        ? (weights['records'] as List<dynamic>).first as Map<String, dynamic>
+        : null;
+    final overallScore = _overallScore(summary, latestWeight);
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: [
+        _SummaryScoreCard(score: overallScore),
+        const SizedBox(height: 16),
+        _MetricGrid(
+          summary: summary,
+          latestWeight: latestWeight,
+          onOpenDetail: _openDetail,
+        ),
+      ],
     );
   }
 }

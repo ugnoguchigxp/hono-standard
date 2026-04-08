@@ -23,16 +23,20 @@ final InterceptorsWrapper mockInterceptor = InterceptorsWrapper(
       });
     } else if (path == '/api/auth/login' && method == 'POST') {
       final data = _asMap(options.data);
-      response = _json(options, state.login(
-        email: data['email'] as String? ?? 'user@example.com',
-        name: 'Demo User',
-      ));
+      response = _json(
+          options,
+          state.login(
+            email: data['email'] as String? ?? 'user@example.com',
+            name: 'Demo User',
+          ));
     } else if (path == '/api/auth/register' && method == 'POST') {
       final data = _asMap(options.data);
-      response = _json(options, state.login(
-        email: data['email'] as String? ?? 'user@example.com',
-        name: data['name'] as String? ?? 'Demo User',
-      ));
+      response = _json(
+          options,
+          state.login(
+            email: data['email'] as String? ?? 'user@example.com',
+            name: data['name'] as String? ?? 'Demo User',
+          ));
     } else if (path == '/api/auth/refresh' && method == 'POST') {
       final refreshToken = _cookieValue(options, 'refresh_token');
       response = refreshToken == state.refreshToken && state.loggedIn
@@ -46,11 +50,16 @@ final InterceptorsWrapper mockInterceptor = InterceptorsWrapper(
       response = _json(options, {'success': true});
     } else if (path == '/api/auth/me' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, {'userId': state.userId, 'email': state.email})
+          ? _json(options, {
+              'userId': state.userId,
+              'email': state.email,
+              'name': state.name
+            })
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/summary/daily' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, state.dailySummary(options.queryParameters['date'] as String?))
+          ? _json(options,
+              state.dailySummary(options.queryParameters['date'] as String?))
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/alerts' && method == 'GET') {
       response = _authorized(options, state)
@@ -58,13 +67,17 @@ final InterceptorsWrapper mockInterceptor = InterceptorsWrapper(
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/reports/weekly' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, state.weeklyReport(options.queryParameters['weekStart'] as String?))
+          ? _json(
+              options,
+              state.weeklyReport(
+                  options.queryParameters['weekStart'] as String?))
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/reminders/settings' && method == 'GET') {
       response = _authorized(options, state)
           ? _json(options, {'records': state.reminderRecords()})
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/reminders/settings/') && method == 'PUT') {
+    } else if (path.startsWith('/api/v1/health/reminders/settings/') &&
+        method == 'PUT') {
       if (_authorized(options, state)) {
         final reminderType = path.split('/').last;
         final body = _asMap(options.data);
@@ -73,18 +86,33 @@ final InterceptorsWrapper mockInterceptor = InterceptorsWrapper(
         response = _error(options, 401, 'Unauthorized');
       }
     } else if (path == '/api/v1/health/sync/settings' && method == 'GET') {
-      response = _authorized(options, state) ? _json(options, state.syncPreference) : _error(options, 401, 'Unauthorized');
+      response = _authorized(options, state)
+          ? _json(options, state.syncPreference)
+          : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/sync/settings' && method == 'PUT') {
       if (_authorized(options, state)) {
         response = _json(options, state.updateSync(_asMap(options.data)));
       } else {
         response = _error(options, 401, 'Unauthorized');
       }
-    } else if (path == '/api/v1/notifications/device-token' && method == 'GET') {
+    } else if (path == '/api/v1/health/profile' && method == 'GET') {
+      response = _authorized(options, state)
+          ? _json(options, state.healthProfile())
+          : _error(options, 401, 'Unauthorized');
+    } else if (path == '/api/v1/health/profile' && method == 'PUT') {
+      if (_authorized(options, state)) {
+        response =
+            _json(options, state.updateHealthProfile(_asMap(options.data)));
+      } else {
+        response = _error(options, 401, 'Unauthorized');
+      }
+    } else if (path == '/api/v1/notifications/device-token' &&
+        method == 'GET') {
       response = _authorized(options, state)
           ? _json(options, {'records': state.devices})
           : _error(options, 401, 'Unauthorized');
-    } else if (path == '/api/v1/notifications/device-token' && method == 'POST') {
+    } else if (path == '/api/v1/notifications/device-token' &&
+        method == 'POST') {
       if (_authorized(options, state)) {
         response = _json(options, state.addDevice(_asMap(options.data)));
       } else {
@@ -92,17 +120,23 @@ final InterceptorsWrapper mockInterceptor = InterceptorsWrapper(
       }
     } else if (path == '/api/v1/health/export' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, state.exportPayload(options.queryParameters['format'] as String? ?? 'json'))
+          ? _json(
+              options,
+              state.exportPayload(
+                  options.queryParameters['format'] as String? ?? 'json'))
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/goals' && method == 'GET') {
-      response = _authorized(options, state) ? _json(options, {'records': state.goals}) : _error(options, 401, 'Unauthorized');
+      response = _authorized(options, state)
+          ? _json(options, {'records': state.goals})
+          : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/goals' && method == 'POST') {
       response = _authorized(options, state)
           ? _json(options, state.createGoal(_asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
     } else if (path.startsWith('/api/v1/health/goals/') && method == 'PUT') {
       response = _authorized(options, state)
-          ? _json(options, state.updateGoal(_idFromPath(path), _asMap(options.data)))
+          ? _json(options,
+              state.updateGoal(_idFromPath(path), _asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
     } else if (path.startsWith('/api/v1/health/goals/') && method == 'DELETE') {
       response = _authorized(options, state)
@@ -110,91 +144,121 @@ final InterceptorsWrapper mockInterceptor = InterceptorsWrapper(
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/goals/achievements' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, state.goalAchievements(options.queryParameters['date'] as String?))
+          ? _json(
+              options,
+              state
+                  .goalAchievements(options.queryParameters['date'] as String?))
           : _error(options, 401, 'Unauthorized');
-    } else if (path == '/api/v1/health/vitals/blood-pressure' && method == 'GET') {
+    } else if (path == '/api/v1/health/vitals/blood-pressure' &&
+        method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, {'records': state.listBloodPressure(options.queryParameters)})
+          ? _json(options,
+              {'records': state.listBloodPressure(options.queryParameters)})
           : _error(options, 401, 'Unauthorized');
-    } else if (path == '/api/v1/health/vitals/blood-pressure' && method == 'POST') {
+    } else if (path == '/api/v1/health/vitals/blood-pressure' &&
+        method == 'POST') {
       response = _authorized(options, state)
           ? _json(options, state.createBloodPressure(_asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/vitals/blood-pressure/') && method == 'PUT') {
+    } else if (path.startsWith('/api/v1/health/vitals/blood-pressure/') &&
+        method == 'PUT') {
       response = _authorized(options, state)
-          ? _json(options, state.updateBloodPressure(_idFromPath(path), _asMap(options.data)))
+          ? _json(
+              options,
+              state.updateBloodPressure(
+                  _idFromPath(path), _asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/vitals/blood-pressure/') && method == 'DELETE') {
+    } else if (path.startsWith('/api/v1/health/vitals/blood-pressure/') &&
+        method == 'DELETE') {
       response = _authorized(options, state)
           ? _json(options, state.deleteBloodPressure(_idFromPath(path)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path == '/api/v1/health/vitals/blood-glucose' && method == 'GET') {
+    } else if (path == '/api/v1/health/vitals/blood-glucose' &&
+        method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, {'records': state.listBloodGlucose(options.queryParameters)})
+          ? _json(options,
+              {'records': state.listBloodGlucose(options.queryParameters)})
           : _error(options, 401, 'Unauthorized');
-    } else if (path == '/api/v1/health/vitals/blood-glucose' && method == 'POST') {
+    } else if (path == '/api/v1/health/vitals/blood-glucose' &&
+        method == 'POST') {
       response = _authorized(options, state)
           ? _json(options, state.createBloodGlucose(_asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/vitals/blood-glucose/') && method == 'PUT') {
+    } else if (path.startsWith('/api/v1/health/vitals/blood-glucose/') &&
+        method == 'PUT') {
       response = _authorized(options, state)
-          ? _json(options, state.updateBloodGlucose(_idFromPath(path), _asMap(options.data)))
+          ? _json(options,
+              state.updateBloodGlucose(_idFromPath(path), _asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/vitals/blood-glucose/') && method == 'DELETE') {
+    } else if (path.startsWith('/api/v1/health/vitals/blood-glucose/') &&
+        method == 'DELETE') {
       response = _authorized(options, state)
           ? _json(options, state.deleteBloodGlucose(_idFromPath(path)))
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/nutrition/meals' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, {'records': state.listMeals(options.queryParameters)})
+          ? _json(
+              options, {'records': state.listMeals(options.queryParameters)})
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/nutrition/meals' && method == 'POST') {
       response = _authorized(options, state)
           ? _json(options, state.createMeal(_asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/nutrition/meals/') && method == 'PUT') {
+    } else if (path.startsWith('/api/v1/health/nutrition/meals/') &&
+        method == 'PUT') {
       response = _authorized(options, state)
-          ? _json(options, state.updateMeal(_idFromPath(path), _asMap(options.data)))
+          ? _json(options,
+              state.updateMeal(_idFromPath(path), _asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/nutrition/meals/') && method == 'DELETE') {
+    } else if (path.startsWith('/api/v1/health/nutrition/meals/') &&
+        method == 'DELETE') {
       response = _authorized(options, state)
           ? _json(options, state.deleteMeal(_idFromPath(path)))
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/vitals/weight' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, {'records': state.listWeight(options.queryParameters)})
+          ? _json(
+              options, {'records': state.listWeight(options.queryParameters)})
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/vitals/weight' && method == 'POST') {
       response = _authorized(options, state)
           ? _json(options, state.createWeight(_asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/vitals/weight/') && method == 'PUT') {
+    } else if (path.startsWith('/api/v1/health/vitals/weight/') &&
+        method == 'PUT') {
       response = _authorized(options, state)
-          ? _json(options, state.updateWeight(_idFromPath(path), _asMap(options.data)))
+          ? _json(options,
+              state.updateWeight(_idFromPath(path), _asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/vitals/weight/') && method == 'DELETE') {
+    } else if (path.startsWith('/api/v1/health/vitals/weight/') &&
+        method == 'DELETE') {
       response = _authorized(options, state)
           ? _json(options, state.deleteWeight(_idFromPath(path)))
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/activity/records' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, {'records': state.listActivity(options.queryParameters)})
+          ? _json(
+              options, {'records': state.listActivity(options.queryParameters)})
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/activity/records' && method == 'POST') {
       response = _authorized(options, state)
           ? _json(options, state.createActivity(_asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/activity/records/') && method == 'PUT') {
+    } else if (path.startsWith('/api/v1/health/activity/records/') &&
+        method == 'PUT') {
       response = _authorized(options, state)
-          ? _json(options, state.updateActivity(_idFromPath(path), _asMap(options.data)))
+          ? _json(options,
+              state.updateActivity(_idFromPath(path), _asMap(options.data)))
           : _error(options, 401, 'Unauthorized');
-    } else if (path.startsWith('/api/v1/health/activity/records/') && method == 'DELETE') {
+    } else if (path.startsWith('/api/v1/health/activity/records/') &&
+        method == 'DELETE') {
       response = _authorized(options, state)
           ? _json(options, state.deleteActivity(_idFromPath(path)))
           : _error(options, 401, 'Unauthorized');
     } else if (path == '/api/v1/health/activity/daily' && method == 'GET') {
       response = _authorized(options, state)
-          ? _json(options, state.dailyActivity(options.queryParameters['date'] as String?))
+          ? _json(options,
+              state.dailyActivity(options.queryParameters['date'] as String?))
           : _error(options, 401, 'Unauthorized');
     }
 
@@ -208,7 +272,8 @@ bool _authorized(RequestOptions options, _MockApiState state) {
   return state.loggedIn && header == 'Bearer ${state.accessToken}';
 }
 
-Response<dynamic> _json(RequestOptions options, Object? data, [int statusCode = 200]) {
+Response<dynamic> _json(RequestOptions options, Object? data,
+    [int statusCode = 200]) {
   return Response(
     requestOptions: options,
     statusCode: statusCode,
@@ -216,7 +281,8 @@ Response<dynamic> _json(RequestOptions options, Object? data, [int statusCode = 
   );
 }
 
-Response<dynamic> _error(RequestOptions options, int statusCode, String message) {
+Response<dynamic> _error(
+    RequestOptions options, int statusCode, String message) {
   return Response(
     requestOptions: options,
     statusCode: statusCode,
@@ -245,9 +311,71 @@ String _cookieValue(RequestOptions options, String name) {
 
 final _MockApiState _mockState = _MockApiState();
 
+void resetMockApiState() {
+  _mockState.reset();
+}
+
 class _MockApiState {
   _MockApiState()
-    : bloodPressure = [
+      : bloodPressure = [],
+        bloodGlucose = [],
+        meals = [],
+        weights = [],
+        activities = [],
+        goals = [],
+        reminders = {},
+        syncPreference = _sync(),
+        devices = [],
+        accessToken = 'mock-access-1',
+        refreshToken = 'mock-refresh-1',
+        userId = 'user-1',
+        email = 'demo@example.com',
+        name = 'Demo User',
+        age = 34,
+        gender = 'male',
+        heightCm = 170,
+        activityLevel = 'moderate' {
+    reset();
+  }
+
+  bool loggedIn = false;
+  String accessToken;
+  String refreshToken;
+  final String userId;
+  String email;
+  String name;
+  int? age;
+  String? gender;
+  num? heightCm;
+  String? activityLevel;
+  final List<Map<String, dynamic>> bloodPressure;
+  final List<Map<String, dynamic>> bloodGlucose;
+  final List<Map<String, dynamic>> meals;
+  final List<Map<String, dynamic>> weights;
+  final List<Map<String, dynamic>> activities;
+  final List<Map<String, dynamic>> goals;
+  final Map<String, Map<String, dynamic>> reminders;
+  final Map<String, dynamic> syncPreference;
+  final List<Map<String, dynamic>> devices;
+  int _tokenVersion = 1;
+  int _nextId = 100;
+
+  void reset() {
+    loggedIn = false;
+    accessToken = 'mock-access-1';
+    refreshToken = 'mock-refresh-1';
+    email = 'demo@example.com';
+    name = 'Demo User';
+    age = 34;
+    gender = 'male';
+    heightCm = 170;
+    activityLevel = 'moderate';
+    _tokenVersion = 1;
+    _nextId = 100;
+
+    bloodPressure
+      ..clear()
+      ..addAll([
         _bp(
           1,
           recordedAt: '2026-04-07T08:00:00.000Z',
@@ -264,8 +392,10 @@ class _MockApiState {
           pulse: 70,
           period: 'evening',
         ),
-      ],
-      bloodGlucose = [
+      ]);
+    bloodGlucose
+      ..clear()
+      ..addAll([
         _glucose(
           1,
           recordedAt: '2026-04-07T07:30:00.000Z',
@@ -273,23 +403,29 @@ class _MockApiState {
           unit: 'mg_dl',
           timing: 'fasting',
         ),
-      ],
-      meals = [
+      ]);
+    meals
+      ..clear()
+      ..addAll([
         _meal(
           1,
           recordedAt: '2026-04-07T12:20:00.000Z',
           items: '玄米ごはん、味噌汁、焼き魚',
           estimatedCalories: 520,
         ),
-      ],
-      weights = [
+      ]);
+    weights
+      ..clear()
+      ..addAll([
         _weight(
           1,
           recordedAt: '2026-04-07T06:40:00.000Z',
           value: 68.4,
         ),
-      ],
-      activities = [
+      ]);
+    activities
+      ..clear()
+      ..addAll([
         _activity(
           1,
           recordedAt: '2026-04-07T18:00:00.000Z',
@@ -297,43 +433,35 @@ class _MockApiState {
           activeMinutes: 45,
           caloriesBurned: 320,
         ),
-      ],
-      goals = [
-        _goal(1, goalType: 'daily_step_count', targetValue: 8000, startsOn: '2026-04-01'),
-      ],
-      reminders = {
+      ]);
+    goals
+      ..clear()
+      ..addAll([
+        _goal(1,
+            goalType: 'daily_step_count',
+            targetValue: 8000,
+            startsOn: '2026-04-01'),
+      ]);
+    syncPreference
+      ..clear()
+      ..addAll(_sync());
+    reminders
+      ..clear()
+      ..addAll({
         'blood_pressure': _reminder('blood_pressure', '08:00'),
         'blood_glucose': _reminder('blood_glucose', '07:30'),
         'meal': _reminder('meal', '12:00'),
         'activity': _reminder('activity', '18:00'),
-      },
-      syncPreference = _sync(),
-      devices = [_device(1)],
-      accessToken = 'mock-access-1',
-      refreshToken = 'mock-refresh-1',
-      userId = 'user-1',
-      email = 'demo@example.com';
-
-  bool loggedIn = false;
-  String accessToken;
-  String refreshToken;
-  final String userId;
-  String email;
-  final List<Map<String, dynamic>> bloodPressure;
-  final List<Map<String, dynamic>> bloodGlucose;
-  final List<Map<String, dynamic>> meals;
-  final List<Map<String, dynamic>> weights;
-  final List<Map<String, dynamic>> activities;
-  final List<Map<String, dynamic>> goals;
-  final Map<String, Map<String, dynamic>> reminders;
-  final Map<String, dynamic> syncPreference;
-  final List<Map<String, dynamic>> devices;
-  int _tokenVersion = 1;
-  int _nextId = 100;
+      });
+    devices
+      ..clear()
+      ..add(_device(1));
+  }
 
   Map<String, dynamic> login({required String email, required String name}) {
     loggedIn = true;
     this.email = email;
+    this.name = name;
     return _sessionPayload();
   }
 
@@ -352,7 +480,7 @@ class _MockApiState {
     return {
       'accessToken': accessToken,
       'refreshToken': refreshToken,
-      'user': {'id': userId, 'email': email},
+      'user': {'id': userId, 'email': email, 'name': name},
     };
   }
 
@@ -362,9 +490,12 @@ class _MockApiState {
     final day = date ?? '2026-04-07';
     return {
       'date': day,
-      'stepsTotal': activities.fold<int>(0, (sum, row) => sum + (row['steps'] as int? ?? 0)),
-      'activeMinutesTotal': activities.fold<int>(0, (sum, row) => sum + (row['activeMinutes'] as int? ?? 0)),
-      'activityCaloriesTotal': activities.fold<int>(0, (sum, row) => sum + (row['caloriesBurned'] as int? ?? 0)),
+      'stepsTotal': activities.fold<int>(
+          0, (sum, row) => sum + (row['steps'] as int? ?? 0)),
+      'activeMinutesTotal': activities.fold<int>(
+          0, (sum, row) => sum + (row['activeMinutes'] as int? ?? 0)),
+      'activityCaloriesTotal': activities.fold<int>(
+          0, (sum, row) => sum + (row['caloriesBurned'] as int? ?? 0)),
       'mealCount': meals.length,
       'latestBloodPressure': latestBp,
       'latestBloodGlucose': latestGlucose,
@@ -374,9 +505,12 @@ class _MockApiState {
   Map<String, dynamic> dailyActivity(String? date) {
     return {
       'date': date ?? '2026-04-07',
-      'stepsTotal': activities.fold<int>(0, (sum, row) => sum + (row['steps'] as int? ?? 0)),
-      'activeMinutesTotal': activities.fold<int>(0, (sum, row) => sum + (row['activeMinutes'] as int? ?? 0)),
-      'caloriesBurnedTotal': activities.fold<int>(0, (sum, row) => sum + (row['caloriesBurned'] as int? ?? 0)),
+      'stepsTotal': activities.fold<int>(
+          0, (sum, row) => sum + (row['steps'] as int? ?? 0)),
+      'activeMinutesTotal': activities.fold<int>(
+          0, (sum, row) => sum + (row['activeMinutes'] as int? ?? 0)),
+      'caloriesBurnedTotal': activities.fold<int>(
+          0, (sum, row) => sum + (row['caloriesBurned'] as int? ?? 0)),
       'records': activities,
     };
   }
@@ -409,8 +543,10 @@ class _MockApiState {
   }
 
   Map<String, dynamic> weeklyReport(String? weekStart) {
-    final stepsTotal = activities.fold<int>(0, (sum, row) => sum + (row['steps'] as int? ?? 0));
-    final mealCalories = meals.fold<int>(0, (sum, row) => sum + (row['estimatedCalories'] as int? ?? 0));
+    final stepsTotal = activities.fold<int>(
+        0, (sum, row) => sum + (row['steps'] as int? ?? 0));
+    final mealCalories = meals.fold<int>(
+        0, (sum, row) => sum + (row['estimatedCalories'] as int? ?? 0));
     return {
       'report': {
         'id': _uuid(300),
@@ -421,25 +557,33 @@ class _MockApiState {
         'generatedAt': '2026-04-07T09:00:00.000Z',
         'stepsTotal': stepsTotal,
         'avgSteps': stepsTotal / 7,
-        'activityCaloriesTotal': activities.fold<int>(0, (sum, row) => sum + (row['caloriesBurned'] as int? ?? 0)),
+        'activityCaloriesTotal': activities.fold<int>(
+            0, (sum, row) => sum + (row['caloriesBurned'] as int? ?? 0)),
         'mealCount': meals.length,
         'mealCaloriesTotal': mealCalories,
-        'mealCaloriesAverage': meals.isEmpty ? null : mealCalories / meals.length,
+        'mealCaloriesAverage':
+            meals.isEmpty ? null : mealCalories / meals.length,
         'avgSystolic': average(bloodPressure.map((r) => r['systolic'] as num)),
-        'avgDiastolic': average(bloodPressure.map((r) => r['diastolic'] as num)),
+        'avgDiastolic':
+            average(bloodPressure.map((r) => r['diastolic'] as num)),
         'bloodPressureSampleCount': bloodPressure.length,
         'avgFastingGlucose': average(
-          bloodGlucose.where((r) => r['timing'] == 'fasting').map((r) => r['value'] as num),
+          bloodGlucose
+              .where((r) => r['timing'] == 'fasting')
+              .map((r) => r['value'] as num),
         ),
         'avgPostprandialGlucose': average(
-          bloodGlucose.where((r) => r['timing'] == 'postprandial').map((r) => r['value'] as num),
+          bloodGlucose
+              .where((r) => r['timing'] == 'postprandial')
+              .map((r) => r['value'] as num),
         ),
         'bloodGlucoseSampleCount': bloodGlucose.length,
         'goalCount': goals.length,
         'goalAchievementRateAverage': 80,
         'previousWeekStepsTotal': stepsTotal - 300,
         'stepsDelta': 300,
-        'summary': '歩数 ${stepsTotal.toString()}, 食事 ${meals.length} 件, 目標 ${goals.length} 件',
+        'summary':
+            '歩数 ${stepsTotal.toString()}, 食事 ${meals.length} 件, 目標 ${goals.length} 件',
         'createdAt': '2026-04-07T09:00:00.000Z',
         'updatedAt': '2026-04-07T09:00:00.000Z',
       },
@@ -449,7 +593,8 @@ class _MockApiState {
 
   List<Map<String, dynamic>> reminderRecords() => reminders.values.toList();
 
-  Map<String, dynamic> updateReminder(String reminderType, Map<String, dynamic> body) {
+  Map<String, dynamic> updateReminder(
+      String reminderType, Map<String, dynamic> body) {
     final current = reminders[reminderType] ?? _reminder(reminderType, '08:00');
     reminders[reminderType] = {
       ...current,
@@ -463,11 +608,62 @@ class _MockApiState {
   }
 
   Map<String, dynamic> updateSync(Map<String, dynamic> body) {
-    syncPreference['isEnabled'] = body['isEnabled'] ?? syncPreference['isEnabled'];
-    syncPreference['intervalHours'] = body['intervalHours'] ?? syncPreference['intervalHours'];
+    syncPreference['isEnabled'] =
+        body['isEnabled'] ?? syncPreference['isEnabled'];
+    syncPreference['intervalHours'] =
+        body['intervalHours'] ?? syncPreference['intervalHours'];
     syncPreference['wifiOnly'] = body['wifiOnly'] ?? syncPreference['wifiOnly'];
     syncPreference['updatedAt'] = _now();
     return syncPreference;
+  }
+
+  Map<String, dynamic> healthProfile() {
+    final latestWeight =
+        weights.isEmpty ? null : weights.first['value'] as num?;
+    final bmr = _calculateBmr(
+      weightKg: latestWeight?.toDouble(),
+      heightCm: heightCm?.toDouble(),
+      age: age,
+      gender: gender,
+    );
+    return {
+      'userId': userId,
+      'email': email,
+      'name': name,
+      'age': age,
+      'gender': gender,
+      'heightCm': heightCm,
+      'activityLevel': activityLevel,
+      'latestWeightKg': latestWeight,
+      'bmr': bmr,
+      'recommendedDailyCalorieGoal': bmr,
+      'updatedAt': _now(),
+    };
+  }
+
+  Map<String, dynamic> updateHealthProfile(Map<String, dynamic> body) {
+    if (body.containsKey('age')) {
+      age = (body['age'] as num?)?.toInt();
+    }
+    if (body.containsKey('gender')) {
+      final value = body['gender'] as String?;
+      gender = value == 'male' || value == 'female' ? value : null;
+    }
+    if (body.containsKey('heightCm')) {
+      heightCm = body['heightCm'] as num?;
+    }
+    if (body.containsKey('activityLevel')) {
+      final value = body['activityLevel'] as String?;
+      const allowed = {
+        'sedentary',
+        'light',
+        'moderate',
+        'active',
+        'very_active'
+      };
+      activityLevel = allowed.contains(value) ? value : null;
+    }
+    return healthProfile();
   }
 
   Map<String, dynamic> addDevice(Map<String, dynamic> body) {
@@ -504,14 +700,19 @@ class _MockApiState {
   }
 
   Map<String, dynamic> goalAchievements(String? date) {
-    final mealCaloriesTotal = meals.fold<int>(0, (sum, row) => sum + (row['estimatedCalories'] as int? ?? 0));
+    final mealCaloriesTotal = meals.fold<int>(
+        0, (sum, row) => sum + (row['estimatedCalories'] as int? ?? 0));
     final latestBp = bloodPressure.isEmpty ? null : bloodPressure.first;
-    final fastingGlucose = bloodGlucose.where((row) => row['timing'] == 'fasting').toList();
-    final postprandialGlucose = bloodGlucose.where((row) => row['timing'] == 'postprandial').toList();
+    final fastingGlucose =
+        bloodGlucose.where((row) => row['timing'] == 'fasting').toList();
+    final postprandialGlucose =
+        bloodGlucose.where((row) => row['timing'] == 'postprandial').toList();
     final latestWeight = weights.isEmpty ? null : weights.first;
-    final stepTotal = activities.fold<int>(0, (sum, row) => sum + (row['steps'] as int? ?? 0));
+    final stepTotal = activities.fold<int>(
+        0, (sum, row) => sum + (row['steps'] as int? ?? 0));
     final qualifyingExerciseDays = activities
-        .map((row) => (row['recordedAt'] as String? ?? '2026-04-07').substring(0, 10))
+        .map((row) =>
+            (row['recordedAt'] as String? ?? '2026-04-07').substring(0, 10))
         .toSet()
         .length;
 
@@ -526,9 +727,13 @@ class _MockApiState {
         case 'blood_pressure_diastolic_max':
           return latestBp?['diastolic'] as num?;
         case 'blood_glucose_fasting_range':
-          return fastingGlucose.isEmpty ? null : fastingGlucose.first['value'] as num?;
+          return fastingGlucose.isEmpty
+              ? null
+              : fastingGlucose.first['value'] as num?;
         case 'blood_glucose_postprandial_range':
-          return postprandialGlucose.isEmpty ? null : postprandialGlucose.first['value'] as num?;
+          return postprandialGlucose.isEmpty
+              ? null
+              : postprandialGlucose.first['value'] as num?;
         case 'weekly_exercise_days':
           return qualifyingExerciseDays;
         case 'weight_target':
@@ -540,60 +745,69 @@ class _MockApiState {
 
     return {
       'asOfDate': date ?? '2026-04-07',
-      'items': goals
-          .map(
-            (goal) {
-              final currentValue = currentValueForGoal(goal);
-              final targetValue = goal['targetValue'] as num?;
-              final targetMin = goal['targetMin'] as num?;
-              final targetMax = goal['targetMax'] as num?;
-              bool achieved = false;
-              double achievementRate = 0;
-              String details = 'mock';
+      'items': goals.map(
+        (goal) {
+          final currentValue = currentValueForGoal(goal);
+          final targetValue = goal['targetValue'] as num?;
+          final targetMin = goal['targetMin'] as num?;
+          final targetMax = goal['targetMax'] as num?;
+          bool achieved = false;
+          double achievementRate = 0;
+          String details = 'mock';
 
-              switch (goal['goalType']) {
-                case 'daily_step_count':
-                case 'weekly_exercise_days':
-                  achieved = currentValue != null && targetValue != null && currentValue >= targetValue;
-                  achievementRate = currentValue != null && targetValue != null && targetValue > 0
-                      ? ((currentValue / targetValue) * 100).clamp(0, 100).toDouble()
+          switch (goal['goalType']) {
+            case 'daily_step_count':
+            case 'weekly_exercise_days':
+              achieved = currentValue != null &&
+                  targetValue != null &&
+                  currentValue >= targetValue;
+              achievementRate =
+                  currentValue != null && targetValue != null && targetValue > 0
+                      ? ((currentValue / targetValue) * 100)
+                          .clamp(0, 100)
+                          .toDouble()
                       : 0;
-                  details = 'current ${currentValue?.toString() ?? '-'}';
-                  break;
-                case 'daily_calorie_limit':
-                case 'blood_pressure_systolic_max':
-                case 'blood_pressure_diastolic_max':
-                case 'weight_target':
-                  achieved = currentValue != null && targetValue != null && currentValue <= targetValue;
-                  achievementRate = currentValue != null && targetValue != null && currentValue > 0
-                      ? ((targetValue / currentValue) * 100).clamp(0, 100).toDouble()
-                      : 0;
-                  details = 'current ${currentValue?.toString() ?? '-'}';
-                  break;
-                case 'blood_glucose_fasting_range':
-                case 'blood_glucose_postprandial_range':
-                  achieved = currentValue != null &&
-                      targetMin != null &&
-                      targetMax != null &&
-                      currentValue >= targetMin &&
-                      currentValue <= targetMax;
-                  achievementRate = achieved ? 100 : 0;
-                  details = 'current ${currentValue?.toString() ?? '-'}';
-                  break;
-              }
+              details = 'current ${currentValue?.toString() ?? '-'}';
+              break;
+            case 'daily_calorie_limit':
+            case 'blood_pressure_systolic_max':
+            case 'blood_pressure_diastolic_max':
+            case 'weight_target':
+              achieved = currentValue != null &&
+                  targetValue != null &&
+                  currentValue <= targetValue;
+              achievementRate = currentValue != null &&
+                      targetValue != null &&
+                      currentValue > 0
+                  ? ((targetValue / currentValue) * 100)
+                      .clamp(0, 100)
+                      .toDouble()
+                  : 0;
+              details = 'current ${currentValue?.toString() ?? '-'}';
+              break;
+            case 'blood_glucose_fasting_range':
+            case 'blood_glucose_postprandial_range':
+              achieved = currentValue != null &&
+                  targetMin != null &&
+                  targetMax != null &&
+                  currentValue >= targetMin &&
+                  currentValue <= targetMax;
+              achievementRate = achieved ? 100 : 0;
+              details = 'current ${currentValue?.toString() ?? '-'}';
+              break;
+          }
 
-              return {
-                'goal': goal,
-                'asOfDate': date ?? '2026-04-07',
-                'currentValue': currentValue,
-                'targetValue': targetValue,
-                'achievementRate': achievementRate,
-                'achieved': achieved,
-                'details': details,
-              };
-            },
-          )
-          .toList(),
+          return {
+            'goal': goal,
+            'asOfDate': date ?? '2026-04-07',
+            'currentValue': currentValue,
+            'targetValue': targetValue,
+            'achievementRate': achievementRate,
+            'achieved': achieved,
+            'details': details,
+          };
+        },
+      ).toList(),
     };
   }
 
@@ -637,9 +851,12 @@ class _MockApiState {
       _filterByRange(bloodPressure, query);
   List<Map<String, dynamic>> listBloodGlucose(Map<String, dynamic> query) =>
       _filterByRange(bloodGlucose, query);
-  List<Map<String, dynamic>> listMeals(Map<String, dynamic> query) => _filterByRange(meals, query);
-  List<Map<String, dynamic>> listWeight(Map<String, dynamic> query) => _filterByRange(weights, query);
-  List<Map<String, dynamic>> listActivity(Map<String, dynamic> query) => _filterByRange(activities, query);
+  List<Map<String, dynamic>> listMeals(Map<String, dynamic> query) =>
+      _filterByRange(meals, query);
+  List<Map<String, dynamic>> listWeight(Map<String, dynamic> query) =>
+      _filterByRange(weights, query);
+  List<Map<String, dynamic>> listActivity(Map<String, dynamic> query) =>
+      _filterByRange(activities, query);
 
   Map<String, dynamic> createBloodPressure(Map<String, dynamic> body) {
     return _createRecord(
@@ -654,7 +871,8 @@ class _MockApiState {
     );
   }
 
-  Map<String, dynamic> updateBloodPressure(String id, Map<String, dynamic> body) =>
+  Map<String, dynamic> updateBloodPressure(
+          String id, Map<String, dynamic> body) =>
       _updateRecord(bloodPressure, id, body);
 
   Map<String, dynamic> deleteBloodPressure(String id) {
@@ -674,7 +892,8 @@ class _MockApiState {
     );
   }
 
-  Map<String, dynamic> updateBloodGlucose(String id, Map<String, dynamic> body) =>
+  Map<String, dynamic> updateBloodGlucose(
+          String id, Map<String, dynamic> body) =>
       _updateRecord(bloodGlucose, id, body);
 
   Map<String, dynamic> deleteBloodGlucose(String id) {
@@ -694,7 +913,8 @@ class _MockApiState {
     );
   }
 
-  Map<String, dynamic> updateMeal(String id, Map<String, dynamic> body) => _updateRecord(meals, id, body);
+  Map<String, dynamic> updateMeal(String id, Map<String, dynamic> body) =>
+      _updateRecord(meals, id, body);
 
   Map<String, dynamic> deleteMeal(String id) {
     _deleteRecord(meals, id);
@@ -729,14 +949,16 @@ class _MockApiState {
     );
   }
 
-  Map<String, dynamic> updateWeight(String id, Map<String, dynamic> body) => _updateRecord(weights, id, body);
+  Map<String, dynamic> updateWeight(String id, Map<String, dynamic> body) =>
+      _updateRecord(weights, id, body);
 
   Map<String, dynamic> deleteWeight(String id) {
     _deleteRecord(weights, id);
     return {'success': true};
   }
 
-  Map<String, dynamic> dailySummaryForCurrentState() => dailySummary('2026-04-07');
+  Map<String, dynamic> dailySummaryForCurrentState() =>
+      dailySummary('2026-04-07');
 
   Map<String, dynamic> _createRecord(
     List<Map<String, dynamic>> list,
@@ -760,7 +982,8 @@ class _MockApiState {
     return {'record': record, 'duplicate': false};
   }
 
-  Map<String, dynamic> _updateRecord(List<Map<String, dynamic>> list, String id, Map<String, dynamic> body) {
+  Map<String, dynamic> _updateRecord(
+      List<Map<String, dynamic>> list, String id, Map<String, dynamic> body) {
     final index = list.indexWhere((row) => row['id'] == id);
     if (index < 0) return list.isEmpty ? {} : {'record': list.first};
     final existing = list[index];
@@ -777,7 +1000,8 @@ class _MockApiState {
     list.removeWhere((row) => row['id'] == id);
   }
 
-  List<Map<String, dynamic>> _filterByRange(List<Map<String, dynamic>> list, Map<String, dynamic> query) {
+  List<Map<String, dynamic>> _filterByRange(
+      List<Map<String, dynamic>> list, Map<String, dynamic> query) {
     final from = query['from'] as String?;
     final to = query['to'] as String?;
     return list.where((row) {
@@ -899,7 +1123,10 @@ Map<String, dynamic> _activity(
       'updatedAt': recordedAt,
     };
 
-Map<String, dynamic> _goal(int id, {required String goalType, num? targetValue, required String startsOn}) =>
+Map<String, dynamic> _goal(int id,
+        {required String goalType,
+        num? targetValue,
+        required String startsOn}) =>
     {
       'id': _uuid(id),
       'goalType': goalType,
@@ -948,10 +1175,24 @@ Map<String, dynamic> _device(int id) => {
       'updatedAt': '2026-04-07T09:00:00.000Z',
     };
 
-String _uuid(int id) => '00000000-0000-0000-0000-${id.toString().padLeft(12, '0')}';
+String _uuid(int id) =>
+    '00000000-0000-0000-0000-${id.toString().padLeft(12, '0')}';
 
 double? average(Iterable<num> values) {
   final list = values.toList();
   if (list.isEmpty) return null;
   return list.reduce((a, b) => a + b) / list.length;
+}
+
+int? _calculateBmr({
+  required double? weightKg,
+  required double? heightCm,
+  required int? age,
+  required String? gender,
+}) {
+  if (weightKg == null || heightCm == null || age == null) return null;
+  if (gender != 'male' && gender != 'female') return null;
+  final s = gender == 'male' ? 5 : -161;
+  final bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + s;
+  return bmr.round();
 }

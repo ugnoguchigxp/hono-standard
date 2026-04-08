@@ -1,0 +1,203 @@
+@import "tailwindcss";
+@import "./variables.css";
+@import "./themes.css";
+
+@source "../**/*.{js,ts,jsx,tsx}";
+@source "../../.storybook/**/*.{js,ts,jsx,tsx}";
+
+/* Tailwind v4: Register CSS variables as theme tokens */
+@theme {
+  /* Colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-purple: var(--purple);
+
+  /* Chart colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+
+  /* ViewSwitcher */
+  --color-view-switcher-bg: var(--view-switcher-bg);
+  --color-view-switcher-active-bg: var(--view-switcher-active-bg);
+  --color-view-switcher-active-text: var(--view-switcher-active-text);
+  --color-view-switcher-inactive-text: var(--view-switcher-inactive-text);
+  /* Help icon */
+  --color-help-icon: var(--help-icon);
+
+  /* Table value colors */
+  --color-table-success: var(--table-success);
+  --color-table-error: var(--table-error);
+  --color-table-neutral: var(--table-neutral);
+  --color-table-text: var(--table-text);
+  --color-table-neutral-zero: var(--table-neutral-zero);
+  --color-table-label: var(--table-label);
+
+  /* Custom colors */
+  --color-err-red: var(--err-red);
+
+  /* Sidebar */
+  --color-sidebar-background: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Score colors */
+  --color-score-a: var(--score-a);
+  --color-score-b: var(--score-b);
+  --color-score-c: var(--score-c);
+  --color-score-d: var(--score-d);
+  --color-score-e: var(--score-e);
+
+  /* Bar Chart colors */
+  --color-bar-chart-active: var(--bar-chart-active);
+  --color-bar-chart-label-active: var(--bar-chart-label-active);
+  --color-bar-chart-inactive: var(--bar-chart-inactive);
+  --color-bar-chart-axis: var(--bar-chart-axis);
+
+  /* Accordion */
+  --color-accordion-destructive-icon: var(--accordion-destructive-icon);
+  --color-accordion-warning-icon: var(--accordion-warning-icon);
+  --color-accordion-success-icon: var(--accordion-success-icon);
+  --color-accordion-badge-bg: var(--accordion-badge-bg);
+  --color-accordion-badge-text: var(--accordion-badge-text);
+  --color-accordion-label: var(--accordion-label);
+  --color-accordion-text: var(--accordion-text);
+  --color-accordion-footer-text: var(--accordion-footer-text);
+  --color-accordion-footer-border: var(--accordion-footer-border);
+  --color-accordion-destructive-bg: var(--accordion-destructive-bg);
+  --color-accordion-destructive-border: var(--accordion-destructive-border);
+  --color-accordion-warning-bg: var(--accordion-warning-bg);
+  --color-accordion-warning-border: var(--accordion-warning-border);
+  --color-accordion-success-bg: var(--accordion-success-bg);
+  --color-accordion-success-border: var(--accordion-success-border);
+  --color-accordion-footer-bg: var(--accordion-footer-bg);
+
+  /* Button colors */
+  --color-button-primary: var(--button-primary);
+  --color-button-primary-hover: var(--button-primary-hover);
+  --color-button-secondary: var(--button-secondary);
+  --color-button-secondary-hover: var(--button-secondary-hover);
+  --color-button-disabled: var(--button-disabled);
+  --color-button-text: var(--button-text);
+
+  /* Action Button */
+  --color-action-button: var(--action-button);
+  --color-action-button-hover: var(--action-button-hover);
+  --color-action-button-shadow: var(--action-button-shadow);
+
+  /* Copy Link */
+  --color-copy-link: var(--copy-link);
+  --color-copy-icon: var(--copy-icon);
+  /* Border radius */
+  --radius-lg: var(--radius);
+  --radius-md: max(0px, calc(var(--radius) - 2px));
+  --radius-sm: max(0px, calc(var(--radius) - 4px));
+
+  /* UI sizing */
+  --spacing-ui: var(--ui-component-height);
+  --spacing-ui-x: var(--ui-component-padding-x);
+  --spacing-ui-y: var(--ui-component-padding-y);
+  --spacing-ui-button: var(--ui-button-padding-x);
+  --spacing-ui-button-x: var(--ui-button-padding-x);
+  --spacing-ui-button-y: var(--ui-button-padding-y);
+  --spacing-ui-cell: var(--ui-table-cell-padding);
+  --spacing-ui-gap: var(--ui-gap-base);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    outline-color: var(--color-ring);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    color: inherit;
+  }
+}
+
+@layer utilities {
+  .px-ui {
+    padding-left: var(--ui-component-padding-x);
+    padding-right: var(--ui-component-padding-x);
+  }
+
+  .py-ui {
+    padding-top: var(--ui-component-padding-y);
+    padding-bottom: var(--ui-component-padding-y);
+  }
+
+  .px-ui-button {
+    padding-left: var(--ui-button-padding-x);
+    padding-right: var(--ui-button-padding-x);
+  }
+
+  .py-ui-button {
+    padding-top: var(--ui-button-padding-y);
+    padding-bottom: var(--ui-button-padding-y);
+  }
+
+  .gap-ui {
+    gap: var(--ui-gap-base);
+  }
+
+  .text-ui {
+    font-size: var(--ui-font-size-base);
+    line-height: 1.5;
+  }
+
+  .h-ui {
+    height: var(--ui-component-height);
+  }
+
+  .w-ui {
+    width: var(--ui-component-height);
+  }
+
+  /* Border radius overrides using CSS variables */
+  .rounded-lg {
+    border-radius: var(--radius);
+  }
+
+  .rounded-md {
+    border-radius: calc(var(--radius) - 2px);
+  }
+
+  .rounded-sm {
+    border-radius: calc(var(--radius) - 4px);
+  }
+}

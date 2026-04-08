@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:fquery/fquery.dart';
 
 import 'src/app/app_shell.dart';
 import 'src/app/theme.dart';
 import 'src/core/session/app_controller.dart';
+import 'src/core/query/app_query.dart';
 
 /// API ベース URL: `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5173`
 void main() {
@@ -31,30 +33,33 @@ class _HonoHealthAppState extends State<HonoHealthApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hono Health',
-      theme: buildAppTheme(),
-      home: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          if (_controller.isLoading) {
-            return const _BootScreen();
-          }
-          if (!_controller.isAuthenticated) {
-            return AuthScreen(controller: _controller);
-          }
-          return AppShell(controller: _controller);
-        },
+    return CacheProvider(
+      cache: appQueryCache,
+      child: MaterialApp(
+        title: 'Hono Health',
+        theme: buildAppTheme(),
+        home: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            if (_controller.isLoading) {
+              return const _BootScreen();
+            }
+            if (!_controller.isAuthenticated) {
+              return AuthScreen(controller: _controller);
+            }
+            return AppShell(controller: _controller);
+          },
+        ),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('ja'),
+          Locale('en'),
+        ],
       ),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('ja'),
-        Locale('en'),
-      ],
     );
   }
 }

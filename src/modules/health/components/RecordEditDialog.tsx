@@ -1,30 +1,25 @@
-import { Button } from '@repo/design-system/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@repo/design-system/components/ui/dialog';
-import { Input } from '@repo/design-system/components/ui/input';
-import { Label } from '@repo/design-system/components/ui/label';
-import {
+  Button,
+  Input,
+  Label,
+  Modal,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@repo/design-system/components/ui/select';
-import { Textarea } from '@repo/design-system/components/ui/textarea';
+  Textarea,
+} from '@repo/design-system';
 import { format } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
+import type { HealthProfile } from '../../../types/health.types';
 import {
   browserTimeZone,
   useCreateBloodGlucose,
   useCreateBloodPressure,
   useCreateMeal,
   useCreateWeight,
+  useHealthProfile,
   useUpdateBloodGlucose,
   useUpdateBloodPressure,
   useUpdateMeal,
@@ -118,6 +113,7 @@ export function RecordEditDialog({
   initialKind = 'weight',
 }: RecordEditDialogProps) {
   const [formData, setFormData] = useState<RecordFormState>(createDefaultState(initialKind));
+  const { data: profileData } = useHealthProfile();
 
   const createBp = useCreateBloodPressure();
   const updateBp = useUpdateBloodPressure();
@@ -261,218 +257,298 @@ export function RecordEditDialog({
   const title = isEditMode ? '記録の編集' : '新規入力';
   const description = isEditMode ? '健康記録の内容を修正します。' : '健康記録を入力します。';
   const saveLabel = isEditMode ? '保存' : '作成';
+  const mealRecommendation = getMealRecommendation(profileData);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-4">
-          {!isEditMode && (
-            <div className="grid gap-2">
-              <Label htmlFor="kind">記録種別</Label>
-              <Select
-                value={currentKind}
-                onValueChange={(value) => changeKind(value as RecordKind)}
-              >
-                <SelectTrigger id="kind">
-                  <SelectValue placeholder="種別を選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weight">{kindLabels.weight}</SelectItem>
-                  <SelectItem value="bp">{kindLabels.bp}</SelectItem>
-                  <SelectItem value="glucose">{kindLabels.glucose}</SelectItem>
-                  <SelectItem value="meal">{kindLabels.meal}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {isEditMode && record && (
-            <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-              種別: {kindLabels[record.kind]}
-            </div>
-          )}
-
-          <div className="grid gap-2">
-            <Label htmlFor="date">日時</Label>
-            <Input
-              id="date"
-              type="datetime-local"
-              value={formData.recordedAt}
-              onChange={(e) => setFormData({ ...formData, recordedAt: e.target.value })}
-            />
-          </div>
-
-          {currentKind === 'bp' && (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="systolic">最高血圧 (mmHg)</Label>
-                  <Input
-                    id="systolic"
-                    type="number"
-                    value={formData.systolic}
-                    onChange={(e) => setFormData({ ...formData, systolic: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="diastolic">最低血圧 (mmHg)</Label>
-                  <Input
-                    id="diastolic"
-                    type="number"
-                    value={formData.diastolic}
-                    onChange={(e) => setFormData({ ...formData, diastolic: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="pulse">脈拍 (bpm)</Label>
-                <Input
-                  id="pulse"
-                  type="number"
-                  value={formData.pulse}
-                  onChange={(e) => setFormData({ ...formData, pulse: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="period">時間帯</Label>
-                <Select
-                  value={formData.period}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      period: value as RecordFormState['period'],
-                    })
-                  }
-                >
-                  <SelectTrigger id="period">
-                    <SelectValue placeholder="時間帯を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="morning">朝</SelectItem>
-                    <SelectItem value="evening">夜</SelectItem>
-                    <SelectItem value="other">その他</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-
-          {currentKind === 'glucose' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="value">血糖値</Label>
-                <Input
-                  id="value"
-                  type="number"
-                  step="0.1"
-                  value={formData.value}
-                  onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="unit">単位</Label>
-                <Select
-                  value={formData.unit}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      unit: value as RecordFormState['unit'],
-                    })
-                  }
-                >
-                  <SelectTrigger id="unit">
-                    <SelectValue placeholder="単位を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mg_dl">mg/dL</SelectItem>
-                    <SelectItem value="mmol_l">mmol/L</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="timing">タイミング</Label>
-                <Select
-                  value={formData.timing}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      timing: value as RecordFormState['timing'],
-                    })
-                  }
-                >
-                  <SelectTrigger id="timing">
-                    <SelectValue placeholder="タイミングを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fasting">空腹時</SelectItem>
-                    <SelectItem value="postprandial">食後</SelectItem>
-                    <SelectItem value="random">随時</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-
-          {currentKind === 'meal' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="items">内容</Label>
-                <Textarea
-                  id="items"
-                  value={formData.items}
-                  onChange={(e) => setFormData({ ...formData, items: e.target.value })}
-                  placeholder="何を食べましたか？"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="calories">推定カロリー (kcal)</Label>
-                <Input
-                  id="calories"
-                  type="number"
-                  value={formData.estimatedCalories}
-                  onChange={(e) => setFormData({ ...formData, estimatedCalories: e.target.value })}
-                />
-              </div>
-            </>
-          )}
-
-          {currentKind === 'weight' && (
-            <div className="grid gap-2">
-              <Label htmlFor="weight">体重 (kg)</Label>
-              <Input
-                id="weight"
-                type="number"
-                step="0.1"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-              />
-            </div>
-          )}
-
-          <div className="grid gap-2">
-            <Label htmlFor="memo">メモ</Label>
-            <Textarea
-              id="memo"
-              value={formData.memo}
-              onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      variant="employee"
+      title={title}
+      description={description}
+      footer={
+        <>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             キャンセル
           </Button>
           <Button onClick={saveRecord} disabled={saveDisabled}>
             {saveLabel}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <div className="grid gap-4 py-4">
+        {!isEditMode && (
+          <div className="grid gap-2">
+            <Label htmlFor="kind">記録種別</Label>
+            <Select value={currentKind} onValueChange={(value) => changeKind(value as RecordKind)}>
+              <SelectTrigger id="kind">
+                <SelectValue placeholder="種別を選択" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weight">{kindLabels.weight}</SelectItem>
+                <SelectItem value="bp">{kindLabels.bp}</SelectItem>
+                <SelectItem value="glucose">{kindLabels.glucose}</SelectItem>
+                <SelectItem value="meal">{kindLabels.meal}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {isEditMode && record && (
+          <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            種別: {kindLabels[record.kind]}
+          </div>
+        )}
+
+        <div className="grid gap-2">
+          <Label htmlFor="date">日時</Label>
+          <Input
+            id="date"
+            type="datetime-local"
+            value={formData.recordedAt}
+            onChange={(e) => setFormData({ ...formData, recordedAt: e.target.value })}
+          />
+        </div>
+
+        {currentKind === 'bp' && (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="systolic">最高血圧 (mmHg)</Label>
+                <Input
+                  id="systolic"
+                  type="number"
+                  value={formData.systolic}
+                  onChange={(e) => setFormData({ ...formData, systolic: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="diastolic">最低血圧 (mmHg)</Label>
+                <Input
+                  id="diastolic"
+                  type="number"
+                  value={formData.diastolic}
+                  onChange={(e) => setFormData({ ...formData, diastolic: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pulse">脈拍 (bpm)</Label>
+              <Input
+                id="pulse"
+                type="number"
+                value={formData.pulse}
+                onChange={(e) => setFormData({ ...formData, pulse: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="period">時間帯</Label>
+              <Select
+                value={formData.period}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    period: value as RecordFormState['period'],
+                  })
+                }
+              >
+                <SelectTrigger id="period">
+                  <SelectValue placeholder="時間帯を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="morning">朝</SelectItem>
+                  <SelectItem value="evening">夜</SelectItem>
+                  <SelectItem value="other">その他</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
+        {currentKind === 'glucose' && (
+          <>
+            <div className="grid gap-2">
+              <Label htmlFor="value">血糖値</Label>
+              <Input
+                id="value"
+                type="number"
+                step="0.1"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="unit">単位</Label>
+              <Select
+                value={formData.unit}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    unit: value as RecordFormState['unit'],
+                  })
+                }
+              >
+                <SelectTrigger id="unit">
+                  <SelectValue placeholder="単位を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mg_dl">mg/dL</SelectItem>
+                  <SelectItem value="mmol_l">mmol/L</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="timing">タイミング</Label>
+              <Select
+                value={formData.timing}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    timing: value as RecordFormState['timing'],
+                  })
+                }
+              >
+                <SelectTrigger id="timing">
+                  <SelectValue placeholder="タイミングを選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fasting">空腹時</SelectItem>
+                  <SelectItem value="postprandial">食後</SelectItem>
+                  <SelectItem value="random">随時</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
+        {currentKind === 'meal' && (
+          <>
+            <div className="grid gap-2">
+              <Label htmlFor="items">内容</Label>
+              <Textarea
+                id="items"
+                value={formData.items}
+                onChange={(e) => setFormData({ ...formData, items: e.target.value })}
+                placeholder="何を食べましたか？"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="calories">推定カロリー (kcal)</Label>
+              <Input
+                id="calories"
+                type="number"
+                value={formData.estimatedCalories}
+                onChange={(e) => setFormData({ ...formData, estimatedCalories: e.target.value })}
+              />
+            </div>
+            <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+              <p>
+                基礎代謝 (BMR):{' '}
+                {mealRecommendation?.bmr != null
+                  ? `${mealRecommendation.bmr.toLocaleString()} kcal/日`
+                  : '算出不可'}
+              </p>
+              <p>
+                総消費カロリー (TDEE):{' '}
+                {mealRecommendation?.tdee != null
+                  ? `${mealRecommendation.tdee.toLocaleString()} kcal/日`
+                  : '算出不可'}
+              </p>
+              <p className="mt-1">食事記録の目安として TDEE を参照できます。</p>
+            </div>
+          </>
+        )}
+
+        {currentKind === 'weight' && (
+          <div className="grid gap-2">
+            <Label htmlFor="weight">体重 (kg)</Label>
+            <Input
+              id="weight"
+              type="number"
+              step="0.1"
+              value={formData.value}
+              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+            />
+          </div>
+        )}
+
+        <div className="grid gap-2">
+          <Label htmlFor="memo">メモ</Label>
+          <Textarea
+            id="memo"
+            value={formData.memo}
+            onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+          />
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+type Gender = 'male' | 'female';
+type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+
+type MealRecommendation = {
+  bmr: number | null;
+  tdee: number | null;
+};
+
+function getMealRecommendation(profileData: HealthProfile | undefined): MealRecommendation | null {
+  if (!profileData) return null;
+  const weightKg =
+    typeof profileData.latestWeightKg === 'number' ? profileData.latestWeightKg : null;
+  const age = typeof profileData.age === 'number' ? profileData.age : null;
+  const heightCm = typeof profileData.heightCm === 'number' ? profileData.heightCm : null;
+  const gender =
+    profileData.gender === 'male' || profileData.gender === 'female'
+      ? (profileData.gender as Gender)
+      : null;
+  const activityLevel = isActivityLevel(profileData.activityLevel)
+    ? (profileData.activityLevel as ActivityLevel)
+    : null;
+
+  const bmr = calculateBmr(weightKg, heightCm, age, gender);
+  const tdee = calculateTdee(weightKg, heightCm, age, gender, activityLevel);
+  return { bmr, tdee };
+}
+
+function calculateBmr(
+  weightKg: number | null,
+  heightCm: number | null,
+  age: number | null,
+  gender: Gender | null
+): number | null {
+  if (weightKg == null || heightCm == null || age == null || gender == null) return null;
+  const s = gender === 'male' ? 5 : -161;
+  return Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + s);
+}
+
+function calculateTdee(
+  weightKg: number | null,
+  heightCm: number | null,
+  age: number | null,
+  gender: Gender | null,
+  activityLevel: ActivityLevel | null
+): number | null {
+  const bmr = calculateBmr(weightKg, heightCm, age, gender);
+  if (bmr == null || activityLevel == null) return null;
+  const multiplier: Record<ActivityLevel, number> = {
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    active: 1.725,
+    very_active: 1.9,
+  };
+  return Math.round(bmr * multiplier[activityLevel]);
+}
+
+function isActivityLevel(value: unknown): value is ActivityLevel {
+  return (
+    value === 'sedentary' ||
+    value === 'light' ||
+    value === 'moderate' ||
+    value === 'active' ||
+    value === 'very_active'
   );
 }

@@ -11,6 +11,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { format } from 'date-fns';
 import { AlertCircle, AlertTriangle, Bell, Check, Clock, Info } from 'lucide-react';
 import { useHealthAlerts, useMarkHealthAlertRead } from '../../modules/health/hooks/health.hooks';
+import type { HealthAlert } from '../../types/health.types';
 
 export const Route = createFileRoute('/health/alerts')({
   component: HealthAlerts,
@@ -26,14 +27,14 @@ function HealthAlerts() {
 
   if (isLoading) return <div className="p-8 text-center animate-pulse">読み込み中...</div>;
 
-  const records = data?.records ?? [];
-  const unreadCount = records.filter((r: any) => !r.isRead).length;
+  const records = (data?.records ?? []) as HealthAlert[];
+  const unreadCount = records.filter((r) => !r.isRead).length;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">アラート</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">アラート</h1>
           <p className="text-muted-foreground">健康指標の異常傾向や重要な通知を確認します。</p>
         </div>
         {unreadCount > 0 && (
@@ -44,7 +45,7 @@ function HealthAlerts() {
       </div>
 
       <div className="space-y-4">
-        {records.map((alert: any) => (
+        {records.map((alert) => (
           <Card
             key={alert.id}
             className={alert.isRead ? 'opacity-60 grayscale-[0.5]' : 'border-l-4 border-l-primary'}

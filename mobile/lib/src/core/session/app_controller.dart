@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../api/health_api.dart';
+import '../query/app_query.dart';
 import '../storage/session_store.dart';
 import 'auth_session.dart';
 
@@ -103,12 +104,14 @@ class AppController extends ChangeNotifier {
   Future<void> _setSession(AuthSession session) async {
     _session = session;
     await store.save(session);
+    clearAppQueryCache();
     notifyListeners();
   }
 
   Future<void> clearSession() async {
     _session = null;
     await store.clear();
+    clearAppQueryCache();
     notifyListeners();
   }
 }

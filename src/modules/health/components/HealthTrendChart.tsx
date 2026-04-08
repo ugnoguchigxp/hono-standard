@@ -7,9 +7,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import type { HealthTrendData } from '../../../types/health.types';
 
 interface HealthTrendChartProps {
-  data: any[];
+  data: HealthTrendData[];
   title: string;
   lines: {
     key: string;
@@ -22,7 +23,7 @@ export function HealthTrendChart({ data, title, lines }: HealthTrendChartProps) 
   return (
     <div className="rounded-2xl border bg-card/50 backdrop-blur-sm p-6 shadow-sm">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-foreground">{title}</h3>
         <div className="flex gap-2">
           {lines.map((line) => (
             <div key={line.key} className="flex items-center gap-1.5">

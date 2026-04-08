@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -56,6 +57,7 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
   late final TextEditingController _activityStepsController;
   late final TextEditingController _activityMinutesController;
   late final TextEditingController _activityCaloriesController;
+  Map<String, dynamic>? _profile;
   final _imagePicker = ImagePicker();
   bool _saving = false;
   String _bpPeriod = 'morning';
@@ -73,7 +75,8 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
     _recordedAtController = TextEditingController(
       text: DateFormat("yyyy-MM-dd'T'HH:mm").format(initial),
     );
-    _memoController = TextEditingController(text: widget.record?['memo'] as String? ?? '');
+    _memoController =
+        TextEditingController(text: widget.record?['memo'] as String? ?? '');
     _systolicController = TextEditingController(
       text: widget.record?['systolic']?.toString() ?? '',
     );
@@ -86,12 +89,15 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
     _glucoseValueController = TextEditingController(
       text: widget.record?['value']?.toString() ?? '',
     );
-    _mealItemsController = TextEditingController(text: widget.record?['items'] as String? ?? '');
+    _mealItemsController =
+        TextEditingController(text: widget.record?['items'] as String? ?? '');
     _mealCaloriesController = TextEditingController(
       text: widget.record?['estimatedCalories']?.toString() ?? '',
     );
-    _weightController = TextEditingController(text: widget.record?['value']?.toString() ?? '');
-    _activityStepsController = TextEditingController(text: widget.record?['steps']?.toString() ?? '');
+    _weightController =
+        TextEditingController(text: widget.record?['value']?.toString() ?? '');
+    _activityStepsController =
+        TextEditingController(text: widget.record?['steps']?.toString() ?? '');
     _activityMinutesController = TextEditingController(
       text: widget.record?['activeMinutes']?.toString() ?? '',
     );
@@ -102,6 +108,17 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
     _glucoseUnit = widget.record?['unit'] as String? ?? 'mg_dl';
     _glucoseTiming = widget.record?['timing'] as String? ?? 'fasting';
     _mealPhotoPath = widget.record?['photoUri'] as String?;
+    unawaited(_loadProfile());
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await widget.controller.api.getHealthProfile();
+      if (!mounted) return;
+      setState(() => _profile = profile);
+    } catch (_) {
+      // Ignore profile load failures; the editor still works without it.
+    }
   }
 
   @override
@@ -143,11 +160,12 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
   }
 
   Map<String, dynamic> _basePayload() {
+    final memo = _memoController.text.trim();
     return {
       'recordedAt': _parseRecordedAt().toIso8601String(),
       'timeZone': kAppTimeZone,
-      'memo': _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
       'inputSource': 'manual',
+      if (memo.isNotEmpty) 'memo': memo,
     };
   }
 
@@ -174,7 +192,8 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
     );
     if (source == null) return;
 
-    final picked = await _imagePicker.pickImage(source: source, imageQuality: 82);
+    final picked =
+        await _imagePicker.pickImage(source: source, imageQuality: 82);
     if (picked == null) return;
     setState(() => _mealPhotoPath = picked.path);
   }
@@ -195,7 +214,8 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
           'systolic': int.parse(_systolicController.text),
           'diastolic': int.parse(_diastolicController.text),
           'period': _bpPeriod,
-          if (_pulseController.text.trim().isNotEmpty) 'pulse': int.parse(_pulseController.text),
+          if (_pulseController.text.trim().isNotEmpty)
+            'pulse': int.parse(_pulseController.text),
         };
         if (isEdit && id != null) {
           await api.updateBloodPressure(id, payload);
@@ -273,7 +293,13 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final kindOptions = const ['blood_pressure', 'blood_glucose', 'meal', 'weight', 'activity'];
+    final kindOptions = const [
+      'blood_pressure',
+      'blood_glucose',
+      'meal',
+      'weight',
+      'activity'
+    ];
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -303,7 +329,9 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
               ),
               const SizedBox(height: 8),
               Text(
-                widget.record == null ? 'Web と同じ項目を入力できます。' : _titleForKind(_kind),
+                widget.record == null
+                    ? 'Web と同じ項目を入力できます。'
+                    : _titleForKind(_kind),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 20),
@@ -328,7 +356,8 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
               ] else
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
@@ -338,12 +367,14 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                 ),
               const SizedBox(height: 12),
               TextFormField(
+                key: const Key('recorded_at_field'),
                 controller: _recordedAtController,
                 decoration: const InputDecoration(
                   labelText: '日時 (yyyy-MM-ddTHH:mm)',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => (value == null || value.isEmpty) ? '日時は必須です' : null,
+                validator: (value) =>
+                    (value == null || value.isEmpty) ? '日時は必須です' : null,
               ),
               const SizedBox(height: 12),
               if (_kind == 'blood_pressure') ...[
@@ -351,6 +382,7 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                   children: [
                     Expanded(
                       child: TextFormField(
+                        key: const Key('bp_systolic_field'),
                         controller: _systolicController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -364,6 +396,7 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
+                        key: const Key('bp_diastolic_field'),
                         controller: _diastolicController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -378,6 +411,7 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
+                  key: const Key('bp_pulse_field'),
                   controller: _pulseController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
@@ -397,17 +431,20 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                     DropdownMenuItem(value: 'evening', child: Text('夜')),
                     DropdownMenuItem(value: 'other', child: Text('その他')),
                   ],
-                  onChanged: (value) => setState(() => _bpPeriod = value ?? _bpPeriod),
+                  onChanged: (value) =>
+                      setState(() => _bpPeriod = value ?? _bpPeriod),
                 ),
               ] else if (_kind == 'blood_glucose') ...[
                 TextFormField(
+                  key: const Key('glucose_value_field'),
                   controller: _glucoseValueController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: '血糖値',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => (value == null || value.isEmpty) ? '必須です' : null,
+                  validator: (value) =>
+                      (value == null || value.isEmpty) ? '必須です' : null,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -420,7 +457,8 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                     DropdownMenuItem(value: 'mg_dl', child: Text('mg/dL')),
                     DropdownMenuItem(value: 'mmol_l', child: Text('mmol/L')),
                   ],
-                  onChanged: (value) => setState(() => _glucoseUnit = value ?? _glucoseUnit),
+                  onChanged: (value) =>
+                      setState(() => _glucoseUnit = value ?? _glucoseUnit),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -434,20 +472,24 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                     DropdownMenuItem(value: 'postprandial', child: Text('食後')),
                     DropdownMenuItem(value: 'random', child: Text('随時')),
                   ],
-                  onChanged: (value) => setState(() => _glucoseTiming = value ?? _glucoseTiming),
+                  onChanged: (value) =>
+                      setState(() => _glucoseTiming = value ?? _glucoseTiming),
                 ),
               ] else if (_kind == 'meal') ...[
                 TextFormField(
+                  key: const Key('meal_items_field'),
                   controller: _mealItemsController,
                   maxLines: 4,
                   decoration: const InputDecoration(
                     labelText: '食事内容',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => (value == null || value.isEmpty) ? '必須です' : null,
+                  validator: (value) =>
+                      (value == null || value.isEmpty) ? '必須です' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
+                  key: const Key('meal_calories_field'),
                   controller: _mealCaloriesController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
@@ -456,7 +498,10 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                _MealRecommendationCard(profile: _profile),
+                const SizedBox(height: 12),
                 OutlinedButton.icon(
+                  key: const Key('meal_photo_button'),
                   onPressed: _pickMealPhoto,
                   icon: const Icon(Icons.photo_camera_rounded),
                   label: const Text('写真を添付'),
@@ -477,6 +522,7 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                   children: [
                     Expanded(
                       child: TextFormField(
+                        key: const Key('activity_steps_field'),
                         controller: _activityStepsController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -488,6 +534,7 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
+                        key: const Key('activity_minutes_field'),
                         controller: _activityMinutesController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -500,6 +547,7 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
+                  key: const Key('activity_calories_field'),
                   controller: _activityCaloriesController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
@@ -509,17 +557,20 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
                 ),
               ] else ...[
                 TextFormField(
+                  key: const Key('weight_value_field'),
                   controller: _weightController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: '体重 (kg)',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => (value == null || value.isEmpty) ? '必須です' : null,
+                  validator: (value) =>
+                      (value == null || value.isEmpty) ? '必須です' : null,
                 ),
               ],
               const SizedBox(height: 12),
               TextFormField(
+                key: const Key('record_memo_field'),
                 controller: _memoController,
                 maxLines: 3,
                 decoration: const InputDecoration(
@@ -529,8 +580,10 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
               ),
               const SizedBox(height: 20),
               FilledButton(
+                key: const Key('record_save_button'),
                 onPressed: _saving ? null : _save,
-                child: Text(_saving ? '保存中…' : (widget.record == null ? '作成' : '保存')),
+                child: Text(
+                    _saving ? '保存中…' : (widget.record == null ? '作成' : '保存')),
               ),
             ],
           ),
@@ -538,4 +591,88 @@ class _RecordEditorSheetState extends State<RecordEditorSheet> {
       ),
     );
   }
+}
+
+class _MealRecommendationCard extends StatelessWidget {
+  const _MealRecommendationCard({required this.profile});
+
+  final Map<String, dynamic>? profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final recommendation = _calculateRecommendation(profile);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('食事の目安', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 4),
+            Text(
+              '基礎代謝 (BMR): ${recommendation.bmr != null ? '${recommendation.bmr} kcal/日' : '算出不可'}',
+            ),
+            Text(
+              '総消費カロリー (TDEE): ${recommendation.tdee != null ? '${recommendation.tdee} kcal/日' : '算出不可'}',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Recommendation {
+  const _Recommendation({required this.bmr, required this.tdee});
+
+  final int? bmr;
+  final int? tdee;
+}
+
+_Recommendation _calculateRecommendation(Map<String, dynamic>? profile) {
+  final weightKg = (profile?['latestWeightKg'] as num?)?.toDouble();
+  final heightCm = (profile?['heightCm'] as num?)?.toDouble();
+  final age = profile?['age'] as int?;
+  final gender = profile?['gender'] as String?;
+  final activityLevel = profile?['activityLevel'] as String?;
+  final bmr = _calculateBmr(weightKg, heightCm, age, gender);
+  final tdee = _calculateTdee(weightKg, heightCm, age, gender, activityLevel);
+  return _Recommendation(bmr: bmr, tdee: tdee);
+}
+
+int? _calculateBmr(
+  double? weightKg,
+  double? heightCm,
+  int? age,
+  String? gender,
+) {
+  if (weightKg == null || heightCm == null || age == null) return null;
+  if (gender != 'male' && gender != 'female') return null;
+  final s = gender == 'male' ? 5 : -161;
+  return (10 * weightKg + 6.25 * heightCm - 5 * age + s).round();
+}
+
+int? _calculateTdee(
+  double? weightKg,
+  double? heightCm,
+  int? age,
+  String? gender,
+  String? activityLevel,
+) {
+  final bmr = _calculateBmr(weightKg, heightCm, age, gender);
+  if (bmr == null || activityLevel == null) return null;
+  const multiplier = {
+    'sedentary': 1.2,
+    'light': 1.375,
+    'moderate': 1.55,
+    'active': 1.725,
+    'very_active': 1.9,
+  };
+  final factor = multiplier[activityLevel];
+  if (factor == null) return null;
+  return (bmr * factor).round();
 }

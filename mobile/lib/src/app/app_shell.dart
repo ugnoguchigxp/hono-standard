@@ -40,6 +40,14 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            key: const Key('app_shell_menu_button'),
+            icon: const Icon(Icons.menu_rounded),
+            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: Text(_labels[_selectedIndex]),
       ),
       drawer: Drawer(

@@ -682,6 +682,36 @@ export const healthSyncPreferenceSchema = z
   })
   .openapi('HealthSyncPreferenceInput');
 
+export const healthProfileGenderSchema = z.enum(['male', 'female']).openapi('HealthProfileGender');
+export const healthActivityLevelSchema = z
+  .enum(['sedentary', 'light', 'moderate', 'active', 'very_active'])
+  .openapi('HealthActivityLevel');
+
+export const healthProfileSchema = z
+  .object({
+    userId: z.string(),
+    email: z.string().email(),
+    name: z.string(),
+    age: z.number().int().nullable(),
+    gender: healthProfileGenderSchema.nullable(),
+    heightCm: z.number().nullable(),
+    activityLevel: healthActivityLevelSchema.nullable(),
+    latestWeightKg: z.number().nullable(),
+    bmr: z.number().int().nullable(),
+    recommendedDailyCalorieGoal: z.number().int().nullable(),
+    updatedAt: z.string().nullable(),
+  })
+  .openapi('HealthProfile');
+
+export const updateHealthProfileSchema = z
+  .object({
+    age: z.number().int().min(1).max(120).nullable().optional(),
+    gender: healthProfileGenderSchema.nullable().optional(),
+    heightCm: z.number().finite().positive().max(300).nullable().optional(),
+    activityLevel: healthActivityLevelSchema.nullable().optional(),
+  })
+  .openapi('UpdateHealthProfileInput');
+
 export type HealthInputSource = z.infer<typeof healthInputSourceSchema>;
 export type HealthRecordKind = z.infer<typeof healthRecordKindSchema>;
 export type CreateBloodPressureInput = z.infer<typeof createBloodPressureSchema>;
@@ -700,3 +730,6 @@ export type ReminderDayOfWeek = z.infer<typeof reminderDayOfWeekSchema>;
 export type NotificationPlatform = z.infer<typeof notificationPlatformSchema>;
 export type RegisterNotificationDeviceInput = z.infer<typeof registerNotificationDeviceSchema>;
 export type HealthSyncPreferenceInput = z.infer<typeof healthSyncPreferenceSchema>;
+export type HealthProfileGender = z.infer<typeof healthProfileGenderSchema>;
+export type HealthActivityLevel = z.infer<typeof healthActivityLevelSchema>;
+export type UpdateHealthProfileInput = z.infer<typeof updateHealthProfileSchema>;

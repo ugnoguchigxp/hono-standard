@@ -1,8 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:fquery/fquery.dart';
+import 'package:fquery_core/fquery_core.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/query/health_query_keys.dart';
 import '../../core/session/app_controller.dart';
 import '../goals/goal_editor_sheet.dart';
 import '../records/record_editor_sheet.dart';
@@ -30,31 +34,32 @@ class MetricDetailScreen extends StatefulWidget {
 class _MetricDetailScreenState extends State<MetricDetailScreen> {
   late DateTime _from = DateTime.now().subtract(const Duration(days: 30));
   late DateTime _to = DateTime.now();
-  late Future<_MetricDetailSnapshot> _snapshot = _loadSnapshot();
-
-  void _reload() {
-    setState(() {
-      _snapshot = _loadSnapshot();
-    });
-  }
 
   Future<_MetricDetailSnapshot> _loadSnapshot() async {
     final from = DateFormat('yyyy-MM-dd').format(_from);
     final to = DateFormat('yyyy-MM-dd').format(_to);
     final recordsFuture = switch (widget.kind) {
-      'blood_pressure' => widget.controller.api.listBloodPressure(from: from, to: to),
-      'blood_glucose' => widget.controller.api.listBloodGlucose(from: from, to: to),
+      'blood_pressure' =>
+        widget.controller.api.listBloodPressure(from: from, to: to),
+      'blood_glucose' =>
+        widget.controller.api.listBloodGlucose(from: from, to: to),
       'meal' => widget.controller.api.listMeals(from: from, to: to),
       'weight' => widget.controller.api.listWeight(from: from, to: to),
-      'activity' => widget.controller.api.getActivityRecords(from: from, to: to),
+      'activity' =>
+        widget.controller.api.getActivityRecords(from: from, to: to),
       _ => widget.controller.api.listWeight(from: from, to: to),
     };
     final goalsFuture = widget.controller.api.getHealthGoals();
-    final goalAchievementsFuture = widget.controller.api.getGoalAchievements(date: to);
-    final results = await Future.wait([recordsFuture, goalsFuture, goalAchievementsFuture]);
+    Map<String, dynamic> goalAchievementsResponse = const {'items': []};
+    try {
+      goalAchievementsResponse =
+          await widget.controller.api.getGoalAchievements(date: to);
+    } catch (_) {
+      goalAchievementsResponse = const {'items': []};
+    }
+    final results = await Future.wait([recordsFuture, goalsFuture]);
     final response = Map<String, dynamic>.from(results[0] as Map);
     final goalsResponse = Map<String, dynamic>.from(results[1] as Map);
-    final goalAchievementsResponse = Map<String, dynamic>.from(results[2] as Map);
     final records = _mapRecords(response);
     final goals = _mapGoals(goalsResponse);
     final goalAchievements = _mapGoalAchievements(goalAchievementsResponse);
@@ -70,7 +75,8 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
   List<_MetricEntry> _mapRecords(Map<String, dynamic> response) {
     final records = response['records'] as List<dynamic>? ?? const [];
     return records
-        .map((record) => _MetricEntry.fromKind(widget.kind, Map<String, dynamic>.from(record as Map)))
+        .map((record) => _MetricEntry.fromKind(
+            widget.kind, Map<String, dynamic>.from(record as Map)))
         .toList()
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
   }
@@ -85,7 +91,8 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
         .toList();
   }
 
-  Map<String, Map<String, dynamic>> _mapGoalAchievements(Map<String, dynamic> response) {
+  Map<String, Map<String, dynamic>> _mapGoalAchievements(
+      Map<String, dynamic> response) {
     final items = response['items'] as List<dynamic>? ?? const [];
     final mapped = <String, Map<String, dynamic>>{};
     for (final item in items.whereType<Map<String, dynamic>>()) {
@@ -104,7 +111,8 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
   List<_TrendPoint> _buildPrimaryTrendPoints(List<_MetricEntry> records) {
     switch (widget.kind) {
       case 'blood_pressure':
-        return _dailyTrend(records, (entry) => entry.record['systolic'] as num?);
+        return _dailyTrend(
+            records, (entry) => entry.record['systolic'] as num?);
       case 'blood_glucose':
         return _dailyTrend(records, (entry) => entry.record['value'] as num?);
       case 'meal':
@@ -118,7 +126,10 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
       case 'activity':
         return _dailyTrend(
           records,
-          (entry) => entry.record['steps'] as num? ?? entry.record['caloriesBurned'] as num? ?? entry.record['activeMinutes'] as num?,
+          (entry) =>
+              entry.record['steps'] as num? ??
+              entry.record['caloriesBurned'] as num? ??
+              entry.record['activeMinutes'] as num?,
           aggregate: _sumTrend,
         );
       default:
@@ -143,7 +154,8 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
       final day = DateFormat('yyyy-MM-dd').format(record.recordedAt);
       byDay.putIfAbsent(day, () => []).add(value);
     }
-    final entries = byDay.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
+    final entries = byDay.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
     return entries
         .map(
           (entry) => _TrendPoint(
@@ -154,30 +166,35 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
         .toList();
   }
 
-  num _averageTrend(List<num> values) => values.reduce((a, b) => a + b) / values.length;
+  num _averageTrend(List<num> values) =>
+      values.reduce((a, b) => a + b) / values.length;
 
-  num _sumTrend(List<num> values) => values.fold<num>(0, (sum, value) => sum + value);
+  num _sumTrend(List<num> values) =>
+      values.fold<num>(0, (sum, value) => sum + value);
 
   Future<void> _createRecord() async {
+    final cache = CacheProvider.get(context);
     final saved = await showRecordEditorSheet(
       context,
       controller: widget.controller,
       initialKind: widget.kind,
     );
-    if (saved) _reload();
+    if (saved) cache.invalidateQueries(['health']);
   }
 
   Future<void> _editRecord(_MetricEntry entry) async {
+    final cache = CacheProvider.get(context);
     final saved = await showRecordEditorSheet(
       context,
       controller: widget.controller,
       initialKind: widget.kind,
       record: entry.record,
     );
-    if (saved) _reload();
+    if (saved) cache.invalidateQueries(['health']);
   }
 
   Future<void> _deleteRecord(_MetricEntry entry) async {
+    final cache = CacheProvider.get(context);
     final shouldDelete = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -213,11 +230,11 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
         case 'weight':
           await api.deleteWeight(entry.record['id'] as String);
           break;
-        case 'activity':
+      case 'activity':
           await api.deleteActivity(entry.record['id'] as String);
           break;
       }
-      _reload();
+      cache.invalidateQueries(['health']);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -227,10 +244,19 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
   }
 
   Future<void> _saveGoal({Map<String, dynamic>? goal}) async {
+    final cache = CacheProvider.get(context);
+    Map<String, dynamic>? profile;
+    try {
+      profile = await widget.controller.api.getHealthProfile();
+    } catch (_) {
+      profile = null;
+    }
+    if (!mounted) return;
     final payload = await showGoalEditorSheet(
       context,
       allowedGoalTypes: _goalTypesForKind(widget.kind),
       goal: goal,
+      profile: profile,
     );
     if (payload == null) return;
 
@@ -238,9 +264,10 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
       if (goal == null) {
         await widget.controller.api.createHealthGoal(payload.toJson());
       } else {
-        await widget.controller.api.updateHealthGoal(goal['id'] as String, payload.toJson());
+        await widget.controller.api
+            .updateHealthGoal(goal['id'] as String, payload.toJson());
       }
-      _reload();
+      cache.invalidateQueries(['health']);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -250,11 +277,13 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
   }
 
   Future<void> _deleteGoal(Map<String, dynamic> goal) async {
+    final cache = CacheProvider.get(context);
     final shouldDelete = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('目標を削除しますか'),
-            content: Text('${_goalTypeLabel(goal['goalType'] as String? ?? '')} を削除します。'),
+            content: Text(
+                '${_goalTypeLabel(goal['goalType'] as String? ?? '')} を削除します。'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -272,7 +301,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
 
     try {
       await widget.controller.api.deleteHealthGoal(goal['id'] as String);
-      _reload();
+      cache.invalidateQueries(['health']);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -282,6 +311,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
   }
 
   Future<void> _pickFromDate() async {
+    final cache = CacheProvider.get(context);
     final picked = await showDatePicker(
       context: context,
       initialDate: _from,
@@ -290,11 +320,12 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
     );
     if (picked != null) {
       setState(() => _from = picked);
-      _reload();
+      cache.invalidateQueries(['health']);
     }
   }
 
   Future<void> _pickToDate() async {
+    final cache = CacheProvider.get(context);
     final picked = await showDatePicker(
       context: context,
       initialDate: _to,
@@ -303,179 +334,207 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
     );
     if (picked != null) {
       setState(() => _to = picked);
-      _reload();
+      cache.invalidateQueries(['health']);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          IconButton(
-            onPressed: _createRecord,
-            icon: const Icon(Icons.add_rounded),
-            tooltip: '新規入力',
-          ),
-        ],
+    return QueryBuilder<_MetricDetailSnapshot, DioException>(
+      options: QueryOptions<_MetricDetailSnapshot, DioException>(
+        queryKey: healthDetailQuery(
+          widget.kind,
+          DateFormat('yyyy-MM-dd').format(_from),
+          DateFormat('yyyy-MM-dd').format(_to),
+        ),
+        queryFn: _loadSnapshot,
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => _reload(),
-        child: FutureBuilder<_MetricDetailSnapshot>(
-          future: _snapshot,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return ListView(
-                padding: const EdgeInsets.all(20),
-                children: [Text('読み込み失敗: ${snapshot.error}')],
-              );
-            }
+      builder: (context, result) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(widget.title),
+            actions: [
+              IconButton(
+                onPressed: _createRecord,
+                icon: const Icon(Icons.add_rounded),
+                tooltip: '新規入力',
+              ),
+            ],
+          ),
+          body: RefreshIndicator(
+            onRefresh: () async {
+              await result.refetch();
+            },
+            child: _buildBody(context, result),
+          ),
+        );
+      },
+    );
+  }
 
-            final data = snapshot.data ??
-                const _MetricDetailSnapshot(
-                  records: [],
-                  goals: [],
-                  goalAchievements: {},
-                  points: [],
-                  secondaryPoints: [],
-                );
-            final summary = _summaryFor(data.records);
-            final chart = _buildChartData(data.records);
-            final goals = data.goals;
-            final goalAchievements = data.goalAchievements;
+  Widget _buildBody(
+    BuildContext context,
+    QueryResult<_MetricDetailSnapshot, DioException> result,
+  ) {
+    if (result.isLoading) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: const [
+          SizedBox(height: 120),
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
+    }
+    if (result.isError || result.data == null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [Text('読み込み失敗: ${result.error}')],
+      );
+    }
 
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              children: [
-                _SectionCard(
-                  title: '目標',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+    final data = result.data ??
+        const _MetricDetailSnapshot(
+          records: [],
+          goals: [],
+          goalAchievements: {},
+          points: [],
+          secondaryPoints: [],
+        );
+    final summary = _summaryFor(data.records);
+    final chart = _buildChartData(data.records);
+    final goals = data.goals;
+    final goalAchievements = data.goalAchievements;
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: [
+        _SectionCard(
+          title: '目標',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'この項目ごとに目標を設定できます。',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                onPressed: () => _saveGoal(),
+                icon: const Icon(Icons.flag_rounded),
+                label: const Text('目標を設定'),
+              ),
+              const SizedBox(height: 16),
+              if (goals.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('この項目に設定された目標はまだありません。'),
+                )
+              else
+                ...goals.map(
+                  (goal) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _GoalCard(
+                      goal: goal,
+                      achievement: goalAchievements[goal['id'] as String? ?? ''],
+                      color: widget.color,
+                      onEdit: () => _saveGoal(goal: goal),
+                      onDelete: () => _deleteGoal(goal),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _SummaryCard(
+          title: '${widget.title} の総合',
+          icon: widget.icon,
+          color: widget.color,
+          summary: summary,
+        ),
+        const SizedBox(height: 16),
+        _TrendCard(
+          title: '時系列',
+          points: chart.primary,
+          accent: widget.color,
+          valueLabel: _trendLabel(),
+          secondaryPoints: chart.secondary,
+          secondaryAccent: _secondaryAccent(),
+          secondaryLabel: chart.secondaryLabel,
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: 170,
+              child: OutlinedButton(
+                onPressed: _pickFromDate,
+                child: Text('開始: ${DateFormat('MM/dd').format(_from)}'),
+              ),
+            ),
+            SizedBox(
+              width: 170,
+              child: OutlinedButton(
+                onPressed: _pickToDate,
+                child: Text('終了: ${DateFormat('MM/dd').format(_to)}'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '${widget.title} の記録',
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        if (data.records.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: Text('この期間の記録はありません。')),
+          )
+        else
+          ...data.records.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Card(
+                elevation: 0,
+                child: ListTile(
+                  onTap: () => _editRecord(entry),
+                  leading: CircleAvatar(
+                    backgroundColor: widget.color.withValues(alpha: 0.12),
+                    child: Icon(widget.icon, color: widget.color),
+                  ),
+                  title: Text(entry.title),
+                  subtitle: Text(
+                    '${DateFormat('yyyy/MM/dd HH:mm').format(entry.recordedAt)}\n${entry.subtitle}',
+                  ),
+                  isThreeLine: entry.subtitle.isNotEmpty,
+                  trailing: Wrap(
+                    spacing: 4,
                     children: [
-                      Text(
-                        'この項目ごとに目標を設定できます。',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      IconButton(
+                        onPressed: () => _editRecord(entry),
+                        icon: const Icon(Icons.edit_rounded),
                       ),
-                      const SizedBox(height: 12),
-                      FilledButton.tonalIcon(
-                        onPressed: () => _saveGoal(),
-                        icon: const Icon(Icons.flag_rounded),
-                        label: const Text('目標を設定'),
+                      IconButton(
+                        onPressed: () => _deleteRecord(entry),
+                        icon: const Icon(Icons.delete_rounded),
                       ),
-                      const SizedBox(height: 16),
-                      if (goals.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Text('この項目に設定された目標はまだありません。'),
-                        )
-                      else
-                        ...goals.map(
-                          (goal) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _GoalCard(
-                              goal: goal,
-                              achievement: goalAchievements[goal['id'] as String? ?? ''],
-                              color: widget.color,
-                              onEdit: () => _saveGoal(goal: goal),
-                              onDelete: () => _deleteGoal(goal),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                _SummaryCard(
-                  title: '${widget.title} の総合',
-                  icon: widget.icon,
-                  color: widget.color,
-                  summary: summary,
-                ),
-                const SizedBox(height: 16),
-                _TrendCard(
-                  title: '時系列',
-                  points: chart.primary,
-                  accent: widget.color,
-                  valueLabel: _trendLabel(),
-                  secondaryPoints: chart.secondary,
-                  secondaryAccent: _secondaryAccent(),
-                  secondaryLabel: chart.secondaryLabel,
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    SizedBox(
-                      width: 170,
-                      child: OutlinedButton(
-                        onPressed: _pickFromDate,
-                        child: Text('開始: ${DateFormat('MM/dd').format(_from)}'),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 170,
-                      child: OutlinedButton(
-                        onPressed: _pickToDate,
-                        child: Text('終了: ${DateFormat('MM/dd').format(_to)}'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${widget.title} の記録',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                if (data.records.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 48),
-                    child: Center(child: Text('この期間の記録はありません。')),
-                  )
-                else
-                  ...data.records.map(
-                    (entry) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Card(
-                        elevation: 0,
-                        child: ListTile(
-                          onTap: () => _editRecord(entry),
-                          leading: CircleAvatar(
-                            backgroundColor: widget.color.withValues(alpha: 0.12),
-                            child: Icon(widget.icon, color: widget.color),
-                          ),
-                          title: Text(entry.title),
-                          subtitle: Text(
-                            '${DateFormat('yyyy/MM/dd HH:mm').format(entry.recordedAt)}\n${entry.subtitle}',
-                          ),
-                          isThreeLine: entry.subtitle.isNotEmpty,
-                          trailing: Wrap(
-                            spacing: 4,
-                            children: [
-                              IconButton(
-                                onPressed: () => _editRecord(entry),
-                                icon: const Icon(Icons.edit_rounded),
-                              ),
-                              IconButton(
-                                onPressed: () => _deleteRecord(entry),
-                                icon: const Icon(Icons.delete_rounded),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -500,18 +559,25 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
     switch (widget.kind) {
       case 'blood_pressure':
         final latest = records.isEmpty ? null : records.first;
-        final systolics = records.map((e) => e.record['systolic']).whereType<num>().toList();
-        final diastolics = records.map((e) => e.record['diastolic']).whereType<num>().toList();
+        final systolics =
+            records.map((e) => e.record['systolic']).whereType<num>().toList();
+        final diastolics =
+            records.map((e) => e.record['diastolic']).whereType<num>().toList();
         return _SummaryData(
-          primary: latest == null ? '—' : '${latest.record['systolic']} / ${latest.record['diastolic']}',
+          primary: latest == null
+              ? '—'
+              : '${latest.record['systolic']} / ${latest.record['diastolic']}',
           secondary:
               '記録 ${records.length} 件 / 平均 ${_avg(systolics)} / ${_avg(diastolics)}',
         );
       case 'blood_glucose':
         final latest = records.isEmpty ? null : records.first;
-        final values = records.map((e) => e.record['value']).whereType<num>().toList();
+        final values =
+            records.map((e) => e.record['value']).whereType<num>().toList();
         return _SummaryData(
-          primary: latest == null ? '—' : '${latest.record['value']} ${latest.record['unit']}',
+          primary: latest == null
+              ? '—'
+              : '${latest.record['value']} ${latest.record['unit']}',
           secondary: '記録 ${records.length} 件 / 平均 ${_avg(values)}',
         );
       case 'meal':
@@ -521,17 +587,21 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
             .fold<num>(0, (sum, value) => sum + value);
         return _SummaryData(
           primary: '${records.length} 件',
-          secondary: '推定 ${calories.round()} kcal / 直近 ${records.isEmpty ? '—' : records.first.title}',
+          secondary:
+              '推定 ${calories.round()} kcal / 直近 ${records.isEmpty ? '—' : records.first.title}',
         );
       case 'weight':
         final latest = records.isEmpty ? null : records.first;
         final earliest = records.isEmpty ? null : records.last;
         final delta = (latest != null && earliest != null)
-            ? (latest.record['value'] as num) - (earliest.record['value'] as num)
+            ? (latest.record['value'] as num) -
+                (earliest.record['value'] as num)
             : null;
         return _SummaryData(
           primary: latest == null ? '—' : '${latest.record['value']} kg',
-          secondary: delta == null ? '記録 ${records.length} 件' : '記録 ${records.length} 件 / 変化 ${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)} kg',
+          secondary: delta == null
+              ? '記録 ${records.length} 件'
+              : '記録 ${records.length} 件 / 変化 ${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)} kg',
         );
       case 'activity':
         final steps = records
@@ -584,7 +654,10 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
 }
 
 class _ChartData {
-  const _ChartData({required this.primary, required this.secondary, required this.secondaryLabel});
+  const _ChartData(
+      {required this.primary,
+      required this.secondary,
+      required this.secondaryLabel});
 
   final List<_TrendPoint> primary;
   final List<_TrendPoint> secondary;
@@ -614,9 +687,15 @@ List<String> _goalTypesForKind(String kind) {
     case 'meal':
       return const ['daily_calorie_limit'];
     case 'blood_pressure':
-      return const ['blood_pressure_systolic_max', 'blood_pressure_diastolic_max'];
+      return const [
+        'blood_pressure_systolic_max',
+        'blood_pressure_diastolic_max'
+      ];
     case 'blood_glucose':
-      return const ['blood_glucose_fasting_range', 'blood_glucose_postprandial_range'];
+      return const [
+        'blood_glucose_fasting_range',
+        'blood_glucose_postprandial_range'
+      ];
     case 'weight':
       return const ['weight_target'];
     default:
@@ -637,7 +716,7 @@ String _goalTypeLabel(String goalType) {
     case 'blood_glucose_postprandial_range':
       return '血糖 食後範囲';
     case 'daily_calorie_limit':
-      return '摂取カロリー上限';
+      return '1日トータル摂取カロリー上限';
     case 'weekly_exercise_days':
       return '週次運動日数';
     case 'weight_target':
@@ -800,16 +879,25 @@ class _MetricEntry {
         );
       case 'activity':
         final parts = <String>[];
-        if (record['steps'] != null) parts.add('歩数 ${record['steps']}');
-        if (record['activeMinutes'] != null) parts.add('活動 ${record['activeMinutes']} 分');
-        if (record['caloriesBurned'] != null) parts.add('消費 ${record['caloriesBurned']} kcal');
+        if (record['steps'] != null) {
+          parts.add('歩数 ${record['steps']}');
+        }
+        if (record['activeMinutes'] != null) {
+          parts.add('活動 ${record['activeMinutes']} 分');
+        }
+        if (record['caloriesBurned'] != null) {
+          parts.add('消費 ${record['caloriesBurned']} kcal');
+        }
         return _MetricEntry(
           kind: kind,
           record: record,
           recordedAt: recordedAt,
           title: parts.isEmpty ? '運動' : parts.join(' · '),
           subtitle: (record['memo'] as String?) ?? '',
-          trendValue: (record['steps'] as num? ?? record['caloriesBurned'] as num? ?? record['activeMinutes'] as num?)?.toDouble(),
+          trendValue: (record['steps'] as num? ??
+                  record['caloriesBurned'] as num? ??
+                  record['activeMinutes'] as num?)
+              ?.toDouble(),
         );
       default:
         return _MetricEntry(
@@ -876,7 +964,10 @@ class _SummaryCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     summary.primary,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 4),
                   Text(summary.secondary),
@@ -916,8 +1007,12 @@ class _TrendCard extends StatelessWidget {
       ...secondaryPoints.map((point) => point.date),
     }.toList()
       ..sort();
-    final primaryMap = {for (final point in points) point.date: point.value?.toDouble()};
-    final secondaryMap = {for (final point in secondaryPoints) point.date: point.value?.toDouble()};
+    final primaryMap = {
+      for (final point in points) point.date: point.value?.toDouble()
+    };
+    final secondaryMap = {
+      for (final point in secondaryPoints) point.date: point.value?.toDouble()
+    };
     final chartPoints = allDates
         .map(
           (date) => _ChartPoint(
@@ -970,7 +1065,8 @@ class _TrendCard extends StatelessWidget {
                             for (final point in chartPoints)
                               Expanded(
                                 child: Text(
-                                  DateFormat('MM/dd').format(DateTime.parse('${point.label}T00:00:00')),
+                                  DateFormat('MM/dd').format(DateTime.parse(
+                                      '${point.label}T00:00:00')),
                                   textAlign: TextAlign.center,
                                   style: Theme.of(context).textTheme.labelSmall,
                                   maxLines: 1,
@@ -1005,7 +1101,6 @@ class _TrendCard extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _GoalCard extends StatelessWidget {
@@ -1066,7 +1161,10 @@ class _GoalCard extends StatelessWidget {
                     children: [
                       Text(
                         _goalTypeLabel(goalType),
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1077,7 +1175,9 @@ class _GoalCard extends StatelessWidget {
                   ),
                 ),
                 _GoalStatusChip(
-                  label: goal['isActive'] == false ? '無効' : (achieved ? '達成' : '進行中'),
+                  label: goal['isActive'] == false
+                      ? '無効'
+                      : (achieved ? '達成' : '進行中'),
                   color: statusColor,
                 ),
               ],
@@ -1159,7 +1259,8 @@ class _GoalStatusChip extends StatelessWidget {
 }
 
 class _ChartPoint {
-  const _ChartPoint({required this.label, required this.primary, required this.secondary});
+  const _ChartPoint(
+      {required this.label, required this.primary, required this.secondary});
 
   final String label;
   final double? primary;
@@ -1230,7 +1331,8 @@ class _LineChartPainter extends CustomPainter {
       canvas.drawLine(Offset(chartLeft, y), Offset(chartRight, y), gridPaint);
     }
 
-    canvas.drawLine(Offset(chartLeft, chartBottom), Offset(chartRight, chartBottom), axisPaint);
+    canvas.drawLine(Offset(chartLeft, chartBottom),
+        Offset(chartRight, chartBottom), axisPaint);
 
     _drawSeries(
       canvas,
@@ -1277,7 +1379,9 @@ class _LineChartPainter extends CustomPainter {
         segment.clear();
         continue;
       }
-      final x = series.length == 1 ? chartLeft + chartWidth / 2 : chartLeft + (chartWidth * i / (series.length - 1));
+      final x = series.length == 1
+          ? chartLeft + chartWidth / 2
+          : chartLeft + (chartWidth * i / (series.length - 1));
       final y = chartTop + chartHeight - _valueToHeight(value, chartHeight);
       final offset = Offset(x, y);
       segment.add(offset);
@@ -1316,7 +1420,8 @@ class _LineChartPainter extends CustomPainter {
 
   double _valueToHeight(double value, double chartHeight) {
     if (maxValue <= minValue) return chartHeight / 2;
-    final normalized = ((value - minValue) / (maxValue - minValue)).clamp(0.0, 1.0);
+    final normalized =
+        ((value - minValue) / (maxValue - minValue)).clamp(0.0, 1.0);
     return 12 + (chartHeight - 24) * normalized;
   }
 
