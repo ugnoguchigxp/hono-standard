@@ -4,6 +4,7 @@ import '../core/session/app_controller.dart';
 import '../features/auth/auth_screen_view.dart';
 import '../features/home/home_screen.dart';
 import '../features/insights/insights_screen.dart';
+import '../features/face_tracking/face_tracking_screen.dart';
 
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key, required this.controller});
@@ -30,11 +31,16 @@ class _AppShellState extends State<AppShell> {
 
   late final List<Widget> _pages = [
     HomeScreen(controller: widget.controller),
+    FaceTrackingScreen(controller: widget.controller),
     InsightsScreen(controller: widget.controller),
   ];
 
-  final _labels = const ['今日のダッシュボード', '設定'];
-  final _icons = const [Icons.dashboard_rounded, Icons.tune_rounded];
+  final _labels = const ['今日のダッシュボード', '表情トラッキング', '設定'];
+  final _icons = const [
+    Icons.dashboard_rounded,
+    Icons.face_retouching_natural_rounded,
+    Icons.tune_rounded
+  ];
 
   @override
   Widget build(BuildContext context) {

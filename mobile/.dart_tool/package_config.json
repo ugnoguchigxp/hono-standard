@@ -44,6 +44,36 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "camera",
+      "rootUri": "file:///Users/y.noguchi/.pub-cache/hosted/pub.dev/camera-0.11.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "camera_android_camerax",
+      "rootUri": "file:///Users/y.noguchi/.pub-cache/hosted/pub.dev/camera_android_camerax-0.6.30",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "camera_avfoundation",
+      "rootUri": "file:///Users/y.noguchi/.pub-cache/hosted/pub.dev/camera_avfoundation-0.9.23+2",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "camera_platform_interface",
+      "rootUri": "file:///Users/y.noguchi/.pub-cache/hosted/pub.dev/camera_platform_interface-2.13.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "camera_web",
+      "rootUri": "file:///Users/y.noguchi/.pub-cache/hosted/pub.dev/camera_web-0.3.5+3",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
       "name": "characters",
       "rootUri": "file:///Users/y.noguchi/.pub-cache/hosted/pub.dev/characters-1.4.1",
       "packageUri": "lib/",
@@ -498,6 +528,12 @@
       "rootUri": "file:///Users/y.noguchi/.pub-cache/hosted/pub.dev/stream_channel-2.1.4",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "stream_transform",
+      "rootUri": "file:///Users/y.noguchi/.pub-cache/hosted/pub.dev/stream_transform-2.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
     },
     {
       "name": "string_scanner",

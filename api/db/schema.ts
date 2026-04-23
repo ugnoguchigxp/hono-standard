@@ -383,3 +383,47 @@ export const healthSyncStates = pgTable(
     userIdIdx: index('hss_user_id_idx').on(table.userId),
   })
 );
+export const vitalsRecords = pgTable(
+  'vitals_records',
+  {
+    ...healthRecordColumns,
+    // 最初から狙う
+    heartRate: doublePrecision('heart_rate').notNull(),
+    respiratoryRate: doublePrecision('respiratory_rate'),
+    qualityScore: doublePrecision('quality_score').notNull(),
+    confidence: doublePrecision('confidence').notNull(),
+
+    // 次に狙う (HRV 時間領域)
+    rmssd: doublePrecision('rmssd'),
+    sdnn: doublePrecision('sdnn'),
+
+    // 慎重に扱う (周波数領域・自律神経)
+    lf: doublePrecision('lf'),
+    hf: doublePrecision('hf'),
+    lfHfRatio: doublePrecision('lf_hf_ratio'),
+    stressLevel: doublePrecision('stress_level'),
+    autonomicBalance: doublePrecision('autonomic_balance'),
+
+    // 美容・健康指標
+    darkCircleIndex: doublePrecision('dark_circle_index'),
+    edemaIndex: doublePrecision('edema_index'),
+    puffinessIndex: doublePrecision('puffiness_index'),
+    lipIndex: doublePrecision('lip_index'),
+    sunkenCheekIndex: doublePrecision('sunken_cheek_index'),
+
+    // 生理・心理状態
+    drowsinessIndex: doublePrecision('drowsiness_index'),
+    inebriationLevel: doublePrecision('inebriation_level'),
+    anemiaIndex: doublePrecision('anemia_index'),
+    fatigueIndex: doublePrecision('fatigue_index'),
+
+    thumbnailUrl: text('thumbnail_url'),
+    metadata: text('metadata'), // JSON string
+  },
+  (table) => ({
+    userRecordedIdx: index('vr_user_recorded_idx').on(table.userId, table.recordedAt),
+    userExternalUnique: uniqueIndex('vr_user_external_id_uidx')
+      .on(table.userId, table.externalId)
+      .where(sql`${table.externalId} IS NOT NULL`),
+  })
+);

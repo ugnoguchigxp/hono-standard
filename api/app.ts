@@ -11,6 +11,7 @@ import { loggerMiddleware } from './middleware/logger';
 import { rateLimiter } from './middleware/rate-limiter';
 import { healthRecordsRouter } from './modules/health/health.routes';
 import { notificationsRouterV1 } from './modules/notifications/notifications.routes';
+import { vitalsRoutes } from './modules/vitals/vitals.routes';
 import { authRouter } from './routes/auth';
 import { healthRouter } from './routes/health';
 import { oauthRouter } from './routes/oauth';
@@ -20,7 +21,8 @@ const apiRoutes = createOpenApiRouter()
   .route('/auth/oauth', oauthRouter)
   .route('/auth', authRouter)
   .route('/v1/health', healthRecordsRouter)
-  .route('/v1/notifications', notificationsRouterV1);
+  .route('/v1/notifications', notificationsRouterV1)
+  .route('/v1/vitals', vitalsRoutes);
 
 const app = createOpenApiRouter();
 const isProduction = config.NODE_ENV === 'production';
@@ -105,6 +107,9 @@ app.get(
 
 // Routes
 app.route('/api', apiRoutes);
+
+// Static files (Uploads)
+app.use('/uploads/*', serveStatic({ root: './public' }));
 
 if (config.NODE_ENV === 'production') {
   const serveIndex = serveStatic({ path: './dist/index.html' });

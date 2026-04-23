@@ -3,4 +3,11 @@ include: package:flutter_lints/flutter.yaml
 linter:
   rules:
     prefer_const_constructors: true
-    avoid_print: false
+    avoid_print: true
+    always_declare_return_types: true
+    cancel_subscriptions: true
+    close_sinks: true
+    prefer_final_locals: true
+    omit_local_variable_types: true
+    await_only_futures: true
+    use_key_in_widget_constructors: true

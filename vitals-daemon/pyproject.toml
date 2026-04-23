@@ -1,0 +1,15 @@
+[project]
+name = "vitals-daemon"
+version = "0.1.0"
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]
