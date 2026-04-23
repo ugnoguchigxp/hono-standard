@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db/client';
 import { vitalsRecords } from '../../db/schema';
@@ -65,6 +65,13 @@ vitalsRoutes.openapi(
               fatigue_index: z.number().optional(),
               status: z.string(),
               thumbnail_url: z.string().optional(),
+              baseline: z
+                .object({
+                  heart_rate_bpm: z.number(),
+                  stress_level: z.number(),
+                  fatigue_index: z.number(),
+                })
+                .optional(),
             }),
           },
         },
@@ -103,8 +110,9 @@ vitalsRoutes.openapi(
     if (result.status === 'success') {
       // データベースへの保存
       try {
+        const userId = '00000000-0000-0000-0000-000000000000';
         await db.insert(vitalsRecords).values({
-          userId: '00000000-0000-0000-0000-000000000000',
+          userId,
           recordedAt: new Date(),
           heartRate: result.heart_rate_bpm,
           respiratoryRate: result.respiratory_rate,
@@ -128,8 +136,32 @@ vitalsRoutes.openapi(
           fatigueIndex: result.fatigue_index,
           thumbnailUrl: thumbnailUrl,
         });
+
+        // ベースライン（過去10回の平均）の取得
+        const pastRecords = await db.query.vitalsRecords.findMany({
+          where: eq(vitalsRecords.userId, userId),
+          orderBy: [desc(vitalsRecords.recordedAt)],
+          limit: 10,
+        });
+
+        if (pastRecords.length > 0) {
+          const baseline = {
+            heart_rate_bpm:
+              pastRecords.reduce((acc, r) => acc + r.heartRate, 0) / pastRecords.length,
+            stress_level:
+              pastRecords.reduce((acc, r) => acc + (r.stressLevel ?? 0), 0) / pastRecords.length,
+            fatigue_index:
+              pastRecords.reduce((acc, r) => acc + (r.fatigueIndex ?? 0), 0) / pastRecords.length,
+          };
+
+          return c.json({
+            ...result,
+            thumbnail_url: thumbnailUrl,
+            baseline,
+          });
+        }
       } catch (e) {
-        console.error('Failed to save record to DB:', e);
+        console.error('Failed to save record or calc baseline:', e);
       }
     }
 
@@ -157,6 +189,8 @@ vitalsRoutes.openapi(
                 respiratory_rate: z.number().nullable(),
                 recorded_at: z.string(),
                 thumbnail_url: z.string().nullable(),
+                dark_circle_index: z.number().nullable(),
+                edema_index: z.number().nullable(),
               })
             ),
           },
@@ -178,6 +212,8 @@ vitalsRoutes.openapi(
         respiratory_rate: h.respiratoryRate,
         recorded_at: h.recordedAt.toISOString(),
         thumbnail_url: h.thumbnailUrl,
+        dark_circle_index: h.darkCircleIndex,
+        edema_index: h.edemaIndex,
       }))
     );
   }

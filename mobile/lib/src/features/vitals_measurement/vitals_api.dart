@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import '../../core/api/dio_client.dart';
 
 class VitalsApi {
-  final Dio _dio = dio;
+  final Dio _dio = buildDio();
 
   Future<Map<String, dynamic>> analyzeVitals(Map<String, dynamic> roiData) async {
     try {

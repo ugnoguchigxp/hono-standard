@@ -124,6 +124,8 @@ class _VitalsMeasurementScreenState extends State<VitalsMeasurementScreen> {
   }
 
   void _showResult(Map<String, dynamic> result) {
+    final baseline = result['baseline'] as Map<String, dynamic>?;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -134,13 +136,32 @@ class _VitalsMeasurementScreenState extends State<VitalsMeasurementScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildResultSection('基本バイタル', [
-                _buildResultRow('心拍数', '${(result['heart_rate_bpm'] as num).toStringAsFixed(1)} BPM'),
+                _buildResultRow(
+                  '心拍数', 
+                  '${(result['heart_rate_bpm'] as num).toStringAsFixed(1)} BPM',
+                  baselineValue: baseline?['heart_rate_bpm'],
+                ),
                 _buildResultRow('呼吸数', '${(result['respiratory_rate'] as num).toStringAsFixed(1)} /分'),
               ]),
               const Divider(),
               _buildResultSection('自律神経・ストレス', [
-                _buildResultRow('ストレス度', '${(result['stress_level'] as num).toStringAsFixed(1)}'),
+                _buildResultRow(
+                  'ストレス度', 
+                  '${(result['stress_level'] as num).toStringAsFixed(1)}',
+                  baselineValue: baseline?['stress_level'],
+                ),
                 _buildResultRow('LF/HF比', '${(result['lf_hf_ratio'] as num).toStringAsFixed(2)}'),
+              ]),
+              const Divider(),
+              _buildResultSection('コンディション推定', [
+                _buildResultRow(
+                  '疲労度', 
+                  '${(result['fatigue_index'] as num).toStringAsFixed(1)} %',
+                  baselineValue: baseline?['fatigue_index'],
+                ),
+                _buildResultRow('眠たさ', '${(result['drowsiness_index'] as num).toStringAsFixed(1)} %'),
+                _buildResultRow('酩酊度', '${(result['inebriation_level'] as num).toStringAsFixed(1)} %'),
+                _buildResultRow('貧血指標', '${(result['anemia_index'] as num).toStringAsFixed(1)}'),
               ]),
               const Divider(),
               _buildResultSection('美容・健康指標', [
@@ -149,13 +170,6 @@ class _VitalsMeasurementScreenState extends State<VitalsMeasurementScreen> {
                 _buildResultRow('目の腫れ', '${(result['puffiness_index'] as num).toStringAsFixed(1)}'),
                 _buildResultRow('唇の荒れ', '${(result['lip_index'] as num).toStringAsFixed(1)}'),
                 _buildResultRow('頬のこけ', '${(result['sunken_cheek_index'] as num).toStringAsFixed(1)}'),
-              ]),
-              const Divider(),
-              _buildResultSection('コンディション推定', [
-                _buildResultRow('疲労度', '${(result['fatigue_index'] as num).toStringAsFixed(1)} %'),
-                _buildResultRow('眠たさ', '${(result['drowsiness_index'] as num).toStringAsFixed(1)} %'),
-                _buildResultRow('酩酊度', '${(result['inebriation_level'] as num).toStringAsFixed(1)} %'),
-                _buildResultRow('貧血指標', '${(result['anemia_index'] as num).toStringAsFixed(1)}'),
               ]),
               const SizedBox(height: 8),
               Text('解析品質: ${(result['quality_score'] as num).toStringAsFixed(2)}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
@@ -183,7 +197,7 @@ class _VitalsMeasurementScreenState extends State<VitalsMeasurementScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey, fontSize: 12)),
         const SizedBox(height: 4),
         ...children,
         const SizedBox(height: 8),
@@ -191,14 +205,33 @@ class _VitalsMeasurementScreenState extends State<VitalsMeasurementScreen> {
     );
   }
 
-  Widget _buildResultRow(String label, String value) {
+  Widget _buildResultRow(String label, String value, {num? baselineValue}) {
+    String diffText = '';
+    Color diffColor = Colors.grey;
+
+    if (baselineValue != null) {
+      final current = double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+      final diff = current - (baselineValue as num).toDouble();
+      if (diff.abs() > 0.1) {
+        final sign = diff > 0 ? '+' : '';
+        diffText = ' ($sign${diff.toStringAsFixed(1)})';
+        diffColor = diff > 0 ? Colors.redAccent : Colors.blueAccent;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14)),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(fontSize: 13)),
+          Row(
+            children: [
+              Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              if (diffText.isNotEmpty)
+                Text(diffText, style: TextStyle(fontSize: 11, color: diffColor, fontWeight: FontWeight.w500)),
+            ],
+          ),
         ],
       ),
     );
@@ -266,7 +299,13 @@ class _VitalsMeasurementScreenState extends State<VitalsMeasurementScreen> {
           if (_isMeasuring) ...[
             LinearProgressIndicator(value: _progress, backgroundColor: Colors.white24, color: Colors.greenAccent),
             const SizedBox(height: 16),
-            const Text('動かないでください...', style: TextStyle(color: Colors.white)),
+            if ((_lastFrameData?['motion_score'] as num? ?? 0) > 0.01)
+              const Text(
+                '警告: 頭を動かさないでください',
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              )
+            else
+              const Text('解析中... 動かないでください', style: TextStyle(color: Colors.white70)),
           ] else ...[
             ElevatedButton(
               onPressed: isDetected ? _startMeasurement : null,

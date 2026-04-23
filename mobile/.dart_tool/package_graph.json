@@ -9,6 +9,7 @@
       "dependencies": [
         "camera",
         "dio",
+        "fl_chart",
         "flutter",
         "flutter_localizations",
         "fquery",
@@ -931,6 +932,23 @@
       "dependencies": [
         "meta",
         "path"
+      ]
+    },
+    {
+      "name": "fl_chart",
+      "version": "0.70.2",
+      "dependencies": [
+        "equatable",
+        "flutter",
+        "vector_math"
+      ]
+    },
+    {
+      "name": "equatable",
+      "version": "2.0.8",
+      "dependencies": [
+        "collection",
+        "meta"
       ]
     }
   ],

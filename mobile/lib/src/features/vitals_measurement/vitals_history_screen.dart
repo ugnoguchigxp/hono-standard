@@ -53,7 +53,7 @@ class _VitalsHistoryScreenState extends State<VitalsHistoryScreen> {
               : Column(
                   children: [
                     const SizedBox(height: 16),
-                    SizedBox(
+                    Container(
                       height: 250,
                       padding: const EdgeInsets.all(16),
                       child: _buildChart(),

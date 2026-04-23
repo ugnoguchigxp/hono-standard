@@ -10,8 +10,13 @@ class VitalsProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     private var geometry: [String: [Double]] = [:]
     private var capturedImageBase64: String?
     private var frameCount = 0
+    
+    // --- ノイズ除去用変数 ---
+    private var lastLandmarks: [NormalizedLandmark]?
+    private var motionScore: Double = 0.0
+    private var smoothingBuffer: [String: [String: [Double]]] = [:]
+    private let smoothingWindow = 3 // 3フレームの移動平均
 
-    // リアルタイム通知用コールバック
     var onFrameUpdate: (([String: Any]) -> Void)?
 
     override init() {
@@ -22,15 +27,12 @@ class VitalsProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
 
     private func setupLandmarker() {
         guard let modelPath = Bundle.main.path(forResource: "face_landmarker", ofType: "task", inDirectory: "Frameworks/App.framework/flutter_assets/assets/models") else {
-            print("Failed to find face_landmarker.task in assets")
             return
         }
-
         let options = FaceLandmarkerOptions()
         options.baseOptions.modelAssetPath = modelPath
         options.runningMode = .video
         options.numFaces = 1
-
         do {
             faceLandmarker = try FaceLandmarker(options: options)
         } catch {
@@ -39,21 +41,16 @@ class VitalsProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 
     private func resetResults() {
-        results = [
-            "forehead": ["r": [], "g": [], "b": []],
-            "left_cheek": ["r": [], "g": [], "b": []],
-            "right_cheek": ["r": [], "g": [], "b": []],
-            "under_eye_left": ["r": [], "g": [], "b": []],
-            "under_eye_right": ["r": [], "g": [], "b": []],
-            "lips": ["r": [], "g": [], "b": []],
-            "left_cheek_hollow": ["r": [], "g": [], "b": []],
-            "right_cheek_hollow": ["r": [], "g": [], "b": []]
-        ]
-        geometry = [
-            "face_width": [],
-            "face_height": [],
-            "eye_aperture": []
-        ]
+        let regions = ["forehead", "left_cheek", "right_cheek", "under_eye_left", "under_eye_right", "lips", "left_cheek_hollow", "right_cheek_hollow"]
+        results = [:]
+        smoothingBuffer = [:]
+        for r in regions {
+            results[r] = ["r": [], "g": [], "b": []]
+            smoothingBuffer[r] = ["r": [], "g": [], "b": []]
+        }
+        geometry = ["face_width": [], "face_height": [], "eye_aperture": []]
+        motionScore = 0.0
+        lastLandmarks = nil
     }
 
     func startCollection() {
@@ -126,15 +123,22 @@ class VitalsProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
         
-        // ROI抽出
-        extractRGB(landmark: landmarks[10], name: "forehead", in: pixelBuffer)
-        extractRGB(landmark: landmarks[234], name: "left_cheek", in: pixelBuffer)
-        extractRGB(landmark: landmarks[454], name: "right_cheek", in: pixelBuffer)
-        extractRGB(landmark: landmarks[101], name: "under_eye_left", in: pixelBuffer)
-        extractRGB(landmark: landmarks[330], name: "under_eye_right", in: pixelBuffer)
-        extractRGB(landmark: landmarks[0], name: "lips", in: pixelBuffer)
-        extractRGB(landmark: landmarks[214], name: "left_cheek_hollow", in: pixelBuffer)
-        extractRGB(landmark: landmarks[434], name: "right_cheek_hollow", in: pixelBuffer)
+        // --- 動き検知ロジック ---
+        if let last = lastLandmarks {
+            // 主要な点の移動距離を積算 (額、鼻、顎など)
+            let d1 = hypot(landmarks[10].x - last[10].x, landmarks[10].y - last[10].y)
+            let d2 = hypot(landmarks[1].x - last[1].x, landmarks[1].y - last[1].y)
+            let d3 = hypot(landmarks[152].x - last[152].x, landmarks[152].y - last[152].y)
+            motionScore = Double(d1 + d2 + d3)
+        }
+        lastLandmarks = landmarks
+
+        // ROI抽出と平滑化
+        let regions = ["forehead": 10, "left_cheek": 234, "right_cheek": 454, "under_eye_left": 101, "under_eye_right": 330, "lips": 0, "left_cheek_hollow": 214, "right_cheek_hollow": 434]
+        
+        for (name, idx) in regions {
+            extractAndSmoothRGB(landmark: landmarks[idx], name: name, in: pixelBuffer)
+        }
         
         // 幾何学的特徴の算出
         let f_width = abs(landmarks[454].x - landmarks[234].x)
@@ -146,9 +150,9 @@ class VitalsProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         geometry["face_height"]?.append(Double(f_height))
         geometry["eye_aperture"]?.append(Double((leftEyeApt + rightEyeApt) / 2.0))
         
-        // UI通知 (主要な点のみ)
         onFrameUpdate?([
             "status": "detected",
+            "motion_score": motionScore,
             "landmarks": [
                 "forehead": ["x": landmarks[10].x, "y": landmarks[10].y],
                 "left_cheek": ["x": landmarks[234].x, "y": landmarks[234].y],
@@ -163,7 +167,7 @@ class VitalsProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         ])
     }
 
-    private func extractRGB(landmark: NormalizedLandmark, name: String, in pixelBuffer: CVPixelBuffer) {
+    private func extractAndSmoothRGB(landmark: NormalizedLandmark, name: String, in pixelBuffer: CVPixelBuffer) {
         let w = CVPixelBufferGetWidth(pixelBuffer)
         let h = CVPixelBufferGetHeight(pixelBuffer)
         let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
@@ -175,7 +179,6 @@ class VitalsProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         let halfSize = roiSize / 2
         
         var r: Double = 0, g: Double = 0, b: Double = 0, count: Double = 0
-        
         for dy in -halfSize..<halfSize {
             for dx in -halfSize..<halfSize {
                 let x = centerX + dx, y = centerY + dy
@@ -190,9 +193,28 @@ class VitalsProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         }
         
         if count > 0 {
-            results[name]?["r"]?.append(r / count)
-            results[name]?["g"]?.append(g / count)
-            results[name]?["b"]?.append(b / count)
+            let currentR = r / count
+            let currentG = g / count
+            let currentB = b / count
+            
+            // 移動平均フィルタの適用
+            smoothingBuffer[name]?["r"]?.append(currentR)
+            smoothingBuffer[name]?["g"]?.append(currentG)
+            smoothingBuffer[name]?["b"]?.append(currentB)
+            
+            if smoothingBuffer[name]?["r"]?.count ?? 0 > smoothingWindow {
+                smoothingBuffer[name]?["r"]?.removeFirst()
+                smoothingBuffer[name]?["g"]?.removeFirst()
+                smoothingBuffer[name]?["b"]?.removeFirst()
+            }
+            
+            let avgR = (smoothingBuffer[name]?["r"]?.reduce(0, +) ?? 0) / Double(smoothingBuffer[name]?["r"]?.count ?? 1)
+            let avgG = (smoothingBuffer[name]?["g"]?.reduce(0, +) ?? 0) / Double(smoothingBuffer[name]?["g"]?.count ?? 1)
+            let avgB = (smoothingBuffer[name]?["b"]?.reduce(0, +) ?? 0) / Double(smoothingBuffer[name]?["b"]?.count ?? 1)
+            
+            results[name]?["r"]?.append(avgR)
+            results[name]?["g"]?.append(avgG)
+            results[name]?["b"]?.append(avgB)
         }
     }
 }
