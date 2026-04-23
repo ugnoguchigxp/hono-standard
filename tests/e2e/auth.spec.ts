@@ -18,7 +18,7 @@ test.describe('Authentication Flows @regression', () => {
 
     await page.goto('/login');
     await page.getByPlaceholder('Email').fill('user@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByPlaceholder('Password').fill('GxpHonoStd_2026!');
     await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await expect(page).toHaveURL('/');

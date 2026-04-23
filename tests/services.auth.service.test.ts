@@ -72,11 +72,11 @@ describe('auth.service', () => {
 
     const result = await register({
       email: 'user@example.com',
-      password: 'password123',
+      password: 'GxpHonoStd_2026!',
       name: 'User',
     });
 
-    expect(mocks.hashPassword).toHaveBeenCalledWith('password123');
+    expect(mocks.hashPassword).toHaveBeenCalledWith('GxpHonoStd_2026!');
     expect(mocks.createUser).toHaveBeenCalledWith({
       email: 'user@example.com',
       passwordHash: 'hashed-password',

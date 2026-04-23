@@ -16,6 +16,10 @@ export const findByEmail = async (
   email: string,
   tx?: DbTransaction
 ): Promise<SelectUser | undefined> => {
+  if (!email) {
+    console.error('findByEmail called with missing email');
+    throw new Error('Email is required for findByEmail');
+  }
   const d = tx || db;
   const [user] = await d.select().from(users).where(eq(users.email, email));
   return user;

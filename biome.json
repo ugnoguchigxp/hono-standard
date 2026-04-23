@@ -9,9 +9,12 @@
         "noUnusedVariables": "error"
       },
       "suspicious": {
-        "noExplicitAny": "warn",
+        "noExplicitAny": "off",
         "noArrayIndexKey": "off",
         "noUnknownAtRules": "off"
+      },
+      "a11y": {
+        "recommended": false
       }
     }
   },

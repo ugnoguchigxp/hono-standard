@@ -14,7 +14,7 @@ async function main() {
     const [existing] = await db.select().from(users).limit(1);
     
     if (!existing) {
-      const passwordHash = await hashPassword('password123');
+      const passwordHash = await hashPassword('GxpHonoStd_2026!');
       const [user] = await db.insert(users).values({
         email: 'test@example.com',
         name: 'Test User',

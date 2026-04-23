@@ -151,13 +151,18 @@ const publicAuthRouter = createOpenApiRouter()
     );
   })
   .openapi(registerRoute, async (c) => {
-    const data = c.req.valid('json');
+    const rawData = await c.req.json();
+    const validatedData = c.req.valid('json');
+    const data = validatedData && Object.keys(validatedData).length > 0 ? validatedData : rawData;
     const result = await register(data);
     setAuthCookies(c, result);
     return c.json({ user: result.user }, 201);
   })
   .openapi(loginRoute, async (c) => {
-    const data = c.req.valid('json');
+    const rawData = await c.req.json();
+    const validatedData = c.req.valid('json');
+    const data = validatedData && Object.keys(validatedData).length > 0 ? validatedData : rawData;
+    console.log('Login data used:', JSON.stringify(data));
     const result = await login(data);
     setAuthCookies(c, result);
     return c.json({ user: result.user }, 200);

@@ -10,6 +10,8 @@ import { errorHandler } from './middleware/error-handler';
 import { loggerMiddleware } from './middleware/logger';
 import { rateLimiter } from './middleware/rate-limiter';
 import { bbsRouter } from './modules/bbs/bbs.routes';
+import { medQuestionnaireRouter } from './modules/med-questionnaire/med-questionnaire.routes';
+import { speechRouter } from './modules/speech/speech.routes';
 import { authRouter } from './routes/auth';
 import { healthRouter } from './routes/health';
 import { oauthRouter } from './routes/oauth';
@@ -18,7 +20,9 @@ const apiRoutes = createOpenApiRouter()
   .route('/health', healthRouter)
   .route('/auth/oauth', oauthRouter)
   .route('/auth', authRouter)
-  .route('/bbs', bbsRouter);
+  .route('/bbs', bbsRouter)
+  .route('/med-questionnaire', medQuestionnaireRouter)
+  .route('/speech', speechRouter);
 
 const app = createOpenApiRouter();
 const isProduction = config.NODE_ENV === 'production';

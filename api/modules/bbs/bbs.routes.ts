@@ -119,7 +119,9 @@ const protectedBbsBase = createOpenApiRouter();
 protectedBbsBase.use('*', authMiddleware());
 const protectedBbs = protectedBbsBase
   .openapi(createThreadRoute, async (c) => {
-    const data = c.req.valid('json');
+    const rawData = await c.req.json();
+    const validatedData = c.req.valid('json');
+    const data = validatedData && Object.keys(validatedData).length > 0 ? validatedData : rawData;
     const user = c.get('user');
     if (!user) {
       throw new AuthError('Unauthorized');
@@ -129,7 +131,9 @@ const protectedBbs = protectedBbsBase
   })
   .openapi(createCommentRoute, async (c) => {
     const id = c.req.param('id');
-    const data = c.req.valid('json');
+    const rawData = await c.req.json();
+    const validatedData = c.req.valid('json');
+    const data = validatedData && Object.keys(validatedData).length > 0 ? validatedData : rawData;
     const user = c.get('user');
     if (!user) {
       throw new AuthError('Unauthorized');

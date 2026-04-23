@@ -1,7 +1,9 @@
 import {
   type AnyPgColumn,
   boolean,
+  doublePrecision,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -96,3 +98,43 @@ export const comments = pgTable(
     authorIdIdx: index('comments_author_id_idx').on(table.authorId),
   })
 );
+
+// Medical Questionnaire Tables
+export const medicalInterviews = pgTable('medical_interviews', {
+  ...commonColumns,
+  sessionId: text('session_id').notNull().unique(),
+  patientAge: integer('patient_age'),
+  patientGender: text('patient_gender'),
+  status: text('status').default('IN_PROGRESS').notNull(), // IN_PROGRESS, COMPLETED, CANCELLED
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+});
+
+export const medicalQuestions = pgTable(
+  'medical_questions',
+  {
+    ...commonColumns,
+    interviewId: uuid('interview_id')
+      .notNull()
+      .references(() => medicalInterviews.id, { onDelete: 'cascade' }),
+    questionText: text('question_text').notNull(),
+    answerText: text('answer_text'),
+    questionOrder: integer('question_order').notNull(),
+    timestamp: timestamp('timestamp').defaultNow().notNull(),
+  },
+  (table) => ({
+    interviewIdIdx: index('mq_interview_id_idx').on(table.interviewId),
+  })
+);
+
+export const medicalDiagnoses = pgTable('medical_diagnoses', {
+  ...commonColumns,
+  interviewId: uuid('interview_id')
+    .notNull()
+    .references(() => medicalInterviews.id, { onDelete: 'cascade' })
+    .unique(),
+  primaryDiagnosis: text('primary_diagnosis').notNull(),
+  confidence: doublePrecision('confidence').notNull(),
+  recommendations: text('recommendations').notNull(),
+  urgencyLevel: text('urgency_level').default('LOW').notNull(), // LOW, MEDIUM, HIGH, EMERGENCY
+});

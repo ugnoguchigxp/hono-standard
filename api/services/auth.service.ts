@@ -44,7 +44,10 @@ export const login = async (data: LoginInput) => {
   checkLocalMode();
 
   const { email, password } = data;
-
+  if (!email) {
+    console.error('Login called with missing email. data:', JSON.stringify(data));
+    throw new AuthError('Email is required');
+  }
   const user = await findByEmail(email);
   if (!user?.passwordHash || !user.isActive) {
     throw new AuthError('Invalid email or password');
