@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { Combobox, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxTrigger } from './combobox';
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxTrigger,
+} from './combobox';
 
 describe('Combobox', () => {
   it('opens and selects an item', async () => {
@@ -20,7 +26,7 @@ describe('Combobox', () => {
 
     const input = screen.getByPlaceholderText(/select framework/i);
     await userEvent.type(input, 'Next');
-    
+
     // In BaseUI, typing might open the popup
     expect(await screen.findByRole('option', { name: /next\.js/i })).toBeInTheDocument();
   });

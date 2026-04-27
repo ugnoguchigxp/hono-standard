@@ -8,16 +8,14 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          'border-border bg-secondary text-foreground [&>svg]:text-foreground',
+        default: 'border-border bg-secondary text-foreground [&>svg]:text-foreground',
         destructive:
           'border-destructive bg-[hsl(0_100%_97%)] text-destructive [&>svg]:text-destructive',
         success:
           'border-success bg-[hsl(142_60%_96%)] text-[hsl(142_71%_35%)] [&>svg]:text-[hsl(142_71%_35%)]',
         warning:
           'border-warning bg-[hsl(35_100%_96%)] text-[hsl(35_100%_35%)] [&>svg]:text-[hsl(35_100%_35%)]',
-        info:
-          'border-info bg-[hsl(199_89%_96%)] text-[hsl(199_89%_38%)] [&>svg]:text-[hsl(199_89%_38%)]',
+        info: 'border-info bg-[hsl(199_89%_96%)] text-[hsl(199_89%_38%)] [&>svg]:text-[hsl(199_89%_38%)]',
       },
     },
     defaultVariants: {

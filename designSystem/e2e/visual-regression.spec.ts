@@ -1,5 +1,4 @@
-
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 /**
  * Visual Regression Tests for Design System Components.
@@ -20,10 +19,10 @@ test.describe('Visual Regression', () => {
     test(`Capture ${item.name} screenshot`, async ({ page }) => {
       // Go to the story's iframe directly for a clean screenshot
       await page.goto(`/iframe.html?id=${item.id}`);
-      
+
       // Wait for content to stabilize
       await page.waitForSelector('#storybook-root > *');
-      
+
       // Use a small buffer to ensure animations or fonts are settled
       await page.waitForTimeout(500);
 

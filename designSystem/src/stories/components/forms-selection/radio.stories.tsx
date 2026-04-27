@@ -13,6 +13,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  args: { value: 'selected' },
   render: () => (
     <RadioGroup value="selected" className="gap-2">
       <div className="flex items-center gap-2">

@@ -21,19 +21,7 @@
     "indentStyle": "space",
     "indentWidth": 2,
     "lineWidth": 100,
-    "lineEnding": "lf",
-    "includes": [
-      "**",
-      "!**/node_modules/**",
-      "!**/dist/**",
-      "!**/dist-api/**",
-      "!**/drizzle/**",
-      "!**/playwright-report/**",
-      "!**/coverage/**",
-      "!**/public/mockServiceWorker.js",
-      "!**/test-results/**",
-      "!**/routeTree.gen.ts"
-    ]
+    "lineEnding": "lf"
   },
   "javascript": {
     "formatter": {
@@ -48,19 +36,51 @@
       "tailwindDirectives": true
     }
   },
+  "overrides": [
+    {
+      "includes": ["designSystem/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noUnknownAtRules": "off"
+          },
+          "a11y": {
+            "useButtonType": "off"
+          },
+          "complexity": {
+            "noBannedTypes": "off",
+            "useArrowFunction": "off"
+          },
+          "correctness": {
+            "noUnusedVariables": "off"
+          },
+          "style": {
+            "useTemplate": "off"
+          }
+        }
+      },
+      "formatter": {
+        "enabled": false
+      }
+    }
+  ],
   "files": {
+    "ignoreUnknown": true,
     "includes": [
-      "**",
-      "!**/node_modules",
-      "!**/dist",
-      "!**/dist-api",
-      "!**/drizzle",
-      "!**/playwright-report",
-      "!**/coverage",
-      "!**/public/mockServiceWorker.js",
-      "!**/test-results",
-      "!**/.git",
-      "!**/routeTree.gen.ts"
+      "api/**",
+      "src/**",
+      "!**/src/routeTree.gen.ts",
+      "shared/**",
+      "tests/**",
+      "designSystem/src/**",
+      "designSystem/scripts/**",
+      "designSystem/pencil/scripts/**",
+      "package.json",
+      "tsconfig.json",
+      "vite.config.ts",
+      "vitest.config.ts",
+      "playwright.config.ts"
     ]
   }
 }

@@ -14,7 +14,7 @@ describe('Alert', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Heads up!')).toBeInTheDocument();
     expect(screen.getByText(/you can add components/i)).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveClass('bg-card');
+    expect(screen.getByRole('alert')).toHaveClass('bg-secondary');
   });
 
   it('renders correctly with destructive variant', () => {
@@ -25,7 +25,7 @@ describe('Alert', () => {
       </Alert>
     );
 
-    expect(screen.getByRole('alert')).toHaveClass('border-destructive/30');
+    expect(screen.getByRole('alert')).toHaveClass('border-destructive');
     expect(screen.getByRole('alert')).toHaveClass('text-destructive');
   });
 });

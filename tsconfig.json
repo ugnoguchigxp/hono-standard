@@ -10,7 +10,7 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./src/*", "./designSystem/src/*"],
       "@api/*": ["./api/*"],
       "@repo/design-system": ["./designSystem/src"],
       "@repo/design-system/*": ["./designSystem/src/*"],

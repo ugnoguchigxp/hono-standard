@@ -32,7 +32,7 @@
     --control-px-lg: calc(1.25rem * var(--spacing-unit));
     --control-py-sm: calc(0.25rem * var(--spacing-unit));
     --control-py-md: calc(0.5rem * var(--spacing-unit));
-    
+
     /* --- Border Radius Variants --- */
     --radius-factor: 1;
     --radius: calc(0.5rem * var(--radius-factor));
@@ -113,7 +113,9 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-feature-settings: "rlig" 1, "calt" 1;
+  font-feature-settings:
+    "rlig" 1,
+    "calt" 1;
 }
 
 .theme {
@@ -121,12 +123,12 @@ body {
   --font-sans: "Geist Variable", sans-serif;
 }
 
-
 /* === AUTO-GENERATED: DO NOT EDIT BELOW === */
 /* Source: design-tokens.ts / Run: pnpm generate-tokens */
 
 @layer base {
-  :root, html.theme-light {
+  :root,
+  html.theme-light {
     --background: 240 8% 97%;
     --foreground: 229 84% 5%;
     --card: 0 0% 100%;
@@ -169,7 +171,8 @@ body {
 }
 
 @layer base {
-  html.theme-dark, .dark {
+  html.theme-dark,
+  .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
     --card: 222 47% 11%;

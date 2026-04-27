@@ -68,7 +68,7 @@ export const Showcase: Story = {
           </CardFooter>
         </Card>
 
-        <Accordion defaultValue="item-1">
+        <Accordion defaultValue={['item-1']}>
           <AccordionItem value="item-1">
             <AccordionTrigger>What does this section contain?</AccordionTrigger>
             <AccordionContent>

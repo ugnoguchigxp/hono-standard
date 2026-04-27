@@ -22,9 +22,9 @@ describe('Select', () => {
     expect(trigger).toBeInTheDocument();
 
     await userEvent.click(trigger);
-    
+
     expect(await screen.findByRole('option', { name: /banana/i })).toBeInTheDocument();
-    
+
     await userEvent.click(screen.getByRole('option', { name: /banana/i }));
     // Value should updated, but BaseUI might update the trigger's child text
   });

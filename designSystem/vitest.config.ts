@@ -14,5 +14,5 @@ export default mergeConfig(
         include: ['src/components/ui/**'],
       },
     },
-  }) as any
+  })
 );

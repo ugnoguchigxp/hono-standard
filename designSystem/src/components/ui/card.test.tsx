@@ -14,7 +14,7 @@ describe('Card', () => {
           <p>Card Content</p>
         </CardContent>
         <CardFooter>
-          <button>Action</button>
+          <button type="button">Action</button>
         </CardFooter>
       </Card>
     );

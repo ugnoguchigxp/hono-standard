@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { InputGroup, InputGroupLabel } from './input-group';
 import { Input } from './input';
+import { InputGroup, InputGroupLabel } from './input-group';
 
 describe('InputGroup', () => {
   it('renders correctly', () => {

@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ShowcaseRouteImport } from './routes/showcase'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BbsIndexRouteImport } from './routes/bbs/index'
 import { Route as OauthCallbackRouteImport } from './routes/oauth.callback'
 import { Route as BbsIdRouteImport } from './routes/bbs/$id'
 
+const ShowcaseRoute = ShowcaseRouteImport.update({
+  id: '/showcase',
+  path: '/showcase',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -44,6 +50,7 @@ const BbsIdRoute = BbsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/showcase': typeof ShowcaseRoute
   '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/bbs/': typeof BbsIndexRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/showcase': typeof ShowcaseRoute
   '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/bbs': typeof BbsIndexRoute
@@ -59,21 +67,36 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/showcase': typeof ShowcaseRoute
   '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/bbs/': typeof BbsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/bbs/$id' | '/oauth/callback' | '/bbs/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/showcase'
+    | '/bbs/$id'
+    | '/oauth/callback'
+    | '/bbs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/bbs/$id' | '/oauth/callback' | '/bbs'
-  id: '__root__' | '/' | '/login' | '/bbs/$id' | '/oauth/callback' | '/bbs/'
+  to: '/' | '/login' | '/showcase' | '/bbs/$id' | '/oauth/callback' | '/bbs'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/showcase'
+    | '/bbs/$id'
+    | '/oauth/callback'
+    | '/bbs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  ShowcaseRoute: typeof ShowcaseRoute
   BbsIdRoute: typeof BbsIdRoute
   OauthCallbackRoute: typeof OauthCallbackRoute
   BbsIndexRoute: typeof BbsIndexRoute
@@ -81,6 +104,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/showcase': {
+      id: '/showcase'
+      path: '/showcase'
+      fullPath: '/showcase'
+      preLoaderRoute: typeof ShowcaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -122,6 +152,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  ShowcaseRoute: ShowcaseRoute,
   BbsIdRoute: BbsIdRoute,
   OauthCallbackRoute: OauthCallbackRoute,
   BbsIndexRoute: BbsIndexRoute,
