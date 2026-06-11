@@ -1,0 +1,288 @@
+# Hono Standard Variant Management
+
+この文書は `hono-standard` を複数のテンプレート variant として保守し、NightWorkers などの外部ツールから clone して再利用できる状態に保つための指示書です。
+
+## 目的
+
+- Web アプリの標準 starter を毎回ゼロから生成せず、clone 可能なテンプレートとして再利用する。
+- SQLite、PostgreSQL、pgvector などの永続化方式を branch / tag / snapshot で明確に分ける。
+- テンプレートの既定値をプロダクト要件として無批判に採用しないよう、variant の責務と検証手順を明文化する。
+- NightWorkers などの agent が「どの variant を使うべきか」を短い判断で選べる状態にする。
+
+## 基本方針
+
+- テンプレート本体は NightWorkers などの利用側 repo に vendoring しない。必要時に `git clone` または archive 展開で取得する。
+- 継続保守する差分は branch で管理し、固定スナップショットは tag と archive で残す。
+- `main` は最小共通の標準 baseline とし、DB や deploy の強い前提を持ちすぎない。
+- DB、auth、deploy、AI/RAG などの大きな前提差分は `variant/*` branch に分離する。
+- 既存プロダクト向けの実験 branch とテンプレート variant branch を混ぜない。
+
+## Branch 構成
+
+### Canonical branches
+
+| Branch | 用途 |
+| --- | --- |
+| `main` | 共通 baseline。Hono + React + Vite + Tailwind CSS + shadcn/ui + TanStack + Drizzle の標準構成。 |
+| `variant/sqlite` | local-first、desktop、prototype、小規模 single-user 向け。SQLite/libSQL を既定にする。 |
+| `variant/postgres` | 通常の Web app 向け。PostgreSQL を既定にする。 |
+| `variant/pgvector` | RAG、embedding、AI 検索向け。PostgreSQL + pgvector を既定にする。 |
+| `variant/auth` | 認証・認可サンプルを厚めに持つ variant。DB variant と組み合わせる場合は派生 branch にする。 |
+| `variant/cloudflare` | Cloudflare Workers / D1 / KV / R2 など edge deploy 前提。Node server 前提と分ける。 |
+
+### Non-canonical branches
+
+`healthrecord` や `patient-simulator` のような具体アプリ寄り branch は、テンプレート variant ではなく sample / experiment として扱う。必要なら次のように rename する。
+
+```bash
+git branch -m healthrecord sample/healthrecord
+git branch -m patient-simulator sample/patient-simulator
+git push origin sample/healthrecord sample/patient-simulator
+git push origin --delete healthrecord patient-simulator
+```
+
+rename は履歴共有者に影響するため、実行前に利用状況を確認する。
+
+## Tag 命名
+
+tag は「固定して clone できるリリース地点」として使う。branch の代わりに tag だけで差分管理しない。
+
+形式:
+
+```text
+<variant>-v<major>.<minor>.<patch>
+```
+
+例:
+
+```text
+baseline-v0.1.0
+sqlite-v0.1.0
+postgres-v0.1.0
+pgvector-v0.1.0
+cloudflare-v0.1.0
+```
+
+tag 作成例:
+
+```bash
+git switch variant/sqlite
+pnpm verify
+git tag -a sqlite-v0.1.0 -m "sqlite template v0.1.0"
+git push origin variant/sqlite sqlite-v0.1.0
+```
+
+## Snapshot 方針
+
+snapshot は GitHub Release asset または `dist/snapshots/` に置く archive として扱う。通常利用は tag clone を優先し、snapshot は「外部 agent が Git 履歴なしで展開したい場合」や「成果物として固定配布したい場合」に使う。
+
+archive 作成例:
+
+```bash
+git switch variant/sqlite
+pnpm install --frozen-lockfile
+pnpm verify
+git archive --format=tar.gz --prefix=hono-standard-sqlite-v0.1.0/ \
+  -o dist/snapshots/hono-standard-sqlite-v0.1.0.tar.gz sqlite-v0.1.0
+```
+
+snapshot に含めないもの:
+
+- `node_modules/`
+- `dist/`
+- `dist-api/`
+- `.env`
+- ローカル DB ファイル
+- Playwright / coverage / test result などの生成物
+
+snapshot 作成前に `.gitignore` と archive 内容を確認する。
+
+```bash
+tar -tzf dist/snapshots/hono-standard-sqlite-v0.1.0.tar.gz | head
+tar -tzf dist/snapshots/hono-standard-sqlite-v0.1.0.tar.gz | rg 'node_modules|\\.env$|sqlite\\.db|test-results|playwright-report' || true
+```
+
+## Clone 利用
+
+### Branch を指定して clone
+
+```bash
+git clone --depth 1 --branch variant/sqlite <repo-url> my-app
+cd my-app
+pnpm install
+```
+
+### Tag を指定して clone
+
+```bash
+git clone --depth 1 --branch sqlite-v0.1.0 <repo-url> my-app
+cd my-app
+pnpm install
+```
+
+### Archive から展開
+
+```bash
+mkdir my-app
+tar -xzf hono-standard-sqlite-v0.1.0.tar.gz -C my-app --strip-components=1
+cd my-app
+pnpm install
+git init
+```
+
+clone 後に必ず変更する項目:
+
+- `package.json` の `name` / `version` / `description`
+- README のプロジェクト名と起動手順
+- `.env.example` と実際の `.env`
+- DB 接続先、migration、seed
+- auth provider、cookie、CORS、CSRF、CSP、rate limit の本番設定
+- サンプル機能を残すか削るか
+- license / author / repository metadata
+
+## Variant 作成手順
+
+1. `main` を clean にする。
+
+```bash
+git switch main
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm verify
+```
+
+2. variant branch を作成する。
+
+```bash
+git switch -c variant/sqlite
+```
+
+3. 差分を variant の責務に限定して実装する。
+
+- DB driver / Drizzle config / migration / seed / Docker compose
+- README の variant 固有手順
+- `.env.example`
+- verify に必要な script
+- variant 固有の smoke test
+
+4. product 固有の機能を入れない。
+
+- 特定業務ドメインの画面
+- 特定顧客向けの seed
+- 固有ブランドの copy / logo
+- 一時的な demo データ
+
+5. 検証する。
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test run
+pnpm -C designSystem type-check
+pnpm -C designSystem test run
+pnpm build
+```
+
+`pnpm verify` が上記を包含している場合は `pnpm verify` を使う。DB variant では fresh DB で migration と seed も確認する。
+
+6. README とこの文書の variant 表を更新する。
+
+7. tag を作成する。
+
+```bash
+git tag -a sqlite-v0.1.0 -m "sqlite template v0.1.0"
+git push origin variant/sqlite sqlite-v0.1.0
+```
+
+## Variant ごとの最低要件
+
+### `main`
+
+- PostgreSQL / SQLite / Cloudflare のいずれかに強く寄りすぎない。
+- Hono RPC、OpenAPI、React、Vite、TanStack、Tailwind、shadcn/ui、Drizzle の基本構成を保つ。
+- security middleware の考え方を README に残す。
+- サンプル機能は小さく、削除しやすくする。
+
+### `variant/sqlite`
+
+- local-first で Docker なしでも動くことを優先する。
+- SQLite または libSQL の DB ファイル保存先を明示する。
+- migration / bootstrap / seed が fresh DB で再現できる。
+- single-user と multi-user の境界を README に書く。
+
+### `variant/postgres`
+
+- Docker Compose で PostgreSQL を起動できる。
+- `DATABASE_URL` の default と compose の user/password/db/port を一致させる。
+- migration / seed / readiness check を揃える。
+- production では memory rate limit だけに依存しない注意を書く。
+
+### `variant/pgvector`
+
+- PostgreSQL + pgvector extension を compose と migration で再現する。
+- embedding table、index、distance metric の最小サンプルを持つ。
+- embedding provider は固定しすぎず、環境変数で差し替え可能にする。
+- RAG サンプルは小さく保ち、アプリ固有のプロンプトを入れない。
+
+### `variant/cloudflare`
+
+- Workers runtime、D1/KV/R2 bindings、Wrangler 設定を main と分ける。
+- Node adapter 前提の middleware や API を持ち込まない。
+- local dev と deploy の環境変数を分ける。
+
+## 差分管理
+
+`main` の更新を variant に取り込むときは、merge または rebase を branch ごとに明示して行う。複数 variant を一度に直さない。
+
+```bash
+git switch variant/sqlite
+git fetch origin
+git merge origin/main
+pnpm verify
+```
+
+variant 固有差分を確認する。
+
+```bash
+git diff --stat main...variant/sqlite
+git diff --name-status main...variant/sqlite
+```
+
+差分が大きくなりすぎた場合は、共通化できる設定を `main` に戻す。ただし DB driver や deploy runtime のように前提が違うものは無理に共通化しない。
+
+## NightWorkers からの利用ルール
+
+NightWorkers や agent が新規 Web app を作る場合:
+
+1. 既存 repo がある場合は、その repo の stack を優先する。
+2. ユーザーが技術スタックを指定している場合は、その指定を優先する。
+3. 指定がなく Web app であれば、`hono-standard` の variant を候補にする。
+4. local-first / desktop / prototype なら `variant/sqlite`。
+5. 通常 Web app / team / deploy 前提なら `variant/postgres`。
+6. RAG / embedding / semantic search が主目的なら `variant/pgvector`。
+7. Cloudflare Workers 前提なら `variant/cloudflare`。
+8. clone 後はテンプレート名、DB、auth、security、sample 機能を要件に合わせて調整する。
+
+テンプレートの既定値をプロダクトの設計判断として扱わない。特に DB 種別、auth 方式、CORS、CSRF、CSP、rate limit、deploy runtime は要件ごとに確認する。
+
+## Release checklist
+
+release tag を打つ前に確認する。
+
+- `git status --short` が意図した変更だけになっている。
+- README に variant 固有の起動手順がある。
+- `.env.example` が variant と一致している。
+- DB migration と seed が fresh DB で通る。
+- `pnpm verify` が通る。
+- `pnpm build` が通る。
+- `node_modules`、`.env`、DB ファイル、test artifacts が snapshot に含まれない。
+- tag 名が `<variant>-v<major>.<minor>.<patch>` に従っている。
+- tag message に主な stack / DB / breaking changes が書かれている。
+
+## Avoid
+
+- tag だけで variant 差分を長期保守する。
+- `main` に pgvector、Cloudflare、特定 auth provider などの強い前提を詰め込む。
+- サンプルアプリ branch を標準 variant として扱う。
+- テンプレート repo 内に利用先プロダクトの仕様や seed を混ぜる。
+- clone 後の app から upstream template の履歴を無理に保ち続ける。必要なら新規 repo として `git init` する。

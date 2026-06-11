@@ -36,6 +36,7 @@ describe('LanguageSelector', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    document.body.style.pointerEvents = '';
     // Ensure hasPointerCapture is defined (fix for Radix UI in jsdom)
     if (!window.HTMLElement.prototype.hasPointerCapture) {
       window.HTMLElement.prototype.hasPointerCapture = () => false;

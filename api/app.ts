@@ -9,7 +9,6 @@ import { createOpenApiRouter } from './lib/openapi';
 import { errorHandler } from './middleware/error-handler';
 import { loggerMiddleware } from './middleware/logger';
 import { rateLimiter } from './middleware/rate-limiter';
-import { bbsRouter } from './modules/bbs/bbs.routes';
 import { authRouter } from './routes/auth';
 import { healthRouter } from './routes/health';
 import { oauthRouter } from './routes/oauth';
@@ -17,8 +16,7 @@ import { oauthRouter } from './routes/oauth';
 const apiRoutes = createOpenApiRouter()
   .route('/health', healthRouter)
   .route('/auth/oauth', oauthRouter)
-  .route('/auth', authRouter)
-  .route('/bbs', bbsRouter);
+  .route('/auth', authRouter);
 
 const app = createOpenApiRouter();
 const isProduction = config.NODE_ENV === 'production';

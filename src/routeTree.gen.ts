@@ -12,9 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ShowcaseRouteImport } from './routes/showcase'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as BbsIndexRouteImport } from './routes/bbs/index'
 import { Route as OauthCallbackRouteImport } from './routes/oauth.callback'
-import { Route as BbsIdRouteImport } from './routes/bbs/$id'
 
 const ShowcaseRoute = ShowcaseRouteImport.update({
   id: '/showcase',
@@ -31,19 +29,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BbsIndexRoute = BbsIndexRouteImport.update({
-  id: '/bbs/',
-  path: '/bbs/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OauthCallbackRoute = OauthCallbackRouteImport.update({
   id: '/oauth/callback',
   path: '/oauth/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BbsIdRoute = BbsIdRouteImport.update({
-  id: '/bbs/$id',
-  path: '/bbs/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -51,55 +39,34 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/showcase': typeof ShowcaseRoute
-  '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bbs/': typeof BbsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/showcase': typeof ShowcaseRoute
-  '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bbs': typeof BbsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/showcase': typeof ShowcaseRoute
-  '/bbs/$id': typeof BbsIdRoute
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bbs/': typeof BbsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/login'
-    | '/showcase'
-    | '/bbs/$id'
-    | '/oauth/callback'
-    | '/bbs/'
+  fullPaths: '/' | '/login' | '/showcase' | '/oauth/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/showcase' | '/bbs/$id' | '/oauth/callback' | '/bbs'
-  id:
-    | '__root__'
-    | '/'
-    | '/login'
-    | '/showcase'
-    | '/bbs/$id'
-    | '/oauth/callback'
-    | '/bbs/'
+  to: '/' | '/login' | '/showcase' | '/oauth/callback'
+  id: '__root__' | '/' | '/login' | '/showcase' | '/oauth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   ShowcaseRoute: typeof ShowcaseRoute
-  BbsIdRoute: typeof BbsIdRoute
   OauthCallbackRoute: typeof OauthCallbackRoute
-  BbsIndexRoute: typeof BbsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -125,25 +92,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bbs/': {
-      id: '/bbs/'
-      path: '/bbs'
-      fullPath: '/bbs/'
-      preLoaderRoute: typeof BbsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/oauth/callback': {
       id: '/oauth/callback'
       path: '/oauth/callback'
       fullPath: '/oauth/callback'
       preLoaderRoute: typeof OauthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bbs/$id': {
-      id: '/bbs/$id'
-      path: '/bbs/$id'
-      fullPath: '/bbs/$id'
-      preLoaderRoute: typeof BbsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -153,9 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   ShowcaseRoute: ShowcaseRoute,
-  BbsIdRoute: BbsIdRoute,
   OauthCallbackRoute: OauthCallbackRoute,
-  BbsIndexRoute: BbsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

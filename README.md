@@ -8,6 +8,7 @@ Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅�
 - [主要コマンド](#主要コマンド)
 - [主な機能](#主な機能)
 - [アーキテクチャ・プロジェクト構成](#アーキテクチャプロジェクト構成)
+- [テンプレート保守](#テンプレート保守)
 - [セキュリティ](#セキュリティ)
 - [ライセンス](#ライセンス)
 
@@ -123,7 +124,6 @@ Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅�
 - **OpenAPI ドキュメント**: `/api/doc` (JSON) と `/api/ui` (Swagger UI) を自動生成。
 - **認証システム**: JWT (Access/Refresh) と OAuth 2.0 (Google/GitHub) に対応。
   - `GET /api/auth/methods` で有効なログイン方式（local/OAuth provider）を取得可能。
-- **BBS 機能**: スレッド作成、詳細閲覧、コメント投稿の実装サンプル。
 - **死活監視の分離**: liveness (`/api/health/live`) と readiness (`/api/health/ready`) を提供。
 - **パフォーマンスプロファイリング**: `Server-Timing` ヘッダーによる処理時間の可視化。
 
@@ -156,6 +156,14 @@ Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅�
 
 - **`drizzle/`**
   - DBのマイグレーション設定およびシードデータ生成スクリプト。
+
+---
+
+## テンプレート保守
+
+`hono-standard` を複数のテンプレート variant として保守する場合は、[docs/template-variant-management.md](docs/template-variant-management.md) を参照してください。
+
+この repo は NightWorkers などの外部ツールから必要時に clone して使う標準 starter として扱い、利用側 repo にテンプレート本体を vendoring しない方針です。SQLite、PostgreSQL、pgvector などの差分は `variant/*` branch で継続保守し、固定配布点は tag / snapshot で管理します。
 
 ---
 

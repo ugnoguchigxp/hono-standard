@@ -22,7 +22,11 @@ describe('InputOTP', () => {
     expect(slots).toHaveLength(3);
     expect(slots[0]).toHaveValue('1');
 
-    await userEvent.type(slots[1]!, '2');
-    expect(slots[1]).toHaveValue('2');
+    const targetSlot = slots[1];
+    expect(targetSlot).toBeDefined();
+    if (targetSlot) {
+      await userEvent.type(targetSlot, '2');
+      expect(slots[1]).toHaveValue('2');
+    }
   });
 });

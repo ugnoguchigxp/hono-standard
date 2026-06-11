@@ -1,13 +1,4 @@
-import {
-  type AnyPgColumn,
-  boolean,
-  index,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 const commonColumns = {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -60,39 +51,5 @@ export const userExternalAccounts = pgTable(
       table.externalId
     ),
     userIdIdx: index('uex_user_id_idx').on(table.userId),
-  })
-);
-
-export const threads = pgTable(
-  'threads',
-  {
-    ...commonColumns,
-    title: text('title').notNull(),
-    content: text('content').notNull(),
-    authorId: uuid('author_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-  },
-  (table) => ({
-    authorIdIdx: index('threads_author_id_idx').on(table.authorId),
-  })
-);
-
-export const comments = pgTable(
-  'comments',
-  {
-    ...commonColumns,
-    threadId: uuid('thread_id')
-      .notNull()
-      .references(() => threads.id, { onDelete: 'cascade' }),
-    parentId: uuid('parent_id').references((): AnyPgColumn => comments.id, { onDelete: 'cascade' }),
-    content: text('content').notNull(),
-    authorId: uuid('author_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-  },
-  (table) => ({
-    threadIdIdx: index('comments_thread_id_idx').on(table.threadId),
-    authorIdIdx: index('comments_author_id_idx').on(table.authorId),
   })
 );
