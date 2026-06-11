@@ -17,7 +17,7 @@ logger.info(`🚀 Server running on port ${port}`);
 const shutdown = async () => {
   logger.info('Shutting down...');
   server.close();
-  await client.end();
+  client.close();
   process.exit(0);
 };
 

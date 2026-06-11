@@ -1,10 +1,12 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
 import { config } from '../config';
 import * as schema from './schema';
 
-export const client = postgres(config.DATABASE_URL, { max: 10 });
+export const client = createClient({
+  url: config.DATABASE_URL,
+});
 
-export const db = drizzle(client, { schema });
+export const db = drizzle({ client, schema });
 
 export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];

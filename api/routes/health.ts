@@ -81,7 +81,7 @@ const legacyHealthRoute = createRoute({
 const buildReadinessPayload = async () => {
   let dbStatus = 'connected';
   try {
-    await db.execute(sql`select 1`);
+    await db.run(sql`select 1`);
   } catch (_err) {
     dbStatus = 'disconnected';
   }

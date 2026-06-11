@@ -39,6 +39,7 @@
     "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-openapi": "^1.2.4",
     "@hono/zod-validator": "^0.7.6",
+    "@libsql/client": "^0.17.3",
     "@repo/design-system": "workspace:*",
     "@tanstack/react-query": "^5.96.1",
     "@tanstack/react-router": "^1.168.10",
