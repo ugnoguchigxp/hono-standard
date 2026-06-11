@@ -1,19 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1775094066612,
-      "tag": "0000_tiny_silverclaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1775410000000,
-      "tag": "0001_oauth_external_unique",
+      "version": "6",
+      "when": 1781189577955,
+      "tag": "0000_naive_the_renegades",
       "breakpoints": true
     }
   ]

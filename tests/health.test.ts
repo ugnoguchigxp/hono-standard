@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppEnv } from '../api/lib/types';
 
 const dbMocks = vi.hoisted(() => ({
-  execute: vi.fn(),
+  run: vi.fn(),
 }));
 
 vi.mock('../api/db/client', () => ({
   db: {
-    execute: dbMocks.execute,
+    run: dbMocks.run,
   },
 }));
 
@@ -22,7 +22,7 @@ const createApp = () => {
 
 describe('Health Check Endpoints', () => {
   beforeEach(() => {
-    dbMocks.execute.mockReset();
+    dbMocks.run.mockReset();
   });
 
   it('GET /api/health/live returns 200 and does not require DB', async () => {
@@ -34,11 +34,16 @@ describe('Health Check Endpoints', () => {
     expect(data.status).toBe('alive');
     expect(data.version).toBeDefined();
     expect(data.timestamp).toBeDefined();
-    expect(dbMocks.execute).not.toHaveBeenCalled();
+    expect(dbMocks.run).not.toHaveBeenCalled();
   });
 
   it('GET /api/health/ready returns 200 when DB is reachable', async () => {
-    dbMocks.execute.mockResolvedValueOnce([{ '?column?': 1 }]);
+    dbMocks.run.mockResolvedValueOnce({
+      columns: [],
+      rows: [],
+      rowsAffected: 0,
+      lastInsertRowid: undefined,
+    });
     const app = createApp();
     const res = await app.request('/api/health/ready');
 
@@ -49,7 +54,7 @@ describe('Health Check Endpoints', () => {
   });
 
   it('GET /api/health/ready returns 503 when DB is unreachable', async () => {
-    dbMocks.execute.mockRejectedValueOnce(new Error('db down'));
+    dbMocks.run.mockRejectedValueOnce(new Error('db down'));
     const app = createApp();
     const res = await app.request('/api/health/ready');
 
@@ -60,7 +65,12 @@ describe('Health Check Endpoints', () => {
   });
 
   it('GET /api/health (legacy) behaves as readiness endpoint', async () => {
-    dbMocks.execute.mockResolvedValueOnce([{ '?column?': 1 }]);
+    dbMocks.run.mockResolvedValueOnce({
+      columns: [],
+      rows: [],
+      rowsAffected: 0,
+      lastInsertRowid: undefined,
+    });
     const app = createApp();
     const res = await app.request('/api/health');
 

@@ -6,8 +6,8 @@ config();
 export default defineConfig({
   schema: './api/db/schema.ts',
   out: './drizzle/migrations',
-  dialect: 'postgresql',
+  dialect: 'sqlite',
   dbCredentials: {
-    url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hono_standard',
+    url: process.env.DATABASE_URL || 'file:sqlite.db',
   },
 });
