@@ -1,4 +1,13 @@
-import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  vector,
+} from 'drizzle-orm/pg-core';
 
 const commonColumns = {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -53,3 +62,10 @@ export const userExternalAccounts = pgTable(
     userIdIdx: index('uex_user_id_idx').on(table.userId),
   })
 );
+
+export const documents = pgTable('documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  content: text('content').notNull(),
+  embedding: vector('embedding', { dimensions: 3 }).notNull(), // 3D for testability
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

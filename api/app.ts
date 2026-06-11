@@ -10,13 +10,15 @@ import { errorHandler } from './middleware/error-handler';
 import { loggerMiddleware } from './middleware/logger';
 import { rateLimiter } from './middleware/rate-limiter';
 import { authRouter } from './routes/auth';
+import { documentsRouter } from './routes/documents';
 import { healthRouter } from './routes/health';
 import { oauthRouter } from './routes/oauth';
 
 const apiRoutes = createOpenApiRouter()
   .route('/health', healthRouter)
   .route('/auth/oauth', oauthRouter)
-  .route('/auth', authRouter);
+  .route('/auth', authRouter)
+  .route('/documents', documentsRouter);
 
 const app = createOpenApiRouter();
 const isProduction = config.NODE_ENV === 'production';
