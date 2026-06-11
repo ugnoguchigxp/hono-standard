@@ -15,6 +15,7 @@
 - 継続保守する差分は branch で管理し、固定スナップショットは tag と archive で残す。
 - `main` は最小共通の標準 baseline とし、DB や deploy の強い前提を持ちすぎない。
 - DB、auth、deploy、AI/RAG などの大きな前提差分は `variant/*` branch に分離する。
+- SSG、SSR、認証追加、Storybook 強化など、既存 variant に重ねられる小さめの差分はまず `overlay/*` branch または patch として管理する。
 - 既存プロダクト向けの実験 branch とテンプレート variant branch を混ぜない。
 
 ## Branch 構成
@@ -29,6 +30,19 @@
 | `variant/pgvector` | RAG、embedding、AI 検索向け。PostgreSQL + pgvector を既定にする。 |
 | `variant/auth` | 認証・認可サンプルを厚めに持つ variant。DB variant と組み合わせる場合は派生 branch にする。 |
 | `variant/cloudflare` | Cloudflare Workers / D1 / KV / R2 など edge deploy 前提。Node server 前提と分ける。 |
+
+### Overlay branches
+
+`overlay/*` branch は、DB や deploy runtime のような大前提ではなく、既存 variant に重ねて使える差分を管理する。
+
+| Branch | 用途 |
+| --- | --- |
+| `overlay/ssr` | React/Vite の client-only baseline に SSR entry、server render、hydration、SSR build を追加する。 |
+| `overlay/ssg` | prerender、static route manifest、build-time data loading などを追加する。 |
+| `overlay/auth-oauth` | baseline / DB variant に OAuth provider 設定を追加する。 |
+| `overlay/storybook` | Storybook や visual regression を厚くする。 |
+
+overlay は「単独で clone する完成テンプレート」ではなく、`main` または `variant/*` に適用できる差分として扱う。差分が大きくなり、単独 clone の需要が明確になった場合だけ `variant/ssr` や `variant/ssg` に昇格する。
 
 ### Non-canonical branches
 
@@ -61,6 +75,8 @@ sqlite-v0.1.0
 postgres-v0.1.0
 pgvector-v0.1.0
 cloudflare-v0.1.0
+overlay-ssr-v0.1.0
+overlay-ssg-v0.1.0
 ```
 
 tag 作成例:
@@ -70,6 +86,15 @@ git switch variant/sqlite
 pnpm verify
 git tag -a sqlite-v0.1.0 -m "sqlite template v0.1.0"
 git push origin variant/sqlite sqlite-v0.1.0
+```
+
+overlay tag は差分取得用の固定地点として使う。
+
+```bash
+git switch overlay/ssr
+pnpm verify
+git tag -a overlay-ssr-v0.1.0 -m "SSR overlay v0.1.0"
+git push origin overlay/ssr overlay-ssr-v0.1.0
 ```
 
 ## Snapshot 方針
@@ -140,6 +165,53 @@ clone 後に必ず変更する項目:
 - サンプル機能を残すか削るか
 - license / author / repository metadata
 
+## Overlay / patch 利用
+
+SSG や SSR のように、DB variant と直交する差分は最初から `variant/ssr-sqlite`、`variant/ssr-postgres` のように掛け算で branch を増やさない。まず overlay として差分を取得し、必要な利用先に適用する。
+
+### 差分を確認する
+
+```bash
+git fetch origin
+git diff --stat origin/main...origin/overlay/ssr
+git diff --name-status origin/main...origin/overlay/ssr
+git diff origin/main...origin/overlay/ssr -- package.json vite.config.ts src api
+```
+
+### patch を作る
+
+```bash
+mkdir -p dist/patches
+git diff --binary origin/main...origin/overlay/ssr \
+  > dist/patches/overlay-ssr-v0.1.0.patch
+```
+
+### patch を適用する
+
+```bash
+git switch variant/sqlite
+git switch -c app/sqlite-ssr
+git apply --check dist/patches/overlay-ssr-v0.1.0.patch
+git apply dist/patches/overlay-ssr-v0.1.0.patch
+pnpm install
+pnpm verify
+```
+
+patch 適用時に conflict する場合は、`main` と対象 variant の差分が overlay の前提からずれている。無理に `git apply --3way` で押し込まず、overlay branch を最新 `main` に追従させてから patch を作り直す。
+
+### branch を重ねる
+
+patch ではなく Git branch として重ねる場合:
+
+```bash
+git switch variant/sqlite
+git switch -c app/sqlite-ssr
+git merge --no-ff origin/overlay/ssr
+pnpm verify
+```
+
+この方法は履歴を残しやすいが、overlay が `main` から作られている場合、対象 variant との conflict が起きやすい。生成された利用先 app では、merge 履歴を残すより patch 適用後に通常の app commit として整理してよい。
+
 ## Variant 作成手順
 
 1. `main` を clean にする。
@@ -194,6 +266,68 @@ git tag -a sqlite-v0.1.0 -m "sqlite template v0.1.0"
 git push origin variant/sqlite sqlite-v0.1.0
 ```
 
+## Overlay 作成手順
+
+1. `main` を clean にする。
+
+```bash
+git switch main
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm verify
+```
+
+2. overlay branch を作成する。
+
+```bash
+git switch -c overlay/ssr
+```
+
+3. 差分を overlay の目的に限定する。
+
+`overlay/ssr` に含めるもの:
+
+- SSR entry point
+- server render / hydrate の最小 wiring
+- Vite SSR build 設定
+- SSR で壊れる browser-only code の分離
+- SSR smoke test
+- README の適用手順
+
+`overlay/ssr` に含めないもの:
+
+- DB driver 変更
+- auth provider 追加
+- Cloudflare Workers など deploy runtime 変更
+- 特定 app の route / copy / seed
+
+4. 差分を確認する。
+
+```bash
+git diff --stat main...overlay/ssr
+git diff --name-status main...overlay/ssr
+```
+
+5. patch を出力して dry-run する。
+
+```bash
+mkdir -p dist/patches
+git diff --binary main...overlay/ssr > dist/patches/overlay-ssr-v0.1.0.patch
+git switch main
+git switch -c tmp/check-overlay-ssr
+git apply --check dist/patches/overlay-ssr-v0.1.0.patch
+git switch main
+git branch -D tmp/check-overlay-ssr
+```
+
+6. tag を作成する。
+
+```bash
+git switch overlay/ssr
+git tag -a overlay-ssr-v0.1.0 -m "SSR overlay v0.1.0"
+git push origin overlay/ssr overlay-ssr-v0.1.0
+```
+
 ## Variant ごとの最低要件
 
 ### `main`
@@ -230,6 +364,20 @@ git push origin variant/sqlite sqlite-v0.1.0
 - Node adapter 前提の middleware や API を持ち込まない。
 - local dev と deploy の環境変数を分ける。
 
+### `overlay/ssr`
+
+- SSR entry、client hydration、server build の責務に限定する。
+- route data loading の方式を README に明記する。
+- browser-only API は SSR 境界の外に隔離する。
+- DB や auth の方針を変えない。
+
+### `overlay/ssg`
+
+- prerender 対象 route と fallback の扱いを明記する。
+- build-time data loading が必要な場合は、環境変数と secret の扱いを分ける。
+- user-specific / auth-required route を静的生成しない。
+- CMS や外部 API の具体 provider に寄せすぎない。
+
 ## 差分管理
 
 `main` の更新を variant に取り込むときは、merge または rebase を branch ごとに明示して行う。複数 variant を一度に直さない。
@@ -250,6 +398,22 @@ git diff --name-status main...variant/sqlite
 
 差分が大きくなりすぎた場合は、共通化できる設定を `main` に戻す。ただし DB driver や deploy runtime のように前提が違うものは無理に共通化しない。
 
+overlay 固有差分を確認する。
+
+```bash
+git diff --stat main...overlay/ssr
+git diff --name-status main...overlay/ssr
+```
+
+overlay を patch として固定する。
+
+```bash
+mkdir -p dist/patches
+git diff --binary main...overlay/ssr > dist/patches/overlay-ssr-v0.1.0.patch
+```
+
+patch は generated artifact なので、通常は tag / release asset として配布し、repo に常時 commit しない。patch を commit する場合は `dist/patches/README.md` を置き、どの tag から生成したかを明記する。
+
 ## NightWorkers からの利用ルール
 
 NightWorkers や agent が新規 Web app を作る場合:
@@ -261,7 +425,8 @@ NightWorkers や agent が新規 Web app を作る場合:
 5. 通常 Web app / team / deploy 前提なら `variant/postgres`。
 6. RAG / embedding / semantic search が主目的なら `variant/pgvector`。
 7. Cloudflare Workers 前提なら `variant/cloudflare`。
-8. clone 後はテンプレート名、DB、auth、security、sample 機能を要件に合わせて調整する。
+8. SSR が必要なら `overlay/ssr`、SSG が必要なら `overlay/ssg` を差分として適用する。
+9. clone 後はテンプレート名、DB、auth、security、sample 機能を要件に合わせて調整する。
 
 テンプレートの既定値をプロダクトの設計判断として扱わない。特に DB 種別、auth 方式、CORS、CSRF、CSP、rate limit、deploy runtime は要件ごとに確認する。
 
@@ -278,10 +443,12 @@ release tag を打つ前に確認する。
 - `node_modules`、`.env`、DB ファイル、test artifacts が snapshot に含まれない。
 - tag 名が `<variant>-v<major>.<minor>.<patch>` に従っている。
 - tag message に主な stack / DB / breaking changes が書かれている。
+- overlay release では `git diff --stat main...overlay/<name>` と patch dry-run の結果を確認している。
 
 ## Avoid
 
 - tag だけで variant 差分を長期保守する。
+- SSG / SSR / auth / Storybook のような直交差分で branch の掛け算を増やす。
 - `main` に pgvector、Cloudflare、特定 auth provider などの強い前提を詰め込む。
 - サンプルアプリ branch を標準 variant として扱う。
 - テンプレート repo 内に利用先プロダクトの仕様や seed を混ぜる。
