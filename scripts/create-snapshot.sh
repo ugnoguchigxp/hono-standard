@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 <variant> <version>"
   echo "Example: $0 sqlite 1.0.0"
-  echo "Variants: baseline, postgres, sqlite"
+  echo "Variants: baseline, postgres, sqlite, turso, cloudflare, pgvector, overlay-ssr, overlay-ssg"
   exit 1
 fi
 
@@ -24,8 +24,18 @@ elif [ "$VARIANT" = "postgres" ]; then
   BRANCH="variant/postgres"
 elif [ "$VARIANT" = "sqlite" ]; then
   BRANCH="variant/sqlite"
+elif [ "$VARIANT" = "turso" ]; then
+  BRANCH="variant/turso"
+elif [ "$VARIANT" = "cloudflare" ]; then
+  BRANCH="variant/cloudflare"
+elif [ "$VARIANT" = "pgvector" ]; then
+  BRANCH="variant/pgvector"
+elif [ "$VARIANT" = "overlay-ssr" ]; then
+  BRANCH="overlay/ssr"
+elif [ "$VARIANT" = "overlay-ssg" ]; then
+  BRANCH="overlay/ssg"
 else
-  echo "Error: Unknown variant '$VARIANT'. Supported: baseline, postgres, sqlite"
+  echo "Error: Unknown variant '$VARIANT'. Supported: baseline, postgres, sqlite, turso, cloudflare, pgvector, overlay-ssr, overlay-ssg"
   exit 1
 fi
 
