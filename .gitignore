@@ -39,6 +39,8 @@ blob-report/
 drizzle/*
 !drizzle/migrations/
 !drizzle/seed.ts
+*.db
+*.db-journal
 
 # OS & Editor
 .DS_Store
