@@ -6,7 +6,11 @@ describe('Avatar', () => {
   it('renders image when provided', async () => {
     const { container } = render(
       <Avatar>
-        <AvatarImage data-testid="avatar-img" src="https://github.com/shadcn.png" alt="@shadcn" />
+        <AvatarImage
+          data-testid="avatar-img"
+          src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+          alt="Template avatar"
+        />
         <AvatarFallback>CN</AvatarFallback>
       </Avatar>
     );

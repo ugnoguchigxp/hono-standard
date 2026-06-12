@@ -1,5 +1,5 @@
 /* === AUTO-GENERATED: DO NOT EDIT BELOW === */
-/* Source: design-tokens.ts / Run: pnpm --dir designSystem exec tsx scripts/generate-tokens.mts */
+/* Source: design-tokens.ts / Run: bun run --cwd designSystem tokens:generate */
 
 @layer base {
   :root {

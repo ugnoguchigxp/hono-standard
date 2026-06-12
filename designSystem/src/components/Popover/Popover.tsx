@@ -19,8 +19,8 @@ const PopoverContent = React.forwardRef<
     <Popover.Positioner sideOffset={sideOffset} align={align} side={side}>
       <Popover.Popup
         ref={ref}
-        data-gxp-portal="true"
-        data-gxp-top-layer="true"
+        data-ds-portal="true"
+        data-ds-top-layer="true"
         className={cn(
           'z-portal rounded-[var(--radius,0.5rem)] border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[closed]:zoom-out-95 data-[open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
           className

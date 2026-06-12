@@ -16,7 +16,7 @@
       "@repo/design-system/*": ["./designSystem/src/*"],
       "@repo/design-system/pencil": ["./designSystem/pencil"]
     },
-    "types": ["node", "vite/client"]
+    "types": ["bun", "node", "vite/client"]
   },
   "include": ["src/**/*", "api/**/*", "shared/**/*"],
   "exclude": ["node_modules", "dist", "drizzle"]

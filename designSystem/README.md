@@ -4,7 +4,7 @@
 
 モダンなB2Bアプリケーション向けに構築された、堅牢なエンタープライズグレードのReactコンポーネントライブラリです。**Tailwind CSS**、**Radix UI**、**TypeScript**をベースにしており、アクセシビリティに配慮した、テーマ適用可能で高性能なコンポーネント群を提供します。
 
-> 📖 **[Storybook ドキュメント](http://localhost:6006)** — `bun storybook` でローカル起動できます
+> 📖 **[Storybook ドキュメント](http://localhost:6006)** — `bun run storybook` でローカル起動できます
 
 ## ✨ 主な特徴
 
@@ -319,11 +319,12 @@ bun install
 
 | コマンド | 説明 |
 |---------|-------------|
-| `bun storybook` | コンポーネントドキュメントサーバー (Storybook) を起動 |
-| `bun build` | 本番用ライブラリのビルド (ESM & CJS) |
-| `bun test` | Vitestによるユニットテストの実行 |
-| `bun lint` | Biomeによるリントとフォーマット |
-| `bun type-check` | TypeScriptの型チェック実行 |
+| `bun run storybook` | コンポーネントドキュメントサーバー (Storybook) を起動 |
+| `bun run build` | 本番用ライブラリのビルド (ESM & CJS) |
+| `bun run test` | Vitestによるユニットテストの実行 |
+| `bun run lint` | Biomeによるリントとフォーマット |
+| `bun run type-check` | TypeScriptの型チェック実行 |
+| `bun run verify` | type-check / lint / test / build を静かな出力で一括実行 |
 
 ### DockerでStorybookを起動
 
@@ -347,11 +348,11 @@ docker compose up --build
 本プロジェクトでは、コードの品質と堅牢性を保証するため、この基準を下回らないよう開発を進めてください。
 
 > [!NOTE]
-> カバレッジプロバイダーには `v8` ではなく `istanbul` を採用しています。これは大規模なプロジェクトでの V8 プロバイダーのハングアップ問題を回避し、CI/CD環境での安定性を確保するためです。開発時は `bun test` を使用してください。
+> カバレッジプロバイダーには `v8` ではなく `istanbul` を採用しています。これは大規模なプロジェクトでの V8 プロバイダーのハングアップ問題を回避し、CI/CD環境での安定性を確保するためです。開発時は `bun run test` を使用してください。
 
 ```bash
 # カバレッジレポートの生成
-bun test run --coverage
+bun run test run --coverage
 ```
 
 | 項目 (Metric) | 目標 (Threshold) | 現在 (Current) | ステータス |
@@ -365,7 +366,7 @@ bun test run --coverage
 
 品質を担保するため、`husky` を使用してコミットおよびプッシュ時に自動チェックを行っています。
 
-- **pre-push**: テスト (`bun test run`) が成功しない限り、リモートリポジトリへのプッシュは拒否されます。
+- **pre-push**: テスト (`bun run test run`) が成功しない限り、リモートリポジトリへのプッシュは拒否されます。
 
 ## ❓ トラブルシューティング
 
@@ -392,4 +393,4 @@ export default defineConfig({
 
 ## 📄 ライセンス
 
-MIT © GXP
+MIT © hono-standard contributors

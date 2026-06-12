@@ -8,17 +8,22 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Default configuration
-const DEFAULT_REPO = 'https://github.com/ugnoguchigxp/design-system-standard.git';
 const DEFAULT_REF = 'main';
 const TARGET_DIR = path.resolve(__dirname, '../designSystem');
 const METADATA_FILE = path.join(TARGET_DIR, 'metadata.json');
 
 // Get arguments or fallback to defaults
-const repoUrl = process.argv[2] || process.env.DESIGN_SYSTEM_REPO || DEFAULT_REPO;
+const repoUrl = process.argv[2] || process.env.DESIGN_SYSTEM_REPO;
 const ref = process.argv[3] || process.env.DESIGN_SYSTEM_REF || DEFAULT_REF;
 
 function sync() {
+  if (!repoUrl) {
+    console.error(
+      'Design system repository is required. Pass it as the first argument or set DESIGN_SYSTEM_REPO.'
+    );
+    process.exit(1);
+  }
+
   console.log('==================================================');
   console.log('Design System Synchronization');
   console.log('==================================================');
@@ -97,7 +102,7 @@ function sync() {
     console.log(`Generated metadata file at ${METADATA_FILE}`);
     console.log('--------------------------------------------------');
     console.log('Design System synced successfully!');
-    console.log('Note: If package.json has changed, please run `pnpm install`.');
+    console.log('Note: If package.json has changed, please run `bun install`.');
     console.log('==================================================');
 
   } catch (error) {

@@ -4,7 +4,7 @@ import './styles/index.css';
 // Contexts
 // ============================================
 // ============================================
-// UI Components (Shadcn/Sonner)
+// UI Components and notifications
 // ============================================
 export { Toaster, toast } from 'sonner';
 export * from './components/ActionButton';

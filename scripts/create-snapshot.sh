@@ -54,8 +54,8 @@ git checkout "$BRANCH"
 
 # Install and verify
 echo "Running verification..."
-pnpm install --frozen-lockfile
-pnpm verify
+bun install --frozen-lockfile
+bun run verify
 
 # Create release directory
 mkdir -p dist/snapshots

@@ -60,7 +60,7 @@
 `.pen` に変更を入れたら、以下のコマンドでバリアント一覧を再生成してください。
 
 ```bash
-pnpm -C designSystem pencil:variants
+bun run --cwd designSystem pencil:variants
 ```
 
 `designSystem` の build ではこの生成処理が自動実行されます。
@@ -70,7 +70,7 @@ pnpm -C designSystem pencil:variants
 `designSystem` では Storybook 10 系を利用します。`.pen` との同期を崩さないため、起動時に必ずバリアント同期を実行します。
 
 ```bash
-pnpm -C designSystem storybook
+bun run --cwd designSystem storybook
 ```
 
 - Storybook の Toolbar で `Theme / Font / Density / Radius / Shadow` を変更できます。

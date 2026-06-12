@@ -131,7 +131,7 @@ root app の Vite は workspace 開発時だけ `@repo/design-system/styles` を
 3. Tailwind token class を使った小さな app-local component
 4. 直接 HTML + Tailwind
 
-内部の `components/ui/*` は shadcn/Radix ベースの実装部品です。
+内部の `components/ui/*` は headless UI primitives と Tailwind token を使った実装部品です。
 root app からは public export されているコンポーネントを使い、必要な部品がない場合は designSystem 側に昇格させます。
 
 ## レイアウト指針
@@ -329,4 +329,3 @@ root app からは public export されているコンポーネントを使い�
 - フォームは label、補足、エラーが入力と近接している。
 - modal / drawer / tooltip の z-index は token の範囲に収まっている。
 - Storybook または `/showcase` に再利用可能な表示例を追加できる状態になっている。
-

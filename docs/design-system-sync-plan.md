@@ -2,7 +2,7 @@
 
 ## 1. 概要
 
-本計画は、Pencil.dev (`.pen`) と React (shadcn/ui + Tailwind CSS) ベースのコードベースを高い精度で同期させるための技術的計画を定義する。
+本計画は、Pencil.dev (`.pen`) と React + Tailwind CSS ベースの design system を高い精度で同期させるための技術的計画を定義する。
 
 ### 基本方針
 
@@ -48,9 +48,9 @@ graph TD
 ## 2. 前提条件
 
 - **Pencil バージョン**: 2.9 (現行)。パーサは抽象化し 3.x 移行に備える。
-- **コードベース**: TypeScript, React, Tailwind CSS, shadcn/ui。
+- **コードベース**: TypeScript, React, Tailwind CSS。
 - **デザイントークン管理**: `designSystem/src/lib/design-tokens.ts`。
-- **CSS 出力**: `designSystem/src/styles/generated-tokens.css` (HSL 3値形式、shadcn/ui 準拠)。
+- **CSS 出力**: `designSystem/src/styles/generated-tokens.css` (HSL 3値形式、Tailwind v4 token 連携)。
 - **テスト基盤**: Storybook 10, Vitest, Playwright (Design System 専用設定)。
 
 ---
@@ -148,7 +148,7 @@ export const COLOR_TOKENS = {
 
 ```css
 /* === AUTO-GENERATED: DO NOT EDIT BELOW === */
-/* Source: design-tokens.ts / Run: pnpm generate-tokens */
+/* Source: design-tokens.ts / Run: bun run --cwd designSystem tokens:generate */
 
 :root { /* Mode=Light, Base=Neutral, Accent=Default */
   --primary: 211 100% 50%;
@@ -224,16 +224,18 @@ function themeAxesToClassName(axes: Record<string, string>): string {
 
 ---
 
-## 9. 実行順序と優先度
+## 9. 現在の実装状態
 
-| Stage | 優先度 | 主な内容 |
+| Stage | 状態 | 主な内容 |
 |:--|:--|:--|
-| **Stage 0** | 🔴 即時 | 命名統一、`.pen` への未登録コンポーネント追加 |
-| **Stage 1** | 🔴 高 | **3軸対応**トークン生成スクリプト、**部分更新パッチ**の実装 |
-| **Stage 2** | 🔴 高 | 双方向存在チェック、バリデーション強化 |
-| **Stage 3** | 🟡 中 | 3.x 移行を見据えたアダプタ化 |
-| **Stage 4** | 🟡 中 | 3軸組合せによる CSS クラス生成とプレセット拡充 |
-| **Stage 5** | 🟢 低 | **専用 Playwright 基盤**によるスクリーンショット検証 |
+| **Stage 0** | 継続 | 命名統一、`.pen` への未登録コンポーネント追加 |
+| **Stage 1** | 実装済み | **3軸対応**トークン生成スクリプト、**部分更新パッチ**の実装 |
+| **Stage 2** | 一部実装 | `sync-variants.mjs` による variant 生成。双方向存在チェックは追加検討対象 |
+| **Stage 3** | 実装済み | 2.9 / 3.x 移行を見据えたアダプタ化 |
+| **Stage 4** | 実装済み | 3軸組合せによる `data-theme` selector 生成 |
+| **Stage 5** | 実装済み | Design System 専用 Playwright 設定と visual regression spec |
+
+現行の CSS 出力先は `designSystem/src/styles/generated-tokens.css` で、公開 entry の `designSystem/src/styles/index.css` から読み込む。古い `src/styles.css` 出力前提には戻さない。
 
 ---
 
@@ -241,4 +243,4 @@ function themeAxesToClassName(axes: Record<string, string>): string {
 
 - **SSoT**: 常に `design-tokens.ts` が真実。
 - **.pen 更新**: スクリプトが `variables` と `themes` のみを更新するため、**デザイナーによるレイアウト作業 (children) とエンジニアによるトークン更新が競合しない。**
-- **検証**: 変更後は `pnpm pencil:check` および Storybook で必ず目視確認を行う。
+- **検証**: 変更後は `bun run --cwd designSystem pencil:variants`、`bun run --cwd designSystem type-check`、`bun run --cwd designSystem test run`、Storybook で確認する。

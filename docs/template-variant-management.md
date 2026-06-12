@@ -24,12 +24,12 @@
 
 | Branch | 用途 |
 | --- | --- |
-| `main` | 共通 baseline。Hono + React + Vite + Tailwind CSS + shadcn/ui + TanStack + Drizzle の標準構成。 |
+| `main` | 共通 baseline。Hono + React + Vite + Tailwind CSS + `@repo/design-system` + TanStack + Drizzle の標準構成。 |
 | `variant/sqlite` | local-first、desktop、prototype、小規模 single-user 向け。SQLite/libSQL を既定にする。 |
 | `variant/postgres` | 通常の Web app 向け。PostgreSQL を既定にする。 |
 | `variant/pgvector` | RAG、embedding、AI 検索向け。PostgreSQL + pgvector を既定にする。 |
 | `variant/auth` | 認証・認可サンプルを厚めに持つ variant。DB variant と組み合わせる場合は派生 branch にする。 |
-| `variant/cloudflare` | Cloudflare Workers / D1 / KV / R2 など edge deploy 前提。Node server 前提と分ける。 |
+| `variant/cloudflare` | Cloudflare Workers / D1 / KV / R2 など edge deploy 前提。Bun server 前提と分ける。 |
 
 ### Overlay branches
 
@@ -83,7 +83,7 @@ tag 作成例:
 
 ```bash
 git switch variant/sqlite
-pnpm verify
+bun run verify
 git tag -a sqlite-v0.1.0 -m "sqlite template v0.1.0"
 git push origin variant/sqlite sqlite-v0.1.0
 ```
@@ -92,7 +92,7 @@ overlay tag は差分取得用の固定地点として使う。
 
 ```bash
 git switch overlay/ssr
-pnpm verify
+bun run verify
 git tag -a overlay-ssr-v0.1.0 -m "SSR overlay v0.1.0"
 git push origin overlay/ssr overlay-ssr-v0.1.0
 ```
@@ -105,8 +105,8 @@ archive 作成例:
 
 ```bash
 git switch variant/sqlite
-pnpm install --frozen-lockfile
-pnpm verify
+bun install --frozen-lockfile
+bun run verify
 git archive --format=tar.gz --prefix=hono-standard-sqlite-v0.1.0/ \
   -o dist/snapshots/hono-standard-sqlite-v0.1.0.tar.gz sqlite-v0.1.0
 ```
@@ -116,6 +116,7 @@ snapshot に含めないもの:
 - `node_modules/`
 - `dist/`
 - `dist-api/`
+- `dist-server/`
 - `.env`
 - ローカル DB ファイル
 - Playwright / coverage / test result などの生成物
@@ -134,7 +135,7 @@ tar -tzf dist/snapshots/hono-standard-sqlite-v0.1.0.tar.gz | rg 'node_modules|\\
 ```bash
 git clone --depth 1 --branch variant/sqlite <repo-url> my-app
 cd my-app
-pnpm install
+bun install
 ```
 
 ### Tag を指定して clone
@@ -142,7 +143,7 @@ pnpm install
 ```bash
 git clone --depth 1 --branch sqlite-v0.1.0 <repo-url> my-app
 cd my-app
-pnpm install
+bun install
 ```
 
 ### Archive から展開
@@ -151,7 +152,7 @@ pnpm install
 mkdir my-app
 tar -xzf hono-standard-sqlite-v0.1.0.tar.gz -C my-app --strip-components=1
 cd my-app
-pnpm install
+bun install
 git init
 ```
 
@@ -193,8 +194,8 @@ git switch variant/sqlite
 git switch -c app/sqlite-ssr
 git apply --check dist/patches/overlay-ssr-v0.1.0.patch
 git apply dist/patches/overlay-ssr-v0.1.0.patch
-pnpm install
-pnpm verify
+bun install
+bun run verify
 ```
 
 patch 適用時に conflict する場合は、`main` と対象 variant の差分が overlay の前提からずれている。無理に `git apply --3way` で押し込まず、overlay branch を最新 `main` に追従させてから patch を作り直す。
@@ -207,7 +208,7 @@ patch ではなく Git branch として重ねる場合:
 git switch variant/sqlite
 git switch -c app/sqlite-ssr
 git merge --no-ff origin/overlay/ssr
-pnpm verify
+bun run verify
 ```
 
 この方法は履歴を残しやすいが、overlay が `main` から作られている場合、対象 variant との conflict が起きやすい。生成された利用先 app では、merge 履歴を残すより patch 適用後に通常の app commit として整理してよい。
@@ -219,8 +220,8 @@ pnpm verify
 ```bash
 git switch main
 git pull --ff-only
-pnpm install --frozen-lockfile
-pnpm verify
+bun install --frozen-lockfile
+bun run verify
 ```
 
 2. variant branch を作成する。
@@ -247,15 +248,15 @@ git switch -c variant/sqlite
 5. 検証する。
 
 ```bash
-pnpm typecheck
-pnpm lint
-pnpm test run
-pnpm -C designSystem type-check
-pnpm -C designSystem test run
-pnpm build
+bun run typecheck
+bun run lint
+bun run test run
+bun run --cwd designSystem type-check
+bun run --cwd designSystem test run
+bun run build
 ```
 
-`pnpm verify` が上記を包含している場合は `pnpm verify` を使う。DB variant では fresh DB で migration と seed も確認する。
+`bun run verify` が上記を包含している場合は `bun run verify` を使う。DB variant では fresh DB で migration と seed も確認する。
 
 6. README とこの文書の variant 表を更新する。
 
@@ -273,8 +274,8 @@ git push origin variant/sqlite sqlite-v0.1.0
 ```bash
 git switch main
 git pull --ff-only
-pnpm install --frozen-lockfile
-pnpm verify
+bun install --frozen-lockfile
+bun run verify
 ```
 
 2. overlay branch を作成する。
@@ -333,7 +334,7 @@ git push origin overlay/ssr overlay-ssr-v0.1.0
 ### `main`
 
 - PostgreSQL / SQLite / Cloudflare のいずれかに強く寄りすぎない。
-- Hono RPC、OpenAPI、React、Vite、TanStack、Tailwind、shadcn/ui、Drizzle の基本構成を保つ。
+- Hono RPC、OpenAPI、React、Vite、TanStack、Tailwind、`@repo/design-system`、Drizzle の基本構成を保つ。
 - security middleware の考え方を README に残す。
 - サンプル機能は小さく、削除しやすくする。
 
@@ -361,7 +362,7 @@ git push origin overlay/ssr overlay-ssr-v0.1.0
 ### `variant/cloudflare`
 
 - Workers runtime、D1/KV/R2 bindings、Wrangler 設定を main と分ける。
-- Node adapter 前提の middleware や API を持ち込まない。
+- Bun server 前提の middleware や API を持ち込まない。
 - local dev と deploy の環境変数を分ける。
 
 ### `overlay/ssr`
@@ -386,7 +387,7 @@ git push origin overlay/ssr overlay-ssr-v0.1.0
 git switch variant/sqlite
 git fetch origin
 git merge origin/main
-pnpm verify
+bun run verify
 ```
 
 variant 固有差分を確認する。
@@ -438,8 +439,8 @@ release tag を打つ前に確認する。
 - README に variant 固有の起動手順がある。
 - `.env.example` が variant と一致している。
 - DB migration と seed が fresh DB で通る。
-- `pnpm verify` が通る。
-- `pnpm build` が通る。
+- `bun run verify` が通る。
+- `bun run build` が通る。
 - `node_modules`、`.env`、DB ファイル、test artifacts が snapshot に含まれない。
 - tag 名が `<variant>-v<major>.<minor>.<patch>` に従っている。
 - tag message に主な stack / DB / breaking changes が書かれている。

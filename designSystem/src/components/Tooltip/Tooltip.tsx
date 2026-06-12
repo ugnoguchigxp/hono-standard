@@ -23,7 +23,7 @@ export const TooltipContent = React.memo(
       <Tooltip.Positioner sideOffset={sideOffset} side={side} align={align}>
         <Tooltip.Popup
           ref={ref}
-          data-gxp-top-layer="true"
+          data-ds-top-layer="true"
           className={cn(
             'z-tooltip overflow-hidden rounded-[var(--radius-sm,2px)] border border-white bg-black text-white px-3 py-1.5 text-xs shadow-md animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
             className

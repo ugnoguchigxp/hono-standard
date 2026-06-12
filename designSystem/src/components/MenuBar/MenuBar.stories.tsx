@@ -114,13 +114,13 @@ export const WithAppMenu: Story = {
   args: {
     menus: sampleMenus,
     appMenu: {
-      label: 'GXP Design',
+      label: 'Design System',
       items: [
-        { label: 'About GXP Design', action: 'about' },
+        { label: 'About Design System', action: 'about' },
         { separator: true, label: '' },
         { label: 'Settings...', action: 'settings', shortcut: '⌘,' },
         { separator: true, label: '' },
-        { label: 'Quit GXP Design', action: 'quit', shortcut: '⌘Q' },
+        { label: 'Quit Design System', action: 'quit', shortcut: '⌘Q' },
       ],
     },
     onAction: (actionId) => console.log(`[WithAppMenu] Action: ${actionId}`),

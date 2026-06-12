@@ -124,7 +124,7 @@ function resolveTokenValue(token: Token, axes: ThemeAxes): string {
 
 function generateCss() {
   let cssContent = `/* === AUTO-GENERATED: DO NOT EDIT BELOW === */
-/* Source: design-tokens.ts / Run: pnpm --dir designSystem exec tsx scripts/generate-tokens.mts */\n\n`;
+/* Source: design-tokens.ts / Run: bun run --cwd designSystem tokens:generate */\n\n`;
 
   // 1. Static Themes (Explicitly defined in THEME_DEFINITIONS like tokyo-night)
   for (const [themeKey, theme] of Object.entries(THEME_DEFINITIONS)) {

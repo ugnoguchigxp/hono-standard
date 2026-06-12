@@ -6,6 +6,16 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          router: ['@tanstack/react-router', '@tanstack/react-query'],
+          designSystem: ['@repo/design-system'],
+        },
+      },
+    },
+  },
   plugins: [
     tailwindcss(),
     TanStackRouterVite({
