@@ -4,21 +4,17 @@
 !.env.example
 
 node_modules
-designSystem/node_modules
 
 dist
 dist-api
 dist-server
+dist-web
 build
 .vite
 coverage
 storybook-static
 playwright-report
 test-results
-designSystem/dist
-designSystem/coverage
-designSystem/storybook-static
-designSystem/.screenshots
 
 *.log
 *.tsbuildinfo

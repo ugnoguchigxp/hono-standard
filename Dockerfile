@@ -1,38 +1,20 @@
-FROM oven/bun:1.3.14-alpine AS base
+FROM postgres:17-alpine
 
-# Dependencies Stage
-FROM base AS deps
-WORKDIR /app
-COPY package.json bun.lock ./
-COPY designSystem/package.json ./designSystem/package.json
-RUN bun install --frozen-lockfile
+# Build-time dependencies for pgvector
+RUN apk add --no-cache --virtual .build-deps \
+    git \
+    build-base \
+    clang19 \
+    llvm19-dev
 
-# Builder Stage
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/designSystem/node_modules ./designSystem/node_modules
-COPY . .
-# Build both frontend and backend
-RUN bun run build
-RUN bun install --production --frozen-lockfile
+# Clone and build pgvector
+RUN cd /tmp && \
+    git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git && \
+    cd pgvector && \
+    make NO_BC=1 && \
+    make NO_BC=1 install && \
+    cd .. && \
+    rm -rf pgvector
 
-# Runner Stage
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV PORT=3000
-
-COPY --from=builder /app/package.json ./
-# Only production dependencies needed
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/designSystem/node_modules ./designSystem/node_modules
-COPY --from=builder /app/designSystem/package.json ./designSystem/package.json
-COPY --from=builder /app/designSystem/dist ./designSystem/dist
-COPY --from=builder /app/dist-api ./dist-api
-COPY --from=builder /app/dist ./dist
-
-EXPOSE 3000
-
-CMD ["bun", "dist-api/index.js"]
+# Remove build-time dependencies
+RUN apk del .build-deps
