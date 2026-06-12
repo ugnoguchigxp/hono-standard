@@ -17,19 +17,120 @@ export const RADIUS_PRESETS = {
   pill: { label: 'Pill', value: '9999' },
 } as const;
 
+const SHADOW_DIRECTIONS = {
+  top: [0, -1],
+  'top-right': [1, -1],
+  right: [1, 0],
+  'bottom-right': [1, 1],
+  bottom: [0, 1],
+  'bottom-left': [-1, 1],
+  left: [-1, 0],
+  'top-left': [-1, -1],
+} as const;
+
+const SHADOW_LEVELS = {
+  sm: { offset: 2, blur: 4, spread: -1 },
+  md: { offset: 4, blur: 8, spread: -2 },
+  lg: { offset: 8, blur: 16, spread: -4 },
+} as const;
+
+type ShadowPresetValues = Record<`--ds-shadow-${string}`, string>;
+
+function formatAlpha(alpha: number) {
+  return alpha.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function directionalShadow(
+  xDirection: number,
+  yDirection: number,
+  level: keyof typeof SHADOW_LEVELS,
+  alpha: number
+) {
+  const { offset, blur, spread } = SHADOW_LEVELS[level];
+  return `${xDirection * offset}px ${yDirection * offset}px ${blur}px ${spread}px rgb(0 0 0 / ${formatAlpha(alpha)})`;
+}
+
+function createDirectionalShadows(alpha: number): ShadowPresetValues {
+  const values: ShadowPresetValues = {};
+  for (const [direction, [xDirection, yDirection]] of Object.entries(SHADOW_DIRECTIONS)) {
+    for (const level of Object.keys(SHADOW_LEVELS) as Array<keyof typeof SHADOW_LEVELS>) {
+      values[`--ds-shadow-${direction}-${level}`] = directionalShadow(
+        xDirection,
+        yDirection,
+        level,
+        alpha
+      );
+    }
+  }
+  return values;
+}
+
+function createNoneShadows(): ShadowPresetValues {
+  const values: ShadowPresetValues = {
+    '--ds-shadow-none': 'none',
+    '--ds-shadow-xs': 'none',
+    '--ds-shadow-sm': 'none',
+    '--ds-shadow-md': 'none',
+    '--ds-shadow-lg': 'none',
+    '--ds-shadow-xl': 'none',
+  };
+  for (const direction of Object.keys(SHADOW_DIRECTIONS)) {
+    for (const level of Object.keys(SHADOW_LEVELS)) {
+      values[`--ds-shadow-${direction}-${level}`] = 'none';
+    }
+  }
+  return values;
+}
+
 export const SHADOW_PRESETS = {
-  none: { label: 'None', var: 'none' },
+  none: { label: 'None', values: createNoneShadows() },
   subtle: {
     label: 'Subtle',
-    var: '0 1px 3px 0 rgb(0 0 0 / 0.10), 0 1px 2px -1px rgb(0 0 0 / 0.10)',
+    values: {
+      '--ds-shadow-none': 'none',
+      '--ds-shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.04)',
+      '--ds-shadow-sm':
+        '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08)',
+      '--ds-shadow-md':
+        '0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08)',
+      '--ds-shadow-lg':
+        '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08)',
+      '--ds-shadow-xl':
+        '0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.08)',
+      ...createDirectionalShadows(0.08),
+    },
   },
   medium: {
     label: 'Medium',
-    var: '0 4px 6px -1px rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.10)',
+    values: {
+      '--ds-shadow-none': 'none',
+      '--ds-shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.06)',
+      '--ds-shadow-sm':
+        '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+      '--ds-shadow-md':
+        '0 4px 6px -1px rgb(0 0 0 / 0.12), 0 2px 4px -2px rgb(0 0 0 / 0.12)',
+      '--ds-shadow-lg':
+        '0 10px 15px -3px rgb(0 0 0 / 0.12), 0 4px 6px -4px rgb(0 0 0 / 0.12)',
+      '--ds-shadow-xl':
+        '0 20px 25px -5px rgb(0 0 0 / 0.16), 0 8px 10px -6px rgb(0 0 0 / 0.12)',
+      ...createDirectionalShadows(0.12),
+    },
   },
   strong: {
     label: 'Strong',
-    var: '0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.10)',
+    values: {
+      '--ds-shadow-none': 'none',
+      '--ds-shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.08)',
+      '--ds-shadow-sm':
+        '0 1px 3px 0 rgb(0 0 0 / 0.14), 0 1px 2px -1px rgb(0 0 0 / 0.14)',
+      '--ds-shadow-md':
+        '0 4px 6px -1px rgb(0 0 0 / 0.16), 0 2px 4px -2px rgb(0 0 0 / 0.16)',
+      '--ds-shadow-lg':
+        '0 10px 15px -3px rgb(0 0 0 / 0.18), 0 4px 6px -4px rgb(0 0 0 / 0.18)',
+      '--ds-shadow-xl':
+        '0 20px 25px -5px rgb(0 0 0 / 0.24), 0 8px 10px -6px rgb(0 0 0 / 0.18)',
+      ...createDirectionalShadows(0.18),
+    },
   },
 } as const;
 
@@ -262,11 +363,11 @@ export const COLOR_TOKENS = {
  * テーマ定義と生成情報のマッピング。
  */
 export const THEME_DEFINITIONS = {
-  light: { label: 'Light', className: 'theme-light', axes: { mode: 'Light' } },
-  dark: { label: 'Dark', className: 'theme-dark', axes: { mode: 'Dark' } },
+  light: { label: 'Light', dataTheme: 'light', axes: { mode: 'Light' } },
+  dark: { label: 'Dark', dataTheme: 'dark', axes: { mode: 'Dark' } },
   'tokyo-night': {
     label: 'Tokyo Night',
-    className: 'theme-tokyo-night',
+    dataTheme: 'tokyo-night',
     axes: { mode: 'Dark' },
     overrides: {
       background: '#1a1b26',
@@ -325,7 +426,9 @@ export function applyDensityAndScaleTokens(
   rootElement.style.setProperty('--font-size-base', FONT_SCALE_PRESETS[options.fontScale].value);
   rootElement.style.setProperty('--spacing-unit', DENSITY_PRESETS[options.density].value);
   rootElement.style.setProperty('--radius-factor', RADIUS_PRESETS[options.radius].value);
-  rootElement.style.setProperty('--shadow-md', SHADOW_PRESETS[options.shadow].var);
+  for (const [tokenName, tokenValue] of Object.entries(SHADOW_PRESETS[options.shadow].values)) {
+    rootElement.style.setProperty(tokenName, tokenValue);
+  }
 }
 
 export function applyColorTheme(theme: ColorThemeKey, root?: HTMLElement | null) {
@@ -333,10 +436,5 @@ export function applyColorTheme(theme: ColorThemeKey, root?: HTMLElement | null)
   if (!rootElement) {
     return;
   }
-  for (const className of rootElement.classList) {
-    if (className.startsWith('theme-')) {
-      rootElement.classList.remove(className);
-    }
-  }
-  rootElement.classList.add(COLOR_THEME_PRESETS[theme].className);
+  rootElement.dataset.theme = COLOR_THEME_PRESETS[theme].dataTheme;
 }

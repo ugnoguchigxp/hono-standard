@@ -2,10 +2,12 @@
 node_modules/
 .pnp
 .pnp.js
+package-lock.json
 
 # Build Outputs
 dist/
 dist-api/
+dist-server/
 build/
 .vite/
 storybook-static/

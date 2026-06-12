@@ -67,8 +67,8 @@ export const DropdownMenu: React.FC<IDropdownMenuProps> = React.memo(
         <Menu.Portal>
           <Menu.Positioner sideOffset={offset} align={alignValue} side={side}>
             <Menu.Popup
-              data-gxp-portal="true"
-              data-gxp-top-layer="true"
+              data-ds-portal="true"
+              data-ds-top-layer="true"
               className="z-portal min-w-[160px] overflow-hidden rounded-[var(--radius,0.5rem)] border border-border bg-background shadow-lg outline-none data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[closed]:zoom-out-95 data-[open]:zoom-in-95"
             >
               <ScrollArea

@@ -110,7 +110,7 @@ const file = `/* eslint-disable */
 /**
  * AUTO-GENERATED FILE.
  * Source: ./designSystem.pen
- * Run: pnpm -C designSystem pencil:variants
+ * Run: bun run --cwd designSystem pencil:variants
  */
 
 export type PenVariantIndex = Record<string, string[]>;

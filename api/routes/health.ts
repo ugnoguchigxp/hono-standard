@@ -1,7 +1,6 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { sql } from 'drizzle-orm';
 import type { Context } from 'hono';
-import { db } from '../db/client';
+import { client } from '../db/client';
 import { createOpenApiRouter } from '../lib/openapi';
 
 const readinessSchema = z.object({
@@ -81,7 +80,7 @@ const legacyHealthRoute = createRoute({
 const buildReadinessPayload = async () => {
   let dbStatus = 'connected';
   try {
-    await db.execute(sql`select 1`);
+    await client`select 1`;
   } catch (_err) {
     dbStatus = 'disconnected';
   }

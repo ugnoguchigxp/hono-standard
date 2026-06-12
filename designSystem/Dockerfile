@@ -1,12 +1,12 @@
-FROM oven/bun:alpine
+FROM oven/bun:1.3.14-alpine
 
 WORKDIR /app
 
 # Copy package management files
-COPY package.json bun.lock* ./
+COPY package.json ./
 
 # Copy the rest of the application
-# We copy everything early so bun install can happen with full context if needed, 
+# We copy everything early so bun install can happen with full context if needed,
 # but specifically for Storybook, we mostly need the shared volume later.
 COPY . .
 

@@ -32,37 +32,16 @@ const ProgressBar = React.forwardRef<HTMLDivElement, ProgressBarProps>(
   ) => {
     const percentage = Math.min(Math.max(value || 0, 0), 100);
 
-    const interpolateColor = (start: number[], end: number[], factor: number) => {
-      const result = start.map((startVal, i) => {
-        const endVal = end[i] || 0;
-        return Math.round(startVal + (endVal - startVal) * factor);
-      });
-      return `rgb(${result.join(',')})`;
-    };
-
     const getProgressStyle = () => {
       if (color) return { className: color };
 
-      if (status === 'paused') return { className: 'bg-yellow-500' };
-      if (status === 'error') return { className: 'bg-red-800' };
+      if (status === 'paused') return { className: 'bg-warning' };
+      if (status === 'error') return { className: 'bg-destructive' };
 
-      // Normal status: Smooth interpolation
-      // 0% (Dark Green: #047857 [4, 120, 87]) -> 50% (Blue: #2563EB [37, 99, 235]) -> 100% (Light Blue: #22D3EE [34, 211, 238])
-      const darkGreen = [4, 120, 87];
-      const blue = [37, 99, 235];
-      const lightBlue = [34, 211, 238];
-
-      let backgroundColor = '';
-      if (percentage <= 50) {
-        backgroundColor = interpolateColor(darkGreen, blue, percentage / 50);
-      } else {
-        backgroundColor = interpolateColor(blue, lightBlue, (percentage - 50) / 50);
-      }
-
-      return { style: { backgroundColor } };
+      return { className: 'bg-primary' };
     };
 
-    const { className: colorClass, style: colorStyle } = getProgressStyle();
+    const { className: colorClass } = getProgressStyle();
 
     return (
       <div className="w-full">
@@ -84,12 +63,11 @@ const ProgressBar = React.forwardRef<HTMLDivElement, ProgressBarProps>(
                 'h-full transition-all duration-500 ease-out flex items-center justify-end pr-2',
                 colorClass,
                 striped &&
-                  'bg-[linear-gradient(45deg,rgba(255,255,255,0.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.15)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem]',
+                  'bg-[linear-gradient(45deg,hsl(var(--primary-foreground)/0.15)_25%,transparent_25%,transparent_50%,hsl(var(--primary-foreground)/0.15)_50%,hsl(var(--primary-foreground)/0.15)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem]',
                 animated && 'animate-progress-stripes'
               )}
               style={{
                 width: `${percentage}%`,
-                ...colorStyle,
               }}
             >
               {/* Optional: Show percentage inside bar if tall enough */}

@@ -26,8 +26,7 @@ import {
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 
-// biome-ignore lint/suspicious/noExplicitAny: route path type is dynamic
-export const Route = createFileRoute('/showcase' as any)({
+export const Route = createFileRoute('/showcase')({
   component: ShowcasePage,
 });
 
@@ -63,9 +62,7 @@ function ShowcasePage() {
           <Badge variant="secondary">Secondary</Badge>
           <Badge variant="outline">Outline</Badge>
           <Badge variant="destructive">Destructive</Badge>
-          <Badge className="bg-emerald-500 text-white hover:bg-emerald-600 border-none">
-            Success
-          </Badge>
+          <Badge variant="success">Success</Badge>
         </div>
       </section>
 
@@ -90,7 +87,7 @@ function ShowcasePage() {
             </CardFooter>
           </Card>
 
-          <Card className="bg-primary/5 border-primary/20 shadow-lg shadow-primary/5">
+          <Card className="bg-primary/5 border-primary/20 shadow-lg">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Statistics</CardTitle>
@@ -119,16 +116,15 @@ function ShowcasePage() {
 
           <Card>
             <CardHeader className="flex-row items-center gap-4 space-y-0">
-              <Avatar src="https://github.com/shadcn.png" alt="Shadcn" fallback="SC" size="md" />
+              <Avatar alt="Template user" fallback="TU" size="md" />
               <div>
-                <CardTitle className="text-lg">Author Profile</CardTitle>
-                <CardDescription>@shadcn • Verified</CardDescription>
+                <CardTitle className="text-lg">Team Profile</CardTitle>
+                <CardDescription>@template-team • Verified</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm">
-                Passionate about UI/UX and open source. Contributor to various React-based design
-                systems.
+                A reusable profile summary using only local fallback content and design tokens.
               </p>
             </CardContent>
           </Card>
@@ -202,11 +198,11 @@ function ShowcasePage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Name</Label>
-                  <Input defaultValue="John Doe" />
+                  <Input defaultValue="Template User" />
                 </div>
                 <div className="space-y-2">
                   <Label>Username</Label>
-                  <Input defaultValue="@johndoe" />
+                  <Input defaultValue="@template-user" />
                 </div>
               </CardContent>
               <CardFooter>

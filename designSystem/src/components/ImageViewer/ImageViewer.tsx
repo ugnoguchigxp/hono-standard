@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-// Shadcn components (assumed existing in project)
 import { Modal } from '@/components/Modal'; // lightweight local implementation
 import { cn } from '@/utils/cn';
 
@@ -13,7 +12,7 @@ interface IImageViewerProps {
 }
 
 
-/** Responsive image viewer using shadcn dialog */
+/** Responsive image viewer using the design system dialog */
 export const ImageViewer: React.FC<IImageViewerProps> = React.memo(
   ({ src, alt, open, onOpenChange, maxWidthPx = 900 }) => {
     // const { t } = useTranslation();

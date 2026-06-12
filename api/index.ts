@@ -1,4 +1,3 @@
-import { serve } from '@hono/node-server';
 import app from './app';
 import { config } from './config';
 import { client } from './db/client';
@@ -6,17 +5,17 @@ import { logger } from './lib/logger';
 
 const port = config.PORT;
 
-const server = serve({
+const server = Bun.serve({
   fetch: app.fetch,
   port,
 });
 
-logger.info(`🚀 Server running on port ${port}`);
+logger.info(`Server running on port ${port}`);
 
 // Graceful Shutdown
 const shutdown = async () => {
   logger.info('Shutting down...');
-  server.close();
+  server.stop(true);
   await client.end();
   process.exit(0);
 };

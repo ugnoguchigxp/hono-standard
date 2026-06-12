@@ -31,7 +31,7 @@ export const Checkbox = React.memo(
             className={cn(
               cardVariants({ variant: 'default' }),
               'w-full flex items-center gap-3 p-[var(--ui-component-padding-x)] transition-all min-h-[var(--ui-component-height)] cursor-pointer',
-              checked ? 'border-theme-success/50' : 'hover:bg-muted',
+              checked ? 'border-success/50' : 'hover:bg-muted',
               disabled && 'opacity-50 cursor-not-allowed',
               className
             )}
@@ -48,7 +48,7 @@ export const Checkbox = React.memo(
             <div
               className={cn(
                 'text-[length:calc(var(--ui-checkbox-size)*1.5)] flex-shrink-0 transition-colors',
-                checked ? 'text-success' : 'text-theme-border'
+                checked ? 'text-success' : 'text-border'
               )}
             >
               {checked ? <CheckCircle size="1em" /> : <Circle size="1em" />}

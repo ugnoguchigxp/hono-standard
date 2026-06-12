@@ -15,9 +15,9 @@ const sizeClasses = {
 };
 
 const variantClasses = {
-  primary: 'border-theme-object-primary border-t-transparent',
-  secondary: 'border-theme-text-secondary border-t-transparent',
-  accent: 'border-theme-accent border-t-transparent',
+  primary: 'border-primary border-t-transparent',
+  secondary: 'border-muted-foreground border-t-transparent',
+  accent: 'border-accent-foreground border-t-transparent',
 };
 
 export const Spinner = React.memo<ISpinnerProps>(

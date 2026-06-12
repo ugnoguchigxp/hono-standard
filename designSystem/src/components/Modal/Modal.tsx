@@ -116,7 +116,7 @@ const DraggableModalContent = React.forwardRef<
       <Dialog.Popup
         ref={combinedRef}
         aria-describedby={descriptionId}
-        data-gxp-top-layer="true"
+        data-ds-top-layer="true"
         className={cn(
           'fixed z-modal flex flex-col gap-0 bg-background',
           !draggable && 'duration-200',

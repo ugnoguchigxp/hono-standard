@@ -1,10 +1,10 @@
-# @gxp/design-system
+# @repo/design-system
 
 ![Coverage](https://img.shields.io/badge/coverage-95%25+-brightgreen)
 
 モダンなB2Bアプリケーション向けに構築された、堅牢なエンタープライズグレードのReactコンポーネントライブラリです。**Tailwind CSS**、**Radix UI**、**TypeScript**をベースにしており、アクセシビリティに配慮した、テーマ適用可能で高性能なコンポーネント群を提供します。
 
-> 📖 **[Storybook ドキュメント](http://localhost:6006)** — `bun storybook` でローカル起動できます
+> 📖 **[Storybook ドキュメント](http://localhost:6006)** — `bun run storybook` でローカル起動できます
 
 ## ✨ 主な特徴
 
@@ -20,7 +20,7 @@
 
 ```bash
 # 1. インストール（ローカルパス指定）
-bun add ../gxp-designSystem
+bun add ../designSystem
 
 # 2. i18n依存関係のインストール（i18nを使用する場合のみ）
 bun add i18next react-i18next
@@ -28,8 +28,8 @@ bun add i18next react-i18next
 
 ```tsx
 // 3. アプリケーションで使用
-import '@gxp/design-system/styles';
-import { Button, Card, CalendarProvider } from '@gxp/design-system';
+import '@repo/design-system/styles';
+import { Button, Card, CalendarProvider } from '@repo/design-system';
 // import './i18n'; // i18n設定ファイル（i18nを使用する場合）
 
 export function App() {
@@ -54,7 +54,7 @@ export function App() {
 ```text
 /workspace
   ├── your-app/        # 利用側のアプリケーション
-  └── gxp-designSystem/ # 本デザインシステム
+  └── designSystem/ # 本デザインシステム
 ```
 
 **インストール:**
@@ -62,14 +62,14 @@ export function App() {
 プロジェクトのディレクトリで以下のコマンドを実行します：
 
 ```bash
-bun add ../gxp-designSystem
+bun add ../designSystem
 ```
 
 これにより、`package.json` には以下のように追加されます：
 
 ```json
 "dependencies": {
-  "@gxp/design-system": "file:../gxp-designSystem"
+  "@repo/design-system": "file:../designSystem"
 }
 ```
 
@@ -80,34 +80,23 @@ bun add ../gxp-designSystem
 アプリケーションのエントリーポイント（例: `src/main.tsx` や `src/App.tsx`）で、コンパイル済みのCSSファイルをインポートしてください。
 
 ```typescript
-import '@gxp/design-system/styles';
+import '@repo/design-system/styles';
 ```
 
 または、CSS ModulesやSassを使用している場合は、グローバルスタイルとしてインポートしてください。
-また、`@gxp/design-system/styles` は `dist/design-system.css` を指しています。
+また、公開 package では `@repo/design-system/styles` は `dist/design-system.css` を指します。
 
 ### 2. Tailwind CSSの設定
 
 本ライブラリは **Tailwind CSS v4** に対応しています。
-アプリケーション側でデザインシステムのスタイルを利用するには、`tailwind-preset` を設定する必要があります。
-これは、デザインシステムで定義されたカラーパレット（`primary`, `secondary` など）やアニメーションを利用可能にします。
+アプリケーション側のグローバルCSSで、Tailwind とデザインシステムの公開CSSを読み込みます。
 
-`tailwind.config.ts` (または `js`, `cjs`) にパッケージのコンテンツパスとプリセットを追加してください。
-プリセットを読み込むことで、デザインシステムと全く同じテーマ設定が適用されます。
-
-```typescript
-// tailwind.config.ts
-import type { Config } from 'tailwindcss';
-import { designSystemPreset } from '@gxp/design-system/tailwind-preset';
-
-export default {
-  content: [
-    './src/**/*.{ts,tsx}',
-    './node_modules/@gxp/design-system/dist/**/*.{js,mjs}'
-  ],
-  presets: [designSystemPreset],
-} satisfies Config;
+```css
+@import "tailwindcss";
+@import "@repo/design-system/styles";
 ```
+
+Tailwind v3 互換が必要な場合のみ、`@repo/design-system/tailwind-preset` を利用してください。
 
 ### 3. i18n (多言語化) の設定 [オプショナル]
 
@@ -198,7 +187,7 @@ import {
   Button, 
   Card, 
   CalendarProvider, // 追加
-} from '@gxp/design-system';
+} from '@repo/design-system';
 import './i18n'; // i18n設定のインポート
 
 export function App() {
@@ -330,11 +319,12 @@ bun install
 
 | コマンド | 説明 |
 |---------|-------------|
-| `bun storybook` | コンポーネントドキュメントサーバー (Storybook) を起動 |
-| `bun build` | 本番用ライブラリのビルド (ESM & CJS) |
-| `bun test` | Vitestによるユニットテストの実行 |
-| `bun lint` | Biomeによるリントとフォーマット |
-| `bun type-check` | TypeScriptの型チェック実行 |
+| `bun run storybook` | コンポーネントドキュメントサーバー (Storybook) を起動 |
+| `bun run build` | 本番用ライブラリのビルド (ESM & CJS) |
+| `bun run test` | Vitestによるユニットテストの実行 |
+| `bun run lint` | Biomeによるリントとフォーマット |
+| `bun run type-check` | TypeScriptの型チェック実行 |
+| `bun run verify` | type-check / lint / test / build を静かな出力で一括実行 |
 
 ### DockerでStorybookを起動
 
@@ -358,11 +348,11 @@ docker compose up --build
 本プロジェクトでは、コードの品質と堅牢性を保証するため、この基準を下回らないよう開発を進めてください。
 
 > [!NOTE]
-> カバレッジプロバイダーには `v8` ではなく `istanbul` を採用しています。これは大規模なプロジェクトでの V8 プロバイダーのハングアップ問題を回避し、CI/CD環境での安定性を確保するためです。開発時は `bun test` を使用してください。
+> カバレッジプロバイダーには `v8` ではなく `istanbul` を採用しています。これは大規模なプロジェクトでの V8 プロバイダーのハングアップ問題を回避し、CI/CD環境での安定性を確保するためです。開発時は `bun run test` を使用してください。
 
 ```bash
 # カバレッジレポートの生成
-bun test run --coverage
+bun run test run --coverage
 ```
 
 | 項目 (Metric) | 目標 (Threshold) | 現在 (Current) | ステータス |
@@ -376,7 +366,7 @@ bun test run --coverage
 
 品質を担保するため、`husky` を使用してコミットおよびプッシュ時に自動チェックを行っています。
 
-- **pre-push**: テスト (`bun test run`) が成功しない限り、リモートリポジトリへのプッシュは拒否されます。
+- **pre-push**: テスト (`bun run test run`) が成功しない限り、リモートリポジトリへのプッシュは拒否されます。
 
 ## ❓ トラブルシューティング
 
@@ -403,4 +393,4 @@ export default defineConfig({
 
 ## 📄 ライセンス
 
-MIT © GXP
+MIT © hono-standard contributors

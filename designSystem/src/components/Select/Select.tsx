@@ -74,8 +74,8 @@ const SelectContent = React.memo(
           >
             <BaseSelect.Popup
               ref={ref}
-              data-gxp-portal="true"
-              data-gxp-top-layer="true"
+              data-ds-portal="true"
+              data-ds-top-layer="true"
               className={cn(
                 'relative box-border overflow-hidden rounded-md border border-input bg-background text-foreground shadow-md outline-none',
                 'data-[state=open]:animate-in data-[state=closed]:animate-out',

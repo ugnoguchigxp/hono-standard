@@ -52,7 +52,7 @@ describe('Skeleton Component', () => {
       expect(innerSpinner).toHaveClass(
         'h-8', // md size
         'w-8',
-        'border-theme-object-primary' // primary variant
+        'border-primary' // primary variant
       );
     });
 
@@ -71,7 +71,7 @@ describe('Skeleton Component', () => {
       const spinner = screen.getByRole('status');
       const innerSpinner = spinner.querySelector('div');
 
-      expect(innerSpinner).toHaveClass('border-theme-accent');
+      expect(innerSpinner).toHaveClass('border-accent-foreground');
     });
 
     it('renders spinner with custom size and variant', () => {
@@ -83,7 +83,7 @@ describe('Skeleton Component', () => {
       expect(innerSpinner).toHaveClass(
         'h-16',
         'w-16', // xl size
-        'border-theme-text-secondary' // secondary variant
+        'border-muted-foreground' // secondary variant
       );
     });
 
@@ -128,15 +128,15 @@ describe('Skeleton Component', () => {
     const variantTests = [
       {
         variant: 'primary' as const,
-        classes: ['border-theme-object-primary', 'border-t-transparent'],
+        classes: ['border-primary', 'border-t-transparent'],
       },
       {
         variant: 'secondary' as const,
-        classes: ['border-theme-text-secondary', 'border-t-transparent'],
+        classes: ['border-muted-foreground', 'border-t-transparent'],
       },
       {
         variant: 'accent' as const,
-        classes: ['border-theme-accent', 'border-t-transparent'],
+        classes: ['border-accent-foreground', 'border-t-transparent'],
       },
     ];
 

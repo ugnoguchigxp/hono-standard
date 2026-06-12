@@ -4,18 +4,15 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 
 const alertVariants = cva(
-  'relative w-full rounded-[6px] border p-4 text-sm shadow-[0_1px_4px_rgba(0,0,0,0.08)] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg+div]:translate-y-[-3px] [&:has(svg)]:pl-11',
+  'relative w-full rounded-md border p-4 text-sm shadow-sm [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg+div]:translate-y-[-3px] [&:has(svg)]:pl-11',
   {
     variants: {
       variant: {
         default: 'border-border bg-secondary text-foreground [&>svg]:text-foreground',
-        destructive:
-          'border-destructive bg-[hsl(0_100%_97%)] text-destructive [&>svg]:text-destructive',
-        success:
-          'border-success bg-[hsl(142_60%_96%)] text-[hsl(142_71%_35%)] [&>svg]:text-[hsl(142_71%_35%)]',
-        warning:
-          'border-warning bg-[hsl(35_100%_96%)] text-[hsl(35_100%_35%)] [&>svg]:text-[hsl(35_100%_35%)]',
-        info: 'border-info bg-[hsl(199_89%_96%)] text-[hsl(199_89%_38%)] [&>svg]:text-[hsl(199_89%_38%)]',
+        destructive: 'border-destructive bg-destructive-soft text-destructive [&>svg]:text-destructive',
+        success: 'border-success bg-success-soft text-success [&>svg]:text-success',
+        warning: 'border-warning bg-warning-soft text-warning [&>svg]:text-warning',
+        info: 'border-info bg-info-soft text-info [&>svg]:text-info',
       },
     },
     defaultVariants: {

@@ -82,7 +82,7 @@ const envSchema = z
 
 const result = envSchema.safeParse(process.env);
 if (!result.success) {
-  console.error('❌ Invalid environment variables:');
+  console.error('Invalid environment variables:');
   console.error(result.error.format());
   process.exit(1);
 }
@@ -92,7 +92,7 @@ const corsOrigins = result.data.CORS_ORIGIN.split(',')
   .filter((origin) => origin.length > 0);
 
 if (corsOrigins.length === 0 || corsOrigins.includes('*')) {
-  console.error('❌ Invalid CORS_ORIGIN: wildcard (*) is not allowed. Use explicit origin list.');
+  console.error('Invalid CORS_ORIGIN: wildcard (*) is not allowed. Use explicit origin list.');
   process.exit(1);
 }
 

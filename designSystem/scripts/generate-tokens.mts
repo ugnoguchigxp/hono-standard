@@ -27,7 +27,7 @@ interface ScoredValue {
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const designSystemDir = path.resolve(scriptDir, '..');
-const cssPath = path.join(designSystemDir, 'src', 'styles.css');
+const cssPath = path.join(designSystemDir, 'src', 'styles', 'generated-tokens.css');
 const penPath = path.join(designSystemDir, 'pencil', 'designSystem.pen');
 
 // --- Utilities ---
@@ -35,7 +35,8 @@ const penPath = path.join(designSystemDir, 'pencil', 'designSystem.pen');
 function hexToHsl(hex: string): string {
   let r = 0,
     g = 0,
-    b = 0;
+    b = 0,
+    a = 1;
   hex = hex.replace('#', '');
   if (hex.length === 3) {
     r = parseInt(hex[0] + hex[0], 16);
@@ -45,6 +46,9 @@ function hexToHsl(hex: string): string {
     r = parseInt(hex.substring(0, 2), 16);
     g = parseInt(hex.substring(2, 4), 16);
     b = parseInt(hex.substring(4, 6), 16);
+    if (hex.length === 8) {
+      a = parseInt(hex.substring(6, 8), 16) / 255;
+    }
   }
 
   r /= 255;
@@ -73,7 +77,11 @@ function hexToHsl(hex: string): string {
     h /= 6;
   }
 
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  const hsl = `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  if (a < 1) {
+    return `${hsl} / ${Number(a.toFixed(3))}`;
+  }
+  return hsl;
 }
 
 function normalizeHexForPen(hex: string): string {
@@ -116,16 +124,12 @@ function resolveTokenValue(token: Token, axes: ThemeAxes): string {
 
 function generateCss() {
   let cssContent = `/* === AUTO-GENERATED: DO NOT EDIT BELOW === */
-/* Source: design-tokens.ts / Run: pnpm generate-tokens */\n\n`;
+/* Source: design-tokens.ts / Run: bun run --cwd designSystem tokens:generate */\n\n`;
 
   // 1. Static Themes (Explicitly defined in THEME_DEFINITIONS like tokyo-night)
   for (const [themeKey, theme] of Object.entries(THEME_DEFINITIONS)) {
-    const selector =
-      themeKey === 'light'
-        ? ':root, html.theme-light'
-        : themeKey === 'dark'
-          ? 'html.theme-dark, .dark'
-          : `html.${theme.className}`;
+    const dataTheme = 'dataTheme' in theme ? theme.dataTheme : themeKey;
+    const selector = themeKey === 'light' ? ':root' : `:root[data-theme="${dataTheme}"]`;
 
     cssContent += `@layer base {\n  ${selector} {\n`;
     for (const [tokenName, token] of Object.entries(COLOR_TOKENS)) {
@@ -145,9 +149,9 @@ function generateCss() {
     const isBase = axes.base === 'Neutral' && axes.accent === 'Default';
     if (isBase) continue;
 
-    const className = `theme-${axes.mode?.toLowerCase()}-${axes.base?.toLowerCase()}-${axes.accent?.toLowerCase()}`;
+    const themeName = `${axes.mode?.toLowerCase()}-${axes.base?.toLowerCase()}-${axes.accent?.toLowerCase()}`;
 
-    cssContent += `@layer base {\n  html.${className} {\n`;
+    cssContent += `@layer base {\n  :root[data-theme="${themeName}"] {\n`;
     for (const [tokenName, token] of Object.entries(COLOR_TOKENS)) {
       const value = resolveTokenValue(token as Token, axes);
       // Only output if it differs from the mode's basic value?
@@ -159,24 +163,8 @@ function generateCss() {
 
   cssContent += '/* === END AUTO-GENERATED === */';
 
-  const existingCss = fs.readFileSync(cssPath, 'utf8');
-  const startMarker = '/* === AUTO-GENERATED: DO NOT EDIT BELOW === */';
-  const endMarker = '/* === END AUTO-GENERATED === */';
-
-  let newCss = '';
-  if (existingCss.includes(startMarker) && existingCss.includes(endMarker)) {
-    newCss = existingCss.replace(
-      new RegExp(
-        `${startMarker.replace(/\*/g, '\\*')}[\\s\\S]*?${endMarker.replace(/\*/g, '\\*')}`
-      ),
-      cssContent
-    );
-  } else {
-    newCss = `${existingCss}\n\n${cssContent}`;
-  }
-
-  fs.writeFileSync(cssPath, newCss, 'utf8');
-  console.log('✅ Generated CSS with 3-axis theme matrix: src/styles.css');
+  fs.writeFileSync(cssPath, cssContent, 'utf8');
+  console.log('✅ Generated CSS with 3-axis theme matrix: src/styles/generated-tokens.css');
 }
 
 // --- Pencil Generation (Refactored to Stage 3 Adapter) ---

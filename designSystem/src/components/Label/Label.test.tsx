@@ -129,7 +129,7 @@ describe('Label Component', () => {
       const label = screen.getByText('Disabled Input Label');
       expect(label).toHaveClass('peer-disabled:cursor-not-allowed');
       expect(label).toHaveClass('peer-disabled:opacity-70');
-      expect(label).toHaveClass('peer-disabled:text-theme-disabled-text');
+      expect(label).toHaveClass('peer-disabled:text-muted-foreground');
     });
   });
 

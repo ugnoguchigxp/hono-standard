@@ -17,19 +17,19 @@ Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅�
 ## 技術スタック
 
 ### バックエンド
-- **コア**: [Hono](https://hono.dev/) (Node.js adapter), TypeScript
+- **コア**: [Hono](https://hono.dev/) (Bun runtime), TypeScript
 - **API ドキュメント**: [@hono/zod-openapi](https://github.com/honojs/middleware/tree/main/packages/zod-openapi) (Swagger UI 同梱)
 - **ミドルウェア**: CORS, Secure Headers, Timing, logger, rateLimiter, CSRF
 
 ### データベース
 - **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
-- **DB**: PostgreSQL (postgres.js)
+- **DB**: SQLite / libSQL (`@libsql/client`)
 
 ### フロントエンド
 - **フレームワーク**: React 19, Vite
 - **ルーティング**: [TanStack Router](https://tanstack.com/router)
 - **状態管理/データ取得**: [TanStack Query](https://tanstack.com/query)
-- **UI/スタイリング**: Tailwind CSS + shadcn/ui (CSS変数を用いたテーミング) + Pencil (Design-to-Code)
+- **UI/スタイリング**: Tailwind CSS v4 + `@repo/design-system` (CSS変数テーミング、Pencil 同期)
 
 ### テスト・品質管理
 - **ユニット/統合テスト**: [Vitest](https://vitest.dev/)
@@ -41,15 +41,13 @@ Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅�
 ## クイックスタート
 
 ### 前提条件
-- Node.js (v20+)
-- pnpm
-- Docker / Docker Compose
+- Bun (v1.3+)
 
 ### セットアップ手順
 
 1. **依存関係のインストール**
    ```bash
-   pnpm install
+   bun install
    ```
 
 2. **環境変数の設定**
@@ -66,20 +64,15 @@ Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅�
    `VITE_ENABLE_MSW=true` を設定すると、開発時に MSW モックを有効化できます（デフォルトは `false`）。
    リバースプロキシ配下（Nginx / Cloudflare など）で動かす場合は `TRUST_PROXY=true` を設定してください。
 
-3. **データベースの起動**
+3. **データベースの初期化**
    ```bash
-   docker-compose up -d
+   bun run db:migrate # 既存マイグレーションを適用
+   bun run db:seed   # テストデータの投入
    ```
 
-4. **データベースの初期化**
+4. **開発サーバーの起動**
    ```bash
-   pnpm db:migrate # 既存マイグレーションを適用
-   pnpm db:seed   # テストデータの投入
-   ```
-
-5. **開発サーバーの起動**
-   ```bash
-   pnpm dev
+   bun run dev
    ```
 
 アプリケーション、API、ドキュメントはすべて `http://localhost:5173` 経由でアクセス可能です。
@@ -90,31 +83,35 @@ Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅�
 
 | コマンド | 説明 |
 |---|---|
-| `pnpm dev` | 開発サーバーの起動 |
-| `pnpm build` | プロダクションビルド (FE & BE) |
-| `pnpm start` | コンパイル済みバックエンドの実行 |
-| `pnpm test` | Vitest によるテスト実行 |
-| `pnpm test:e2e` | Playwright による E2E テスト実行 |
-| `pnpm test:e2e:smoke` | `@smoke` タグ付きE2Eのみ実行 |
-| `pnpm test:e2e:regression` | `@regression` タグ付きE2Eのみ実行 |
-| `pnpm test:coverage` | Vitest カバレッジレポート生成 |
-| `pnpm lint` | Biome によるコードチェック |
-| `pnpm typecheck` | TypeScript 型チェック |
-| `pnpm db:generate` | マイグレーションSQLを生成 |
-| `pnpm db:migrate` | マイグレーションを DB に適用 |
-| `pnpm db:push` | 開発用途でスキーマを直接反映（本番非推奨） |
-| `pnpm db:studio` | Drizzle Studio の起動 |
-| `pnpm db:seed` | シードデータの投入 |
+| `bun run dev` | 開発サーバーの起動 |
+| `bun run build` | プロダクションビルド (FE & BE) |
+| `bun run start` | Bun でコンパイル済みバックエンドを実行 |
+| `bun run test` | Vitest によるテスト実行 |
+| `bun run test:e2e` | Playwright による E2E テスト実行 |
+| `bun run test:e2e:smoke` | `@smoke` タグ付きE2Eのみ実行 |
+| `bun run test:e2e:regression` | `@regression` タグ付きE2Eのみ実行 |
+| `bun run test:coverage` | Vitest カバレッジレポート生成 |
+| `bun run lint` | Biome によるコードチェック |
+| `bun run typecheck` | TypeScript 型チェック |
+| `bun run verify` | typecheck / lint / format / test / build を静かな出力で一括実行 |
+| `bun run design-system:sync -- <repo-url> [ref]` | 指定した外部 design system repo から `designSystem/` を同期 |
+| `bun run design-system:storybook` | Design System の Storybook 起動 |
+| `bun run design-system:storybook:build` | Design System の Storybook ビルド |
+| `bun run db:generate` | マイグレーションSQLを生成 |
+| `bun run db:migrate` | マイグレーションを DB に適用 |
+| `bun run db:push` | 開発用途でスキーマを直接反映（本番非推奨） |
+| `bun run db:studio` | Drizzle Studio の起動 |
+| `bun run db:seed` | シードデータの投入 |
 
 ### E2Eタグ運用
 - `@smoke`: 主要導線の高速確認用（PRごとに実行推奨）
 - `@regression`: 回帰確認用のフルスイート（定期実行/マージ前推奨）
 
 ### マイグレーション運用（推奨）
-1. スキーマ変更後に `pnpm db:generate` で SQL を生成
+1. スキーマ変更後に `bun run db:generate` で SQL を生成
 2. 生成された `drizzle/migrations/*.sql` をレビューしてコミット
-3. ローカル・CI・本番で `pnpm db:migrate` を実行して適用
-4. `pnpm db:push` は試作や検証時のみ利用し、本番フローには使わない
+3. ローカル・CI・本番で `bun run db:migrate` を実行して適用
+4. `bun run db:push` は試作や検証時のみ利用し、本番フローには使わない
 
 ---
 
@@ -136,20 +133,16 @@ Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅�
 ### ディレクトリ構成
 
 - **`api/` (バックエンド)**
-  - `modules/`: 機能ドメインごとのコード層。各ドメインは以下の3層アーキテクチャで構成。
-    - `*.routes.ts`: ルーティング、リクエストバリデーション、レスポンスの返却。
-    - `*.service.ts`: ビジネスロジック。
-    - `*.repository.ts`: Drizzle ORM を用いたデータベースアクセス処理。
-  - `db/`, `middleware/`: DB接続設定や、認証・セキュリティ・ロギング等の共通ミドルウェア。
+  - `routes/`: Hono / OpenAPI のルーティング、リクエストバリデーション、レスポンスの返却。
+  - `services/`: 認証、ユーザー、トークン、OAuth などのビジネスロジック。
+  - `db/`, `middleware/`, `lib/`: DB接続、共通ミドルウェア、エラー、ログ、OpenAPI、Cookie、セキュリティ補助。
+  - 新しい大きめのドメインを追加する場合は、必要に応じて `api/modules/<domain>/` へ `routes / service / repository` を近接配置します。
 
 - **`src/` (フロントエンド)**
-  - `modules/`: 機能ドメインごとのコード層。UIとロジックを近接して管理します。
-    - `components/`: ドメイン固有のUIコンポーネント。
-    - `hooks/`: 状態管理やUIの副作用を切り出したカスタムフック。
-    - `repositories/`: バックエンドAPIを呼び出すデータフェッチ層 (TanStack Query等の処理)。
-    - `services/`: フロントエンド側の複雑なロジックやデータ加工処理。
   - `routes/`: TanStack Router によるファイルベースのルーティング。
-  - `lib/api.ts`: Hono RPCによる型安全な API クライアント (`client`) を定義。Cookie セッションの自動リフレッシュをカプセル化。
+  - `lib/`: Hono RPC API client、認証 context、共通 utility。
+  - `mocks/`: MSW の開発用 mock。
+  - 画面が増えて `routes/` だけでは見通しが悪くなった場合は、`src/modules/<domain>/` に components / hooks / repositories / services を近接配置します。
 
 - **`shared/` (共有コード)**
   - `schemas/`: Zod によるバリデーションスキーマ群。フロントエンドの入力検証と、バックエンドの引数検証で全く同じスキーマを再利用することで DRY な設計を実現。

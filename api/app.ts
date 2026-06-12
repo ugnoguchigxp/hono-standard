@@ -1,5 +1,5 @@
-import { serveStatic } from '@hono/node-server/serve-static';
 import { swaggerUI } from '@hono/swagger-ui';
+import type { MiddlewareHandler } from 'hono';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { secureHeaders } from 'hono/secure-headers';
@@ -22,6 +22,20 @@ const apiRoutes = createOpenApiRouter()
 
 const app = createOpenApiRouter();
 const isProduction = config.NODE_ENV === 'production';
+let staticHandlers: Promise<{
+  assets: MiddlewareHandler;
+  favicon: MiddlewareHandler;
+  index: MiddlewareHandler;
+}> | null = null;
+
+const getStaticHandlers = async () => {
+  staticHandlers ??= import('hono/bun').then(({ serveStatic }) => ({
+    assets: serveStatic({ root: './dist' }),
+    favicon: serveStatic({ root: './dist' }),
+    index: serveStatic({ path: './dist/index.html' }),
+  }));
+  return staticHandlers;
+};
 
 // Middleware
 app.use('*', timing());
@@ -105,12 +119,18 @@ app.get(
 app.route('/api', apiRoutes);
 
 if (config.NODE_ENV === 'production') {
-  const serveIndex = serveStatic({ path: './dist/index.html' });
-  app.use('/assets/*', serveStatic({ root: './dist' }));
-  app.use('/favicon.ico', serveStatic({ root: './dist' }));
+  app.use('/assets/*', async (c, next) => {
+    const { assets } = await getStaticHandlers();
+    return assets(c, next);
+  });
+  app.use('/favicon.ico', async (c, next) => {
+    const { favicon } = await getStaticHandlers();
+    return favicon(c, next);
+  });
   app.get('*', async (c, next) => {
     if (c.req.path.startsWith('/api')) return next();
-    return serveIndex(c, next);
+    const { index } = await getStaticHandlers();
+    return index(c, next);
   });
 }
 

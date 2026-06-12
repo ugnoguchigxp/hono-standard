@@ -53,7 +53,10 @@ export const Showcase: Story = {
           <CardContent className="grid gap-3">
             <div className="flex items-center gap-2">
               <Avatar>
-                <AvatarImage src="https://github.com/shadcn.png" alt="Avatar" />
+                <AvatarImage
+                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='32' fill='%23dbeafe'/%3E%3Ctext x='32' y='39' font-size='20' text-anchor='middle' fill='%231e3a8a' font-family='sans-serif'%3EDS%3C/text%3E%3C/svg%3E"
+                  alt="Design system avatar"
+                />
                 <AvatarFallback>DS</AvatarFallback>
               </Avatar>
               <div className="text-sm">

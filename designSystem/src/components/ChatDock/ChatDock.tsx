@@ -43,7 +43,7 @@ export const ChatDock: React.FC<ChatDockProps> = React.memo(
         {isOpen && (
           <div
             className={cn(
-              'flex w-[320px] max-w-[92vw] flex-col overflow-hidden rounded-2xl border border-border/70 bg-background shadow-[0_18px_40px_rgba(15,23,42,0.22)]',
+              'flex w-[320px] max-w-[92vw] flex-col overflow-hidden rounded-2xl border border-border/70 bg-background shadow-xl',
               panelClassName
             )}
           >
@@ -78,7 +78,7 @@ export const ChatDock: React.FC<ChatDockProps> = React.memo(
           type="button"
           onClick={isOpen ? onClose : onOpen}
           className={cn(
-            'inline-flex items-center gap-2 rounded-full border border-border/70 bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[0_12px_28px_rgba(15,23,42,0.25)] transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'inline-flex items-center gap-2 rounded-full border border-border/70 bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             buttonClassName
           )}
           aria-expanded={isOpen}

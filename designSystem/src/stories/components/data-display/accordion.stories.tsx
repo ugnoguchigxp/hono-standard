@@ -24,7 +24,7 @@ export const Default: Story = {
       </AccordionItem>
       <AccordionItem value="item-2">
         <AccordionTrigger>Is it token-driven?</AccordionTrigger>
-        <AccordionContent>Yes. It follows shadcn/ui + Tailwind design tokens.</AccordionContent>
+        <AccordionContent>Yes. It follows the shared design system and Tailwind design tokens.</AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-3">
         <AccordionTrigger>How do I customize it?</AccordionTrigger>
