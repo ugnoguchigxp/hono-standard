@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "../designSystem/src/styles/index.css";
+@import "@repo/design-system/styles";
 @import "@fontsource-variable/geist";
 
 @layer base {

@@ -1,4 +1,4 @@
-# @gxp/design-system
+# @repo/design-system
 
 ![Coverage](https://img.shields.io/badge/coverage-95%25+-brightgreen)
 
@@ -20,7 +20,7 @@
 
 ```bash
 # 1. インストール（ローカルパス指定）
-bun add ../gxp-designSystem
+bun add ../designSystem
 
 # 2. i18n依存関係のインストール（i18nを使用する場合のみ）
 bun add i18next react-i18next
@@ -28,8 +28,8 @@ bun add i18next react-i18next
 
 ```tsx
 // 3. アプリケーションで使用
-import '@gxp/design-system/styles';
-import { Button, Card, CalendarProvider } from '@gxp/design-system';
+import '@repo/design-system/styles';
+import { Button, Card, CalendarProvider } from '@repo/design-system';
 // import './i18n'; // i18n設定ファイル（i18nを使用する場合）
 
 export function App() {
@@ -54,7 +54,7 @@ export function App() {
 ```text
 /workspace
   ├── your-app/        # 利用側のアプリケーション
-  └── gxp-designSystem/ # 本デザインシステム
+  └── designSystem/ # 本デザインシステム
 ```
 
 **インストール:**
@@ -62,14 +62,14 @@ export function App() {
 プロジェクトのディレクトリで以下のコマンドを実行します：
 
 ```bash
-bun add ../gxp-designSystem
+bun add ../designSystem
 ```
 
 これにより、`package.json` には以下のように追加されます：
 
 ```json
 "dependencies": {
-  "@gxp/design-system": "file:../gxp-designSystem"
+  "@repo/design-system": "file:../designSystem"
 }
 ```
 
@@ -80,34 +80,23 @@ bun add ../gxp-designSystem
 アプリケーションのエントリーポイント（例: `src/main.tsx` や `src/App.tsx`）で、コンパイル済みのCSSファイルをインポートしてください。
 
 ```typescript
-import '@gxp/design-system/styles';
+import '@repo/design-system/styles';
 ```
 
 または、CSS ModulesやSassを使用している場合は、グローバルスタイルとしてインポートしてください。
-また、`@gxp/design-system/styles` は `dist/design-system.css` を指しています。
+また、公開 package では `@repo/design-system/styles` は `dist/design-system.css` を指します。
 
 ### 2. Tailwind CSSの設定
 
 本ライブラリは **Tailwind CSS v4** に対応しています。
-アプリケーション側でデザインシステムのスタイルを利用するには、`tailwind-preset` を設定する必要があります。
-これは、デザインシステムで定義されたカラーパレット（`primary`, `secondary` など）やアニメーションを利用可能にします。
+アプリケーション側のグローバルCSSで、Tailwind とデザインシステムの公開CSSを読み込みます。
 
-`tailwind.config.ts` (または `js`, `cjs`) にパッケージのコンテンツパスとプリセットを追加してください。
-プリセットを読み込むことで、デザインシステムと全く同じテーマ設定が適用されます。
-
-```typescript
-// tailwind.config.ts
-import type { Config } from 'tailwindcss';
-import { designSystemPreset } from '@gxp/design-system/tailwind-preset';
-
-export default {
-  content: [
-    './src/**/*.{ts,tsx}',
-    './node_modules/@gxp/design-system/dist/**/*.{js,mjs}'
-  ],
-  presets: [designSystemPreset],
-} satisfies Config;
+```css
+@import "tailwindcss";
+@import "@repo/design-system/styles";
 ```
+
+Tailwind v3 互換が必要な場合のみ、`@repo/design-system/tailwind-preset` を利用してください。
 
 ### 3. i18n (多言語化) の設定 [オプショナル]
 
@@ -198,7 +187,7 @@ import {
   Button, 
   Card, 
   CalendarProvider, // 追加
-} from '@gxp/design-system';
+} from '@repo/design-system';
 import './i18n'; // i18n設定のインポート
 
 export function App() {

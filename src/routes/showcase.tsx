@@ -63,9 +63,7 @@ function ShowcasePage() {
           <Badge variant="secondary">Secondary</Badge>
           <Badge variant="outline">Outline</Badge>
           <Badge variant="destructive">Destructive</Badge>
-          <Badge className="bg-emerald-500 text-white hover:bg-emerald-600 border-none">
-            Success
-          </Badge>
+          <Badge variant="success">Success</Badge>
         </div>
       </section>
 
@@ -90,7 +88,7 @@ function ShowcasePage() {
             </CardFooter>
           </Card>
 
-          <Card className="bg-primary/5 border-primary/20 shadow-lg shadow-primary/5">
+          <Card className="bg-primary/5 border-primary/20 shadow-lg">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Statistics</CardTitle>

@@ -32,7 +32,7 @@ vi.stubGlobal('log', {
 });
 
 describe('LanguageSelector', () => {
-  const user = userEvent.setup();
+  const setupUser = () => userEvent.setup({ pointerEventsCheck: 0 });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,6 +60,7 @@ describe('LanguageSelector', () => {
   });
 
   it('opens menu on click', async () => {
+    const user = setupUser();
     render(<LanguageSelector />);
 
     const trigger = screen.getByRole('combobox');
@@ -70,6 +71,7 @@ describe('LanguageSelector', () => {
   });
 
   it('changes language using i18n.changeLanguage when onValueChange is not provided', async () => {
+    const user = setupUser();
     render(<LanguageSelector />);
 
     await user.click(screen.getByRole('combobox'));
@@ -83,6 +85,7 @@ describe('LanguageSelector', () => {
   });
 
   it('calls onValueChange if provided', async () => {
+    const user = setupUser();
     const onValueChange = vi.fn();
     render(<LanguageSelector onValueChange={onValueChange} />);
 
@@ -94,6 +97,7 @@ describe('LanguageSelector', () => {
   });
 
   it('closes menu when clicking outside', async () => {
+    const user = setupUser();
     render(<LanguageSelector />);
 
     await user.click(screen.getByRole('combobox'));
@@ -113,6 +117,7 @@ describe('LanguageSelector', () => {
   });
 
   it('handles missing global log gracefully', async () => {
+    const user = setupUser();
     // Untub global log to simulate missing log
     vi.stubGlobal('log', undefined);
 

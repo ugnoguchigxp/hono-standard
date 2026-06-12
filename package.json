@@ -17,6 +17,7 @@
     "lint:all": "biome check .",
     "design-system:storybook": "pnpm -C designSystem storybook",
     "design-system:storybook:build": "pnpm -C designSystem build-storybook",
+    "design-system:sync": "tsx scripts/sync-design-system.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

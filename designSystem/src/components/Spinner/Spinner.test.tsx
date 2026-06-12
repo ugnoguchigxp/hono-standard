@@ -25,7 +25,7 @@ describe('Spinner Component', () => {
         'h-8',
         'w-8',
         'border-[3px]',
-        'border-theme-object-primary',
+        'border-primary',
         'border-t-transparent'
       );
     });
@@ -93,7 +93,7 @@ describe('Spinner Component', () => {
       const spinner = screen.getByRole('status');
       const innerSpinner = spinner.querySelector('div');
 
-      expect(innerSpinner).toHaveClass('border-theme-object-primary', 'border-t-transparent');
+      expect(innerSpinner).toHaveClass('border-primary', 'border-t-transparent');
     });
 
     it('renders secondary variant', () => {
@@ -102,7 +102,7 @@ describe('Spinner Component', () => {
       const spinner = screen.getByRole('status');
       const innerSpinner = spinner.querySelector('div');
 
-      expect(innerSpinner).toHaveClass('border-theme-text-secondary', 'border-t-transparent');
+      expect(innerSpinner).toHaveClass('border-muted-foreground', 'border-t-transparent');
     });
 
     it('renders accent variant', () => {
@@ -111,7 +111,7 @@ describe('Spinner Component', () => {
       const spinner = screen.getByRole('status');
       const innerSpinner = spinner.querySelector('div');
 
-      expect(innerSpinner).toHaveClass('border-theme-accent', 'border-t-transparent');
+      expect(innerSpinner).toHaveClass('border-accent-foreground', 'border-t-transparent');
     });
   });
 
@@ -126,7 +126,7 @@ describe('Spinner Component', () => {
         'h-4',
         'w-4',
         'border-2', // xs size
-        'border-theme-text-secondary',
+        'border-muted-foreground',
         'border-t-transparent' // secondary variant
       );
     });
@@ -141,7 +141,7 @@ describe('Spinner Component', () => {
         'h-16',
         'w-16',
         'border-4', // xl size
-        'border-theme-accent',
+        'border-accent-foreground',
         'border-t-transparent' // accent variant
       );
     });
@@ -169,7 +169,7 @@ describe('Spinner Component', () => {
         'h-8',
         'w-8',
         'border-[3px]',
-        'border-theme-object-primary',
+        'border-primary',
         'border-t-transparent'
       );
     });

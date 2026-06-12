@@ -44,20 +44,18 @@ describe('ProgressBar', () => {
 
   it('applies status-based colors', () => {
     const { rerender, container } = render(<ProgressBar value={50} status="paused" />);
-    // Finding the indicator using the color class
-    let indicator = container.querySelector('.bg-yellow-500');
+    let indicator = container.querySelector('.bg-warning');
     expect(indicator).toBeInTheDocument();
 
     rerender(<ProgressBar value={50} status="error" />);
-    indicator = container.querySelector('.bg-red-800');
+    indicator = container.querySelector('.bg-destructive');
     expect(indicator).toBeInTheDocument();
   });
 
-  it('interpolates color for normal status', () => {
+  it('uses primary token color for normal status', () => {
     const { container } = render(<ProgressBar value={50} status="normal" />);
-    const indicator = container.querySelector("div[style*='background-color']") as HTMLElement;
-    // 50% is Blue: rgb(37, 99, 235)
-    expect(indicator.style.backgroundColor).toContain('rgb(37, 99, 235)');
+    const indicator = container.querySelector('.bg-primary');
+    expect(indicator).toBeInTheDocument();
   });
 
   it('renders striped and animated by default', () => {

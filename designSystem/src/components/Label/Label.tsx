@@ -8,7 +8,7 @@ export const Label = React.memo(
       <label
         ref={ref}
         className={cn(
-          'text-ui font-medium leading-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70 peer-disabled:text-theme-disabled-text',
+          'text-ui font-medium leading-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70 peer-disabled:text-muted-foreground',
           className
         )}
         {...props}

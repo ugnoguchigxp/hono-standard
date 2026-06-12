@@ -106,14 +106,14 @@ describe('Checkbox', () => {
       expect(icon).toBeInTheDocument();
 
       // The icon should be Circle when unchecked
-      expect(icon?.parentElement).toHaveClass('text-theme-border');
+      expect(icon?.parentElement).toHaveClass('text-border');
     });
 
     it('applies checked styling to card variant when checked', () => {
       render(<Checkbox {...defaultProps} variant="card" checked={true} />);
 
       const label = screen.getByText('Test Checkbox').closest('label');
-      expect(label).toHaveClass('border-theme-success/50');
+      expect(label).toHaveClass('border-success/50');
 
       const icon = label?.querySelector('.flex-shrink-0');
       expect(icon).toHaveClass('text-success');
@@ -129,7 +129,7 @@ describe('Checkbox', () => {
       expect(label).toHaveClass('border-border', 'hover:bg-muted');
 
       const icon = label?.querySelector('.flex-shrink-0');
-      expect(icon).toHaveClass('text-theme-border');
+      expect(icon).toHaveClass('text-border');
 
       const text = screen.getByText('Test Checkbox');
       expect(text).toHaveClass('text-muted-foreground');

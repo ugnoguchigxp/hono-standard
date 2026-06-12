@@ -46,7 +46,7 @@ export const ScaleInput = React.memo(
     return (
       <div className={cn('flex flex-col gap-2', className)}>
         {label && <span className="text-sm font-medium text-muted-foreground">{label}</span>}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-theme-border scrollbar-track-transparent">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
           {range.map((num) => (
             <button
               key={num}
@@ -56,7 +56,7 @@ export const ScaleInput = React.memo(
               className={cn(
                 'w-[var(--ui-component-height)] h-[var(--ui-component-height)] rounded-full flex-shrink-0 flex items-center justify-center font-bold transition-all border',
                 value === num
-                  ? 'bg-primary text-primary-foreground border-theme-object-primary shadow-md scale-110'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-md scale-110'
                   : 'bg-card text-muted-foreground border-border hover:bg-muted',
                 disabled && 'opacity-50 cursor-not-allowed hover:bg-card hover:scale-100'
               )}

@@ -20,7 +20,7 @@ const buttonVariants = cva(
         // Semantic / Feedback Variants
         success: 'bg-success text-success-foreground shadow-sm hover:bg-success/90',
         warning: 'bg-warning text-warning-foreground shadow-sm hover:bg-warning/90',
-        info: 'bg-info text-info-text shadow-sm hover:bg-info/90',
+        info: 'bg-info text-info-foreground shadow-sm hover:bg-info/90',
 
         // Outline Variations
         'outline-success':

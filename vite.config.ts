@@ -24,6 +24,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@api': path.resolve(__dirname, './api'),
+      '@repo/design-system/styles': path.resolve(__dirname, './designSystem/src/styles/index.css'),
     },
   },
   server: {

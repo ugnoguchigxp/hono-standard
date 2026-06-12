@@ -48,6 +48,53 @@
   /* 20px */
   --ui-switch-thumb-translate: 1.25rem;
   /* 20px */
+
+  --panel-p-sm: 0.5rem;
+  --panel-p-md: 1rem;
+  --panel-p-lg: 1.5rem;
+  --stack-gap-sm: 0.5rem;
+  --stack-gap-md: 0.75rem;
+  --stack-gap-lg: 1rem;
+  --list-item-height: 2.5rem;
+
+  --z-backdrop: 40;
+  --z-modal: 50;
+  --z-portal: 60;
+  --z-tooltip: 70;
+
+  --ds-shadow-none: none;
+  --ds-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --ds-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --ds-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --ds-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --ds-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  --ds-shadow-top-sm: 0 -2px 4px -1px rgb(0 0 0 / 0.1);
+  --ds-shadow-top-right-sm: 2px -2px 4px -1px rgb(0 0 0 / 0.1);
+  --ds-shadow-right-sm: 2px 0 4px -1px rgb(0 0 0 / 0.1);
+  --ds-shadow-bottom-right-sm: 2px 2px 4px -1px rgb(0 0 0 / 0.1);
+  --ds-shadow-bottom-sm: 0 2px 4px -1px rgb(0 0 0 / 0.1);
+  --ds-shadow-bottom-left-sm: -2px 2px 4px -1px rgb(0 0 0 / 0.1);
+  --ds-shadow-left-sm: -2px 0 4px -1px rgb(0 0 0 / 0.1);
+  --ds-shadow-top-left-sm: -2px -2px 4px -1px rgb(0 0 0 / 0.1);
+
+  --ds-shadow-top-md: 0 -4px 8px -2px rgb(0 0 0 / 0.12);
+  --ds-shadow-top-right-md: 4px -4px 8px -2px rgb(0 0 0 / 0.12);
+  --ds-shadow-right-md: 4px 0 8px -2px rgb(0 0 0 / 0.12);
+  --ds-shadow-bottom-right-md: 4px 4px 8px -2px rgb(0 0 0 / 0.12);
+  --ds-shadow-bottom-md: 0 4px 8px -2px rgb(0 0 0 / 0.12);
+  --ds-shadow-bottom-left-md: -4px 4px 8px -2px rgb(0 0 0 / 0.12);
+  --ds-shadow-left-md: -4px 0 8px -2px rgb(0 0 0 / 0.12);
+  --ds-shadow-top-left-md: -4px -4px 8px -2px rgb(0 0 0 / 0.12);
+
+  --ds-shadow-top-lg: 0 -8px 16px -4px rgb(0 0 0 / 0.14);
+  --ds-shadow-top-right-lg: 8px -8px 16px -4px rgb(0 0 0 / 0.14);
+  --ds-shadow-right-lg: 8px 0 16px -4px rgb(0 0 0 / 0.14);
+  --ds-shadow-bottom-right-lg: 8px 8px 16px -4px rgb(0 0 0 / 0.14);
+  --ds-shadow-bottom-lg: 0 8px 16px -4px rgb(0 0 0 / 0.14);
+  --ds-shadow-bottom-left-lg: -8px 8px 16px -4px rgb(0 0 0 / 0.14);
+  --ds-shadow-left-lg: -8px 0 16px -4px rgb(0 0 0 / 0.14);
+  --ds-shadow-top-left-lg: -8px -8px 16px -4px rgb(0 0 0 / 0.14);
 }
 
 /* Density: Compact */
@@ -93,6 +140,13 @@
   /* 16px */
   --ui-switch-thumb-translate: 1rem;
   /* 16px */
+  --panel-p-sm: 0.375rem;
+  --panel-p-md: 0.75rem;
+  --panel-p-lg: 1rem;
+  --stack-gap-sm: 0.375rem;
+  --stack-gap-md: 0.5rem;
+  --stack-gap-lg: 0.75rem;
+  --list-item-height: 2rem;
 }
 
 /* Density: Spacious */
@@ -130,6 +184,13 @@
   /* 24px */
   --ui-switch-thumb-translate: 1.5rem;
   /* 24px */
+  --panel-p-sm: 0.75rem;
+  --panel-p-md: 1.25rem;
+  --panel-p-lg: 2rem;
+  --stack-gap-sm: 0.75rem;
+  --stack-gap-md: 1rem;
+  --stack-gap-lg: 1.5rem;
+  --list-item-height: 3.5rem;
 }
 
 /* Tablet Mode Overrides */
@@ -174,4 +235,11 @@
   /* 24px */
   --ui-switch-thumb-translate: 1.25rem;
   /* 20px */
+  --panel-p-sm: 0.5rem;
+  --panel-p-md: 1rem;
+  --panel-p-lg: 1.5rem;
+  --stack-gap-sm: 0.5rem;
+  --stack-gap-md: 0.75rem;
+  --stack-gap-lg: 1rem;
+  --list-item-height: 2.75rem;
 }
