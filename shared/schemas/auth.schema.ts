@@ -1,35 +1,28 @@
-import { z } from '@hono/zod-openapi';
-import sanitizeHtml from 'sanitize-html';
+import { z } from "zod";
 
-const sanitize = (val: string) =>
-  sanitizeHtml(val, {
-    allowedTags: [],
-    allowedAttributes: {},
-    disallowedTagsMode: 'discard',
-  });
+export const userRoleSchema = z.enum(["admin", "member"]);
+export type UserRole = z.infer<typeof userRoleSchema>;
 
-export const loginSchema = z
-  .object({
-    email: z.string().email().openapi({ example: 'user@example.com' }),
-    password: z.string().min(1).openapi({ example: 'password123' }),
-  })
-  .openapi('LoginInput');
+export const authSessionUserSchema = z.object({
+	id: z.string().uuid(),
+	email: z.string().email(),
+	displayName: z.string().min(1),
+	role: userRoleSchema,
+});
+export type AuthSessionUser = z.infer<typeof authSessionUserSchema>;
 
-export const registerSchema = z
-  .object({
-    email: z.string().email().openapi({ example: 'user@example.com' }),
-    password: z.string().min(8).openapi({ example: 'password123' }),
-    name: z.string().min(1).transform(sanitize).openapi({ example: 'John Doe' }),
-  })
-  .openapi('RegisterInput');
+export const loginSchema = z.object({
+	email: z.string().trim().email(),
+	password: z.string().min(1),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
 
 export const authResponseSchema = z.object({
-  user: z.object({
-    id: z.string(),
-    email: z.string(),
-  }),
+	user: authSessionUserSchema,
 });
+export type AuthResponse = z.infer<typeof authResponseSchema>;
 
-// Infer types
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
+export const logoutResponseSchema = z.object({
+	ok: z.literal(true),
+});
+export type LogoutResponse = z.infer<typeof logoutResponseSchema>;

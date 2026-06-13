@@ -1,179 +1,120 @@
-# Hono Standard テンプレート
+# Hono Standard
 
-Hono、Drizzle ORM、React、TanStack Router を活用した、モダンで堅牢、かつ型安全なフルスタック・モノリス ウェブアプリケーションのテンプレートです。
+[![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh/)
+[![Hono](https://img.shields.io/badge/Hono-%23E36022.svg?style=for-the-badge&logo=hono&logoColor=white)](https://hono.dev/)
+[![React](https://img.shields.io/badge/React-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://react.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-## 目次
-- [技術スタック](#技術スタック)
-- [クイックスタート](#クイックスタート)
-- [主要コマンド](#主要コマンド)
-- [主な機能](#主な機能)
-- [アーキテクチャ・プロジェクト構成](#アーキテクチャプロジェクト構成)
-- [テンプレート保守](#テンプレート保守)
-- [セキュリティ](#セキュリティ)
-- [ライセンス](#ライセンス)
+Hono backend と React + Vite frontend を同一 origin で動かす、最小構成の Web app template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
 
----
+## 構成
 
-## 技術スタック
+| Path | Role |
+| --- | --- |
+| `api/app/hono.ts` | Hono app composition。middleware、API route、静的配信、`AppType` を登録 |
+| `api/app/server.ts` | Bun server bootstrap |
+| `api/app/env.ts` | runtime env parser |
+| `api/config/appDefaults.ts` | 非シークレットの既定値 |
+| `api/db/schema.ts` | Drizzle schema |
+| `api/routes/auth.route.ts` | `/api/auth/*` route |
+| `api/routes/health.route.ts` | `/api/health` route |
+| `api/modules/auth/` | password hash、JWT、cookie、auth service |
+| `api/middleware/auth.ts` | protected API middleware |
+| `web/src/` | React frontend |
+| `shared/schemas/` | frontend/backend で共有する Zod schema と API object type |
+| `drizzle/` | SQL migrations |
+| `scripts/verify.ts` | typecheck / lint / format / test / build の検証 pipeline |
 
-### バックエンド
-- **コア**: [Hono](https://hono.dev/) (Bun runtime), TypeScript
-- **API ドキュメント**: [@hono/zod-openapi](https://github.com/honojs/middleware/tree/main/packages/zod-openapi) (Swagger UI 同梱)
-- **ミドルウェア**: CORS, Secure Headers, Timing, logger, rateLimiter, CSRF
+## 前提
 
-### データベース
-- **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
-- **DB**: SQLite / libSQL (`@libsql/client`)
+| Tool | 用途 |
+| --- | --- |
+| Bun | package manager、runtime、scripts |
+| Docker | local PostgreSQL を使う場合 |
+| PostgreSQL | auth user / refresh token storage |
 
-### フロントエンド
-- **フレームワーク**: React 19, Vite
-- **ルーティング**: [TanStack Router](https://tanstack.com/router)
-- **状態管理/データ取得**: [TanStack Query](https://tanstack.com/query)
-- **UI/スタイリング**: Tailwind CSS v4 + `@repo/design-system` (CSS変数テーミング、Pencil 同期)
+## セットアップ
 
-### テスト・品質管理
-- **ユニット/統合テスト**: [Vitest](https://vitest.dev/)
-- **E2E テスト**: [Playwright](https://playwright.dev/)
-- **静的解析・整形**: [Biome](https://biomejs.dev/)
+```bash
+bun install
+cp .env.example .env
+docker compose up -d db
+bun run db:migrate
+bun run auth:create-admin -- --email admin@example.com --name "Admin User"
+bun run dev
+```
 
----
+`auth:create-admin` は対話で password を読みます。自動化する場合は次のように標準入力から渡せます。
 
-## クイックスタート
+```bash
+printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.com --name "Admin User" --password-stdin
+```
 
-### 前提条件
-- Bun (v1.3+)
+開発サーバーは `http://localhost:5173` で起動します。Vite dev server が frontend を配信し、`/api/*` は Hono に渡されます。
 
-### セットアップ手順
+## 環境変数
 
-1. **依存関係のインストール**
-   ```bash
-   bun install
-   ```
+非シークレットの既定値は `api/config/appDefaults.ts` にあります。`.env.example` は local development 向けの値です。
 
-2. **環境変数の設定**
-   ```bash
-   cp .env.example .env
-   # .env 内の変数を環境に合わせて更新
-   ```
-   `AUTH_MODE` ごとの必須設定:
-   - `local`: OAuth設定は不要
-   - `oauth`: `APP_URL` と、`GOOGLE_*` または `GITHUB_*` のどちらか1組が必須
-   - `both`: `APP_URL` は必須（OAuthを使う場合は `GOOGLE_*` または `GITHUB_*` のどちらか1組を設定）
-   - `COOKIE_SAME_SITE=none` を使う場合は HTTPS (`APP_URL` が `https://...`) であることが必須
+| Variable | Required | Description | Default |
+| --- | --- | --- | --- |
+| `NODE_ENV` | no | `development` / `test` / `production` | `development` |
+| `DATABASE_URL` | no | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/hono_standard` |
+| `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
+| `APP_URL` | no | public origin。cookie secure 既定値と CORS に使う | `http://localhost:5173` |
+| `CORS_ORIGINS` | no | 追加許可 origin。カンマ区切り | `http://localhost:5173` |
+| `AUTH_COOKIE_SECURE` | no | auth cookie に `Secure` を付けるか | production/HTTPS では `true` |
+| `AUTH_COOKIE_SAME_SITE` | no | auth cookie SameSite | `lax` |
+| `SECURITY_HEADERS_MODE` | no | HTTPS 前提 header の有効化方針。`auto` / `http` / `https` | `auto` |
 
-   `VITE_ENABLE_MSW=true` を設定すると、開発時に MSW モックを有効化できます（デフォルトは `false`）。
-   リバースプロキシ配下（Nginx / Cloudflare など）で動かす場合は `TRUST_PROXY=true` を設定してください。
+`AUTH_COOKIE_SAME_SITE=none` を使う場合は、HTTPS の `APP_URL` または `AUTH_COOKIE_SECURE=true` が必要です。
 
-3. **データベースの初期化**
-   ```bash
-   bun run db:migrate # 既存マイグレーションを適用
-   bun run db:seed   # テストデータの投入
-   ```
+## Scripts
 
-4. **開発サーバーの起動**
-   ```bash
-   bun run dev
-   ```
+| Command | Purpose |
+| --- | --- |
+| `bun run dev` | Vite + Hono dev server |
+| `bun run start` | Bun server を直接起動 |
+| `bun run auth:create-admin -- --email <email> --name "<name>"` | admin user 作成 |
+| `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
+| `bun run db:generate` | Drizzle migration 生成 |
+| `bun run db:migrate:drizzle` | drizzle-kit migration。`DATABASE_URL` は process env または `.env` から読む |
+| `bun run typecheck` | TypeScript check |
+| `bun run lint` | Biome lint |
+| `bun run format` | Biome format write |
+| `bun run format:check` | Biome format check |
+| `bun run test` | Vitest |
+| `bun run build` | Vite production build |
+| `bun run verify` | typecheck、lint、format:check、test、build |
 
-アプリケーション、API、ドキュメントはすべて `http://localhost:5173` 経由でアクセス可能です。
+## API
 
----
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/health` | health check |
+| `POST` | `/api/auth/login` | email/password login。httpOnly cookie を設定 |
+| `POST` | `/api/auth/refresh` | refresh token rotation |
+| `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
+| `GET` | `/api/auth/me` | 現在の login user |
 
-## 主要コマンド
+`/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
 
-| コマンド | 説明 |
-|---|---|
-| `bun run dev` | 開発サーバーの起動 |
-| `bun run build` | プロダクションビルド (FE & BE) |
-| `bun run start` | Bun でコンパイル済みバックエンドを実行 |
-| `bun run test` | Vitest によるテスト実行 |
-| `bun run test:e2e` | Playwright による E2E テスト実行 |
-| `bun run test:e2e:smoke` | `@smoke` タグ付きE2Eのみ実行 |
-| `bun run test:e2e:regression` | `@regression` タグ付きE2Eのみ実行 |
-| `bun run test:coverage` | Vitest カバレッジレポート生成 |
-| `bun run lint` | Biome によるコードチェック |
-| `bun run typecheck` | TypeScript 型チェック |
-| `bun run verify` | typecheck / lint / format / test / build を静かな出力で一括実行 |
-| `bun run design-system:sync -- <repo-url> [ref]` | 指定した外部 design system repo から `designSystem/` を同期 |
-| `bun run design-system:storybook` | Design System の Storybook 起動 |
-| `bun run design-system:storybook:build` | Design System の Storybook ビルド |
-| `bun run db:generate` | マイグレーションSQLを生成 |
-| `bun run db:migrate` | マイグレーションを DB に適用 |
-| `bun run db:push` | 開発用途でスキーマを直接反映（本番非推奨） |
-| `bun run db:studio` | Drizzle Studio の起動 |
-| `bun run db:seed` | シードデータの投入 |
+API request / response の共有 schema は `shared/schemas/` に置きます。Backend route はその schema を `zValidator` で使い、frontend は `api/app/hono.ts` から export される `AppType` を `hono/client` に渡して API 型を共有します。
 
-### E2Eタグ運用
-- `@smoke`: 主要導線の高速確認用（PRごとに実行推奨）
-- `@regression`: 回帰確認用のフルスイート（定期実行/マージ前推奨）
+## Build / Runtime
 
-### マイグレーション運用（推奨）
-1. スキーマ変更後に `bun run db:generate` で SQL を生成
-2. 生成された `drizzle/migrations/*.sql` をレビューしてコミット
-3. ローカル・CI・本番で `bun run db:migrate` を実行して適用
-4. `bun run db:push` は試作や検証時のみ利用し、本番フローには使わない
+```bash
+bun run build
+NODE_ENV=production bun run start
+```
 
----
+production では `JWT_SECRET` を必ず強いランダム値に変更してください。未設定または dev default のままの場合、アプリは起動時に失敗します。HTTPS で公開する場合は `APP_URL=https://...` とし、必要に応じて `AUTH_COOKIE_SECURE=true`、`SECURITY_HEADERS_MODE=https` を明示します。
 
-## 主な機能
+## Template Notes
 
-- **型安全な API (Hono RPC)**: バックエンドの型定義をフロントエンドで共有。
-- **OpenAPI ドキュメント**: `/api/doc` (JSON) と `/api/ui` (Swagger UI) を自動生成。
-- **認証システム**: JWT (Access/Refresh) と OAuth 2.0 (Google/GitHub) に対応。
-  - `GET /api/auth/methods` で有効なログイン方式（local/OAuth provider）を取得可能。
-- **死活監視の分離**: liveness (`/api/health/live`) と readiness (`/api/health/ready`) を提供。
-- **パフォーマンスプロファイリング**: `Server-Timing` ヘッダーによる処理時間の可視化。
-
----
-
-## アーキテクチャ・プロジェクト構成
-
-本プロジェクトはフロントエンドとバックエンドを統合した「モジュラー・モノリス」構造を採用し、ドメインベースでコードを凝集させることでメンテナンス性を高めています。エンドツーエンドの型安全性を実現するため、Hono RPC と Zod スキーマを共有しています。
-
-### ディレクトリ構成
-
-- **`api/` (バックエンド)**
-  - `routes/`: Hono / OpenAPI のルーティング、リクエストバリデーション、レスポンスの返却。
-  - `services/`: 認証、ユーザー、トークン、OAuth などのビジネスロジック。
-  - `db/`, `middleware/`, `lib/`: DB接続、共通ミドルウェア、エラー、ログ、OpenAPI、Cookie、セキュリティ補助。
-  - 新しい大きめのドメインを追加する場合は、必要に応じて `api/modules/<domain>/` へ `routes / service / repository` を近接配置します。
-
-- **`src/` (フロントエンド)**
-  - `routes/`: TanStack Router によるファイルベースのルーティング。
-  - `lib/`: Hono RPC API client、認証 context、共通 utility。
-  - `mocks/`: MSW の開発用 mock。
-  - 画面が増えて `routes/` だけでは見通しが悪くなった場合は、`src/modules/<domain>/` に components / hooks / repositories / services を近接配置します。
-
-- **`shared/` (共有コード)**
-  - `schemas/`: Zod によるバリデーションスキーマ群。フロントエンドの入力検証と、バックエンドの引数検証で全く同じスキーマを再利用することで DRY な設計を実現。
-
-- **`drizzle/`**
-  - DBのマイグレーション設定およびシードデータ生成スクリプト。
-
----
-
-## テンプレート保守
-
-`hono-standard` を複数のテンプレート variant として保守する場合は、[docs/template-variant-management.md](docs/template-variant-management.md) を参照してください。
-
-この repo は NightWorkers などの外部ツールから必要時に clone して使う標準 starter として扱い、利用側 repo にテンプレート本体を vendoring しない方針です。SQLite、PostgreSQL、pgvector などの差分は `variant/*` branch で継続保守し、固定配布点は tag / snapshot で管理します。
-
----
-
-## セキュリティ
-
-### トークン管理
-JWT (Access/Refresh) は `httpOnly Cookie` に保存されます。
-- **メリット**: JavaScript から直接参照できないため、トークン窃取系XSSに強い構成です。
-- **補足**: CSRF対策として `csrf()` ミドルウェアを併用し、`Origin/Referer` を検証します。
-
-### セキュリティミドルウェア
-- **CSRF**: Hono 標準の `csrf()` による Origin/Referer チェック。
-- **セキュリティヘッダー**: `Secure Headers` による CSP、HSTS 等の設定（本番では `unsafe-inline` / `unsafe-eval` を無効化）。
-- **レート制限**: ブルートフォース攻撃を防ぐための `rateLimiter` (メモリベース) を全 API に適用。
-- **CORS**: ワイルドカード不許可の明示オリジン許可リスト方式を採用。
-
----
-
-## ライセンス
-MIT
+- この branch は RAG / pgvector / agentic search template ではありません。
+- 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
+- PostgreSQL は auth user と refresh token 保存に使います。
+- clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。

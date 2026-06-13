@@ -1,32 +1,25 @@
-import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    globals: true,
-    environment: 'node',
-    setupFiles: ['./tests/setup-env.ts'],
-    include: ['tests/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['tests/e2e/**'],
+    include: ['api/**/*.test.ts', 'web/**/*.test.ts', 'shared/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html', 'lcov'],
-      reportsDirectory: './coverage',
-      include: [
-        'api/lib/**/*.ts',
-        'api/middleware/**/*.ts',
-        'api/services/oauth/**/*.ts',
-        'api/services/token.service.ts',
-        'api/services/auth.service.ts',
-        'src/lib/utils.ts',
-        'shared/schemas/auth.schema.ts',
-        'shared/schemas/**/*.ts',
+      reporter: ['text', 'html'],
+      include: ['api/**/*.ts', 'shared/**/*.ts'],
+      exclude: [
+        'api/db/schema.ts',
+        'api/db/index.ts',
+        'api/app/server.ts',
+        'api/cli/migrate.ts',
+        'api/cli/auth-create-admin.ts',
       ],
-      exclude: ['**/*.d.ts', 'api/services/oauth/base.ts'],
-    },
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@api': path.resolve(__dirname, './api'),
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+      },
     },
   },
 });

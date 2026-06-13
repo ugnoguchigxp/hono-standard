@@ -1,67 +1,53 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+	boolean,
+	index,
+	pgTable,
+	text,
+	timestamp,
+	uniqueIndex,
+	uuid,
+} from "drizzle-orm/pg-core";
 
-const commonColumns = {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date()),
-};
-
-export const users = sqliteTable('users', {
-  ...commonColumns,
-  email: text('email').notNull().unique(),
-  passwordHash: text('password_hash'),
-  name: text('name').notNull(),
-  isActive: integer('is_active', { mode: 'boolean' }).default(true).notNull(),
-});
-
-export const refreshTokens = sqliteTable(
-  'refresh_tokens',
-  {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    token: text('token').notNull().unique(),
-    userId: text('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .$defaultFn(() => new Date()),
-  },
-  (table) => ({
-    userIdIdx: index('rt_user_id_idx').on(table.userId),
-  })
+export const users = pgTable(
+	"users",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		email: text("email").notNull().unique(),
+		passwordHash: text("password_hash").notNull(),
+		displayName: text("display_name").notNull(),
+		role: text("role").notNull().default("member"),
+		isActive: boolean("is_active").notNull().default(true),
+		lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => ({
+		emailIdx: uniqueIndex("users_email_idx").on(table.email),
+		roleIdx: index("users_role_idx").on(table.role),
+		isActiveIdx: index("users_is_active_idx").on(table.isActive),
+	}),
 );
 
-export const userExternalAccounts = sqliteTable(
-  'user_external_accounts',
-  {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    provider: text('provider').notNull(), // 'google', 'github'
-    externalId: text('external_id').notNull(),
-    email: text('email'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .$defaultFn(() => new Date()),
-  },
-  (table) => ({
-    providerExternalIdUniqueIdx: uniqueIndex('uex_provider_ext_uidx').on(
-      table.provider,
-      table.externalId
-    ),
-    userIdIdx: index('uex_user_id_idx').on(table.userId),
-  })
+export const refreshTokens = pgTable(
+	"refresh_tokens",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		token: text("token").notNull().unique(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => ({
+		tokenIdx: uniqueIndex("refresh_tokens_token_idx").on(table.token),
+		userIdIdx: index("refresh_tokens_user_id_idx").on(table.userId),
+		expiresAtIdx: index("refresh_tokens_expires_at_idx").on(table.expiresAt),
+	}),
 );
