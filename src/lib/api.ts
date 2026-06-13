@@ -38,9 +38,7 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promis
   const newInit: RequestInit = {
     ...init,
     credentials: 'include',
-    headers: {
-      ...init?.headers,
-    },
+    headers: new Headers(init?.headers),
   };
 
   let response = await fetch(input, newInit);

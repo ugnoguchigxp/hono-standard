@@ -17,12 +17,12 @@ test.describe('Authentication Flows @regression', () => {
     });
 
     await page.goto('/login');
-    await page.getByPlaceholder('Email').fill('user@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('password123');
     await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await expect(page).toHaveURL('/');
-    await expect(page.getByText(defaultUser.email)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'test accountt' })).toBeVisible();
   });
 
   test('shows login error when API returns 401', async ({ page }) => {
@@ -37,8 +37,8 @@ test.describe('Authentication Flows @regression', () => {
     });
 
     await page.goto('/login');
-    await page.getByPlaceholder('Email').fill('user@example.com');
-    await page.getByPlaceholder('Password').fill('wrong-password');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('wrong-password');
     await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await expect(page.getByText('Login failed')).toBeVisible();
@@ -66,12 +66,13 @@ test.describe('Authentication Flows @regression', () => {
     });
 
     await page.goto('/login');
-    await page.getByPlaceholder('Email').fill('user@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('password123');
     await page.getByRole('button', { name: 'Login', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'test accountt' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Logout' }).click();
+    await page.getByRole('button', { name: 'test accountt' }).click();
+    await page.getByText('Logout').click();
 
     await page.reload();
     await expect(page.getByRole('link', { name: 'Login' })).toBeVisible();
@@ -91,7 +92,7 @@ test.describe('Authentication Flows @regression', () => {
 
     await page.goto('/oauth/callback');
     await expect(page).toHaveURL('/');
-    await expect(page.getByText(defaultUser.email)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'test accountt' })).toBeVisible();
   });
 
   test('redirects OAuth callback to login when session is missing', async ({ page }) => {

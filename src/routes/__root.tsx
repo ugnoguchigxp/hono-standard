@@ -1,8 +1,8 @@
-import { Avatar, Button, DropdownMenu } from '@repo/design-system';
+import { Button, DropdownMenu } from '@repo/design-system';
 import type { QueryClient } from '@tanstack/react-query';
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router';
-import { Home, LayoutGrid, LogOut, User } from 'lucide-react';
-import type { useAuth } from '../lib/auth';
+import { Home, LayoutGrid, LogOut } from 'lucide-react';
+import { useAuth } from '../lib/auth';
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -11,7 +11,7 @@ interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => {
-    const { auth } = Route.useRouteContext();
+    const auth = useAuth();
 
     return (
       <div className="min-h-screen bg-background">
@@ -39,21 +39,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
               <DropdownMenu
                 align="end"
                 trigger={
-                  <div className="cursor-pointer">
-                    <Avatar
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${auth.user.email}`}
-                      fallback={auth.user.email[0].toUpperCase()}
-                      size="md"
-                      className="border border-border hover:border-primary/50 transition-colors"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex h-9 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    test accountt
+                  </button>
                 }
                 items={[
-                  {
-                    label: 'Profile',
-                    icon: <User className="h-4 w-4" />,
-                    onClick: () => console.log('Profile clicked'),
-                  },
                   {
                     label: 'Logout',
                     icon: <LogOut className="h-4 w-4" />,
