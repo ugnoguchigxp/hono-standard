@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-Hono backend と React + Vite frontend を同一 origin で動かす、最小構成の Web app template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
+Hono backend と React + Vite frontend を同一 origin で動かす、SSR overlay template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase、production SSR fallback を含みます。
 
 ## 構成
 
@@ -23,6 +23,8 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 | `api/modules/auth/` | password hash、JWT、cookie、auth service |
 | `api/middleware/auth.ts` | protected API middleware |
 | `web/src/` | React frontend |
+| `web/src/entry-client.tsx` | client hydration entry |
+| `web/src/entry-server.tsx` | SSR render entry |
 | `shared/schemas/` | frontend/backend で共有する Zod schema と API object type |
 | `drizzle/` | SQL migrations |
 | `scripts/verify.ts` | typecheck / lint / format / test / build の検証 pipeline |
@@ -87,6 +89,7 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `bun run format:check` | Biome format check |
 | `bun run test` | Vitest |
 | `bun run build` | Vite production build |
+| `bun run build:ssr` | SSR server bundle build |
 | `bun run verify` | typecheck、lint、format:check、test、build |
 
 ## API
@@ -114,7 +117,7 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 ## Template Notes
 
-- この branch は RAG / pgvector / agentic search template ではありません。
+- この branch は SSR overlay です。RAG / pgvector / agentic search template ではありません。
 - 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
 - PostgreSQL は auth user と refresh token 保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。
