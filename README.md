@@ -3,21 +3,22 @@
 [![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh/)
 [![Hono](https://img.shields.io/badge/Hono-%23E36022.svg?style=for-the-badge&logo=hono&logoColor=white)](https://hono.dev/)
 [![React](https://img.shields.io/badge/React-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://react.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020.svg?style=for-the-badge&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-Hono backend と React + Vite frontend を同一 origin で動かす、最小構成の Web app template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
+Hono backend と React + Vite frontend を同一 origin で動かす、Cloudflare Workers / D1 対応の Web app template です。Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
 
 ## 構成
 
 | Path | Role |
 | --- | --- |
 | `api/app/hono.ts` | Hono app composition。middleware、API route、静的配信、`AppType` を登録 |
+| `api/worker.ts` | Cloudflare Worker entry |
 | `api/app/server.ts` | Bun server bootstrap |
 | `api/app/env.ts` | runtime env parser |
 | `api/config/appDefaults.ts` | 非シークレットの既定値 |
-| `api/db/schema.ts` | Drizzle schema |
+| `api/db/schema.ts` | Drizzle D1/libSQL schema |
 | `api/routes/auth.route.ts` | `/api/auth/*` route |
 | `api/routes/health.route.ts` | `/api/health` route |
 | `api/modules/auth/` | password hash、JWT、cookie、auth service |
@@ -32,15 +33,13 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 | Tool | 用途 |
 | --- | --- |
 | Bun | package manager、runtime、scripts |
-| Docker | local PostgreSQL を使う場合 |
-| PostgreSQL | auth user / refresh token storage |
+| Cloudflare Workers / D1 | edge runtime and auth user / refresh token storage |
 
 ## セットアップ
 
 ```bash
 bun install
 cp .env.example .env
-docker compose up -d db
 bun run db:migrate
 bun run auth:create-admin -- --email admin@example.com --name "Admin User"
 bun run dev
@@ -61,7 +60,8 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | Variable | Required | Description | Default |
 | --- | --- | --- | --- |
 | `NODE_ENV` | no | `development` / `test` / `production` | `development` |
-| `DATABASE_URL` | no | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/hono_standard` |
+| `DATABASE_URL` | no | libSQL connection string | `file:sqlite.db` |
+| `DATABASE_AUTH_TOKEN` | no | local libSQL fallback token。file DB では空でよい | empty |
 | `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
 | `APP_URL` | no | public origin。cookie secure 既定値と CORS に使う | `http://localhost:5173` |
 | `CORS_ORIGINS` | no | 追加許可 origin。カンマ区切り | `http://localhost:5173` |
@@ -76,9 +76,12 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | Command | Purpose |
 | --- | --- |
 | `bun run dev` | Vite + Hono dev server |
+| `bun run dev:worker` | Cloudflare Worker dev server |
+| `bun run deploy` | Deploy Worker with Wrangler |
 | `bun run start` | Bun server を直接起動 |
 | `bun run auth:create-admin -- --email <email> --name "<name>"` | admin user 作成 |
-| `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
+| `bun run db:migrate` | `drizzle/*.sql` を local libSQL に順番に適用 |
+| `bun run db:migrate:d1` | Apply D1 migrations with Wrangler |
 | `bun run db:generate` | Drizzle migration 生成 |
 | `bun run db:migrate:drizzle` | drizzle-kit migration。`DATABASE_URL` は process env または `.env` から読む |
 | `bun run typecheck` | TypeScript check |
@@ -114,7 +117,7 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 ## Template Notes
 
-- この branch は RAG / pgvector / agentic search template ではありません。
+- この branch は Cloudflare Workers / D1 variant です。RAG / pgvector / agentic search template ではありません。
 - 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
-- PostgreSQL は auth user と refresh token 保存に使います。
+- Cloudflare D1 は auth user と refresh token 保存に使います。local Vite dev では libSQL file DB を fallback として使えます。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。

@@ -8,7 +8,7 @@ export function HomeView() {
 					with a React and Vite frontend on a single origin.
 				</p>
 				<p>
-					It includes PostgreSQL-backed authentication, httpOnly cookie
+					It includes Cloudflare D1-backed authentication, httpOnly cookie
 					sessions, typed routing, and a reusable component showcase without
 					forcing login on public screens.
 				</p>

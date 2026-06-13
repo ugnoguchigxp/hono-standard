@@ -14,10 +14,13 @@
 	"scripts": {
 		"dev": "bunx --bun vite",
 		"dev:vite": "vite",
+		"dev:worker": "wrangler dev",
+		"deploy": "wrangler deploy",
 		"start": "bun run api/app/server.ts",
 		"auth:create-admin": "bun run api/cli/auth-create-admin.ts",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "bun run api/cli/migrate.ts",
+		"db:migrate:d1": "wrangler d1 migrations apply hono-standard-d1 --local",
 		"db:migrate:drizzle": "drizzle-kit migrate",
 		"test": "vitest run",
 		"test:watch": "vitest",
@@ -38,6 +41,7 @@
 	],
 	"dependencies": {
 		"@hono/zod-validator": "0.8.0",
+		"@libsql/client": "0.17.3",
 		"@tanstack/react-query": "5.101.0",
 		"@tanstack/react-router": "1.170.15",
 		"@tanstack/react-table": "8.21.3",
@@ -45,7 +49,6 @@
 		"hono": "4.12.25",
 		"jose": "6.2.3",
 		"lucide-react": "1.18.0",
-		"pg": "8.21.0",
 		"react": "19.2.7",
 		"react-dom": "19.2.7",
 		"react-hook-form": "^7.79.0",
@@ -53,11 +56,11 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.0",
+		"@cloudflare/workers-types": "^4.20260613.1",
 		"@hono/vite-dev-server": "0.26.0",
 		"@tailwindcss/vite": "^4.3.1",
 		"@types/bun": "1.3.14",
 		"@types/node": "25.9.3",
-		"@types/pg": "8.20.0",
 		"@types/react": "19.2.17",
 		"@types/react-dom": "19.2.3",
 		"@vitejs/plugin-react": "6.0.2",
@@ -65,7 +68,8 @@
 		"tailwindcss": "^4.3.1",
 		"typescript": "5.9.3",
 		"vite": "8.0.16",
-		"vitest": "4.1.8"
+		"vitest": "4.1.8",
+		"wrangler": "4.99.0"
 	},
 	"overrides": {
 		"esbuild": "0.28.1",

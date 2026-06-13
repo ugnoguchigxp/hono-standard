@@ -1,0 +1,19 @@
+name = "hono-standard"
+main = "api/worker.ts"
+compatibility_date = "2026-06-13"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NODE_ENV = "production"
+APP_URL = "https://example.com"
+CORS_ORIGINS = "https://example.com"
+AUTH_COOKIE_SECURE = "true"
+AUTH_COOKIE_SAME_SITE = "lax"
+SECURITY_HEADERS_MODE = "https"
+JWT_SECRET = "replace-this-with-a-strong-secret-before-deploying"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hono-standard-d1"
+database_id = "replace-with-d1-database-id"
+migrations_dir = "drizzle"

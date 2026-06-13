@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import type * as schema from "../../db/schema";
 import type { AppEnv } from "../../app/env";
 import { AuthService } from "./auth.service";
@@ -46,7 +46,7 @@ describe("AuthService", () => {
 		};
 
 		authService = new AuthService(
-			mockDb as unknown as NodePgDatabase<typeof schema>,
+			mockDb as unknown as LibSQLDatabase<typeof schema>,
 			mockEnv,
 		);
 

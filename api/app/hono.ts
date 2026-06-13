@@ -28,7 +28,10 @@ declare global {
 
 async function createRuntime(): Promise<AppRuntime> {
 	const env = readAppEnv();
-	const dbConnection = createDbConnection(env.databaseUrl);
+	const dbConnection = createDbConnection(
+		env.databaseUrl,
+		env.databaseAuthToken,
+	);
 	const authService = new AuthService(dbConnection.db, env);
 	return { env, dbConnection, authService };
 }

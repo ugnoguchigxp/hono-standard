@@ -93,7 +93,7 @@ async function main() {
 		);
 	} finally {
 		if (db.ownsConnection) {
-			await db.pgClient.end();
+			db.client.close();
 		}
 	}
 }

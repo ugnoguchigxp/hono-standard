@@ -16,7 +16,7 @@ describe("readAppEnv", () => {
 
 	it("accepts database and auth runtime overrides", () => {
 		const env = readAppEnv({
-			DATABASE_URL: "postgres://example",
+			DATABASE_URL: "file:example.db",
 			JWT_SECRET: "x".repeat(32),
 			APP_URL: "https://showcase.example.com",
 			CORS_ORIGINS: "https://showcase.example.com,http://localhost:5173",
@@ -25,7 +25,7 @@ describe("readAppEnv", () => {
 			SECURITY_HEADERS_MODE: "https",
 		});
 
-		expect(env.databaseUrl).toBe("postgres://example");
+		expect(env.databaseUrl).toBe("file:example.db");
 		expect(env.jwtSecret).toBe("x".repeat(32));
 		expect(env.appUrl).toBe("https://showcase.example.com");
 		expect(env.corsOrigins).toEqual([

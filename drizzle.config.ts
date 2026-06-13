@@ -28,8 +28,9 @@ const databaseUrl =
 export default {
 	schema: "./api/db/schema.ts",
 	out: "./drizzle",
-	dialect: "postgresql",
+	dialect: "turso",
 	dbCredentials: {
 		url: databaseUrl,
+		authToken: process.env.DATABASE_AUTH_TOKEN,
 	},
 } satisfies Config;

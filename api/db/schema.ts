@@ -1,28 +1,29 @@
+import { randomUUID } from "node:crypto";
 import {
-	boolean,
 	index,
-	pgTable,
+	integer,
+	sqliteTable,
 	text,
-	timestamp,
 	uniqueIndex,
-	uuid,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
 
-export const users = pgTable(
+export const users = sqliteTable(
 	"users",
 	{
-		id: uuid("id").defaultRandom().primaryKey(),
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => randomUUID()),
 		email: text("email").notNull().unique(),
 		passwordHash: text("password_hash").notNull(),
 		displayName: text("display_name").notNull(),
 		role: text("role").notNull().default("member"),
-		isActive: boolean("is_active").notNull().default(true),
-		lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.defaultNow()
+		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+		lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
 			.notNull(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.defaultNow()
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
 			.notNull(),
 	},
 	(table) => ({
@@ -32,17 +33,19 @@ export const users = pgTable(
 	}),
 );
 
-export const refreshTokens = pgTable(
+export const refreshTokens = sqliteTable(
 	"refresh_tokens",
 	{
-		id: uuid("id").defaultRandom().primaryKey(),
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => randomUUID()),
 		token: text("token").notNull().unique(),
-		userId: uuid("user_id")
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.defaultNow()
+		expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
 			.notNull(),
 	},
 	(table) => ({
