@@ -10,7 +10,9 @@ import {
 	Settings,
 	Users,
 	LogOut,
+	Grid2X2,
 } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
 	type AuthUser,
@@ -32,8 +34,13 @@ import {
 	KnowledgeNavigationProvider,
 } from "./domains/knowledge/knowledge-domain";
 import { SearchDomainSection } from "./domains/search/search-domain";
+import { defaultShowcaseTableSearch } from "./showcase-table-search";
 
-type TabId = "knowledge" | "chat" | "search" | "settings" | "admin";
+export type AppViewId = "knowledge" | "chat" | "search" | "settings" | "admin";
+
+type AppProps = {
+	view: AppViewId;
+};
 
 type AppHealth = {
 	status: string;
@@ -51,8 +58,8 @@ const isUnauthorizedError = (error: unknown): boolean =>
 	error instanceof Error &&
 	(error.message === "Unauthorized" || error.message.includes("401"));
 
-export function App() {
-	const [tab, setTab] = useState<TabId>("chat");
+export function App({ view }: AppProps) {
+	const navigate = useNavigate();
 	const [busy, setBusy] = useState(false);
 	const [errorText, setErrorText] = useState<string | null>(null);
 	const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -71,16 +78,21 @@ export function App() {
 	const [systemContextSaving, setSystemContextSaving] = useState(false);
 
 	const tabItems = useMemo<
-		Array<{ id: TabId; label: string; icon: typeof BookOpen }>
+		Array<{ id: AppViewId; label: string; icon: typeof BookOpen; to: string }>
 	>(() => {
-		const items: Array<{ id: TabId; label: string; icon: typeof BookOpen }> = [
-			{ id: "knowledge", label: "Knowledge", icon: BookOpen },
-			{ id: "chat", label: "Chat", icon: Bot },
-			{ id: "search", label: "Search", icon: Search },
-			{ id: "settings", label: "Settings", icon: Settings },
+		const items: Array<{
+			id: AppViewId;
+			label: string;
+			icon: typeof BookOpen;
+			to: string;
+		}> = [
+			{ id: "knowledge", label: "Knowledge", icon: BookOpen, to: "/knowledge" },
+			{ id: "chat", label: "Chat", icon: Bot, to: "/chat" },
+			{ id: "search", label: "Search", icon: Search, to: "/search" },
+			{ id: "settings", label: "Settings", icon: Settings, to: "/settings" },
 		];
 		if (authUser?.role === "admin") {
-			items.push({ id: "admin", label: "Admin", icon: Users });
+			items.push({ id: "admin", label: "Admin", icon: Users, to: "/admin" });
 		}
 		return items;
 	}, [authUser?.role]);
@@ -131,17 +143,16 @@ export function App() {
 	}, []);
 
 	useEffect(() => {
-		if (tab === "admin" && authUser?.role !== "admin") {
-			setTab("settings");
+		if (view === "admin" && authUser?.role !== "admin") {
+			void navigate({ to: "/settings", replace: true });
 		}
-	}, [tab, authUser?.role]);
+	}, [authUser?.role, navigate, view]);
 
 	useEffect(() => {
 		const onUnauthorized = () => {
 			setAuthUser(null);
 			setSystemContextText("");
 			setSystemContextUpdatedAt(null);
-			setTab("chat");
 			setErrorText("Session expired. Please login again.");
 		};
 		window.addEventListener(UNAUTHORIZED_EVENT_NAME, onUnauthorized);
@@ -192,7 +203,7 @@ export function App() {
 			setAuthUser(null);
 			setSystemContextText("");
 			setSystemContextUpdatedAt(null);
-			setTab("chat");
+			await navigate({ to: "/chat" });
 		});
 	};
 
@@ -225,17 +236,24 @@ export function App() {
 							{tabItems.map((item) => {
 								const Icon = item.icon;
 								return (
-									<button
+									<Link
 										key={item.id}
-										type="button"
-										className={tab === item.id ? "tab active" : "tab"}
-										onClick={() => setTab(item.id)}
+										className={view === item.id ? "tab active" : "tab"}
+										to={item.to}
 									>
 										<Icon className="icon" />
 										<span>{item.label}</span>
-									</button>
+									</Link>
 								);
 							})}
+							<Link
+								className="tab"
+								to="/showcase"
+								search={defaultShowcaseTableSearch}
+							>
+								<Grid2X2 className="icon" />
+								<span>Showcase</span>
+							</Link>
 						</nav>
 						<div className="auth-chip">
 							<Shield className="icon" />
@@ -274,23 +292,23 @@ export function App() {
 
 			{authUser ? (
 				<KnowledgeNavigationProvider
-					onOpenKnowledge={() => setTab("knowledge")}
+					onOpenKnowledge={() => void navigate({ to: "/knowledge" })}
 				>
-					<KnowledgeDomainSection active={tab === "knowledge"} />
+					<KnowledgeDomainSection active={view === "knowledge"} />
 					<ChatDomainSection
-						active={tab === "chat"}
+						active={view === "chat"}
 						busy={busy}
 						runWithBusy={withBusy}
 						availableCategories={availableCategories}
 						setErrorText={setErrorText}
 					/>
 					<SearchDomainSection
-						active={tab === "search"}
+						active={view === "search"}
 						busy={busy}
 						runWithBusy={withBusy}
 						availableCategories={availableCategories}
 					/>
-					{tab === "settings" ? (
+					{view === "settings" ? (
 						<main className="layout columns-2">
 							<section className="panel">
 								<div className="panel-header">
@@ -357,7 +375,7 @@ export function App() {
 							</section>
 						</main>
 					) : null}
-					{authUser.role === "admin" && tab === "admin" ? (
+					{authUser.role === "admin" && view === "admin" ? (
 						<AdminUserManagementPanel
 							busy={busy}
 							runWithBusy={withBusy}
