@@ -8,11 +8,11 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: ['src/**/*.ts'],
       exclude: [
-        'src/index.ts',
         'src/db/schema.ts',
         'src/db/index.ts',
-        'src/repositories/**/*.ts',
-        'src/providers/types.ts',
+        'src/app/server.ts',
+        'src/cli/migrate.ts',
+        'src/cli/auth-create-admin.ts',
       ],
       thresholds: {
         lines: 80,

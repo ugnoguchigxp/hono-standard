@@ -16,6 +16,14 @@ const secretKey = (jwtSecret: string): Uint8Array =>
 
 type JwtCorePayload = Omit<JwtPayload, "type">;
 
+async function verifyJwtPayload(token: string, env: AppEnv) {
+	try {
+		return await jwtVerify(token, secretKey(env.jwtSecret));
+	} catch {
+		throw new HttpError(401, "Invalid token.");
+	}
+}
+
 export async function generateAccessToken(
 	payload: JwtCorePayload,
 	env: AppEnv,
@@ -58,11 +66,15 @@ export async function verifyAccessToken(
 	token: string,
 	env: AppEnv,
 ): Promise<JwtPayload> {
-	const verified = await jwtVerify(token, secretKey(env.jwtSecret));
+	const verified = await verifyJwtPayload(token, env);
 	if (verified.payload.type !== "access") {
-		throw new Error("Invalid access token type.");
+		throw new HttpError(401, "Invalid token.");
 	}
-	return jwtPayloadSchema.parse(verified.payload);
+	const parsed = jwtPayloadSchema.safeParse(verified.payload);
+	if (!parsed.success) {
+		throw new HttpError(401, "Invalid token.");
+	}
+	return parsed.data;
 }
 
 export async function consumeRefreshToken(
@@ -86,11 +98,15 @@ export async function consumeRefreshToken(
 		throw new HttpError(401, "Refresh token expired.");
 	}
 
-	const verified = await jwtVerify(token, secretKey(env.jwtSecret));
+	const verified = await verifyJwtPayload(token, env);
 	if (verified.payload.type !== "refresh") {
 		throw new HttpError(401, "Invalid refresh token.");
 	}
-	const payload = jwtPayloadSchema.parse(verified.payload);
+	const parsed = jwtPayloadSchema.safeParse(verified.payload);
+	if (!parsed.success) {
+		throw new HttpError(401, "Invalid refresh token.");
+	}
+	const payload = parsed.data;
 	if (payload.userId !== deleted.userId) {
 		throw new HttpError(401, "Invalid refresh token.");
 	}
@@ -104,11 +120,4 @@ export async function revokeRefreshToken(
 	await db
 		.delete(refreshTokens)
 		.where(eq(refreshTokens.token, hashToken(token)));
-}
-
-export async function revokeAllRefreshTokensForUser(
-	userId: string,
-	db: NodePgDatabase<typeof schema>,
-): Promise<void> {
-	await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
 }

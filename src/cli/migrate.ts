@@ -8,7 +8,7 @@ type MigrationRecord = {
 	applied_at: Date;
 };
 
-const MIGRATIONS_TABLE = "hono_standard_rag_schema_migrations";
+const MIGRATIONS_TABLE = "hono_standard_schema_migrations";
 
 async function listSqlMigrations(dir: string): Promise<string[]> {
 	const entries = await readdir(dir, { withFileTypes: true });

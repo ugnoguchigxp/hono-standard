@@ -51,7 +51,7 @@ export function createAuthRoute(deps: AuthRouteDeps) {
 		.get("/me", async (c) => {
 			const authUser = getAuthContextUser(c);
 			const user = await deps.authService.findUserById(authUser.userId);
-			if (!user || !user.isActive) {
+			if (!user?.isActive) {
 				throw new HttpError(401, "Unauthorized");
 			}
 			return c.json({

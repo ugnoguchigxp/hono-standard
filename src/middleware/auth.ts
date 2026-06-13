@@ -37,7 +37,7 @@ export const requireAuth = (deps: AuthMiddlewareDeps) =>
 			throw unauthorized;
 		});
 		const user = await deps.authService.findUserById(payload.userId);
-		if (!user || !user.isActive) {
+		if (!user?.isActive) {
 			throw unauthorized;
 		}
 
@@ -46,16 +46,5 @@ export const requireAuth = (deps: AuthMiddlewareDeps) =>
 			email: user.email,
 			role: user.role,
 		});
-		await next();
-	});
-
-export const requireAdmin = () =>
-	createMiddleware(async (c, next) => {
-		const authUser = c.get("authUser") as
-			| { userId: string; email: string; role: "admin" | "member" }
-			| undefined;
-		if (!authUser || authUser.role !== "admin") {
-			throw new HttpError(403, "Forbidden");
-		}
 		await next();
 	});

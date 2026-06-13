@@ -1,10 +1,15 @@
 import { ArrowRight, AtSign, Database, KeyRound, Shield } from "lucide-react";
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+
+type LoginFormValues = {
+	email: string;
+	password: string;
+};
 
 type LoginDomainSectionProps = {
 	active: boolean;
 	busy: boolean;
-	onLogin: (params: { email: string; password: string }) => Promise<boolean>;
+	onLogin: (params: LoginFormValues) => Promise<boolean>;
 };
 
 export const LoginDomainSection = ({
@@ -12,18 +17,25 @@ export const LoginDomainSection = ({
 	busy,
 	onLogin,
 }: LoginDomainSectionProps) => {
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
+	const {
+		register,
+		handleSubmit,
+		resetField,
+		formState: { isSubmitting },
+	} = useForm<LoginFormValues>({
+		defaultValues: {
+			email: "",
+			password: "",
+		},
+	});
 
-	const handleSubmit = async () => {
-		const nextEmail = email.trim();
-		if (!nextEmail || !password) return;
+	const submitLogin = async (values: LoginFormValues) => {
 		const ok = await onLogin({
-			email: nextEmail,
-			password,
+			email: values.email.trim(),
+			password: values.password,
 		});
 		if (ok) {
-			setPassword("");
+			resetField("password");
 		}
 	};
 
@@ -38,23 +50,22 @@ export const LoginDomainSection = ({
 							<Database className="icon" />
 						</div>
 						<div>
-							<h1>Hono RAG</h1>
+							<h1>Hono Standard</h1>
 							<p>ログイン</p>
 						</div>
 					</div>
 					<div className="auth-accent-line" />
 				</div>
-				<div className="auth-form">
+				<form className="auth-form" onSubmit={handleSubmit(submitLogin)}>
 					<label htmlFor="login-email">Email</label>
 					<div className="auth-input-wrap">
 						<AtSign className="icon" />
 						<input
 							id="login-email"
 							type="email"
-							value={email}
-							onChange={(event) => setEmail(event.target.value)}
 							placeholder="admin@example.com"
 							autoComplete="username"
+							{...register("email", { required: true })}
 						/>
 					</div>
 					<label htmlFor="login-password">Password</label>
@@ -63,29 +74,21 @@ export const LoginDomainSection = ({
 						<input
 							id="login-password"
 							type="password"
-							value={password}
-							onChange={(event) => setPassword(event.target.value)}
 							placeholder="********"
 							autoComplete="current-password"
-							onKeyDown={(event) => {
-								if (event.key === "Enter") {
-									event.preventDefault();
-									void handleSubmit();
-								}
-							}}
+							{...register("password", { required: true })}
 						/>
 					</div>
 					<button
-						type="button"
+						type="submit"
 						className="auth-submit"
-						onClick={() => void handleSubmit()}
-						disabled={busy}
+						disabled={busy || isSubmitting}
 					>
 						<Shield className="icon" />
 						<span>ログイン</span>
 						<ArrowRight className="icon" />
 					</button>
-				</div>
+				</form>
 			</section>
 		</main>
 	);

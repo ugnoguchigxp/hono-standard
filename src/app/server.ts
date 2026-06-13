@@ -10,7 +10,7 @@ const server = Bun.serve({
 });
 
 console.log(
-	`RAG template server listening on http://${env.host}:${server.port}`,
+	`Hono Standard server listening on http://${env.host}:${server.port}`,
 );
 
 const shutdown = async (signal: string) => {

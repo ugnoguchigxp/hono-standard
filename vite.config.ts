@@ -32,10 +32,6 @@ export default defineConfig(({ mode }) => {
 			host: APP_CONFIG_DEFAULTS.host,
 			port: APP_CONFIG_DEFAULTS.port,
 		},
-		optimizeDeps: {
-			include: ["dayjs"],
-			exclude: ["markdown-wysiwyg-editor"],
-		},
 		build: {
 			outDir: "../dist-web",
 			emptyOutDir: true,

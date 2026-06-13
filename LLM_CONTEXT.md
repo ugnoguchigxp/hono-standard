@@ -1,74 +1,71 @@
-# LLM Context: Hono Standard RAG
+# LLM Context: Hono Standard
 
-この文書は、`variant/rag` をテンプレートとして clone した直後に、広い構造確認をせず作業の入口を決めるための圧縮コンテキストです。
-
-README は人間向けの説明です。通常の実装作業では、この文書で作業領域を絞ってから必要なファイルだけを読むと十分です。
+この文書は、`hono-standard` を clone した直後に作業入口を決めるための圧縮コンテキストです。現行 branch は minimal auth/showcase template です。RAG、pgvector、agentic search、wiki ingestion は含みません。
 
 ## Repository Snapshot
 
-- Bun + Hono backend と React + Vite frontend を持つ RAG application template。
+- Bun + Hono backend と React + Vite frontend を同一 origin で動かす template。
 - DB は PostgreSQL。Drizzle schema は `src/db/schema.ts`、migration は `drizzle/`。
 - Backend app composition は `src/app/hono.ts`、server bootstrap は `src/app/server.ts`。
-- Frontend entry は `web/src/App.tsx`、API client は `web/src/api.ts`。
-- RAG core は `src/core/`、retrieval は `src/modules/rag/`、agentic search は `src/modules/agentic-search/`。
-- Auth は admin/user login 前提。ログイン UI は `web/src/domains/auth/login-domain.tsx`。
-- Wiki/Markdown source handling は `src/modules/sources/` と `wiki-knowledge/`。
-- Package manager / runtime は Bun。dev server は Bun runtime で Vite を起動する。
+- Frontend entry は `web/src/App.tsx`、router は `web/src/router.tsx`、API client は `web/src/api.ts`。
+- Auth 実装は `src/modules/auth/`、route は `src/routes/auth.route.ts`、login UI は `web/src/domains/auth/login-domain.tsx`。
+- Home と Showcase は未ログインでも表示する。ログイン状態がある場合だけ header に user chip と logout button を表示する。
+- Package manager / runtime は Bun。dev server は `bunx --bun vite` で起動する。
 
 ## Top-Level Map
 
 | Path | Role |
 | --- | --- |
-| `src/app/hono.ts` | Hono app composition, middleware, route mounting |
+| `src/app/hono.ts` | Hono middleware、API route、static fallback |
 | `src/app/server.ts` | Bun server bootstrap |
-| `src/config/` | Environment defaults and parsing |
+| `src/app/env.ts` | environment parsing and defaults |
+| `src/config/appDefaults.ts` | non-secret app defaults |
 | `src/db/` | PostgreSQL connection and Drizzle schema |
-| `src/routes/` | HTTP API route modules |
-| `src/modules/auth/` | Auth service, cookies, tokens, password hashing |
-| `src/modules/rag/` | Retrieval and search evidence logic |
-| `src/modules/agentic-search/` | Agentic search runner, tools, LLM adapters |
-| `src/modules/sources/` | Markdown/wiki source import, blob sync, content repo |
-| `web/src/App.tsx` | React app shell and authenticated workspace routing |
-| `web/src/api.ts` | Browser API client, auth refresh, unauthorized event handling |
-| `web/src/domains/auth/` | Login UI |
-| `web/src/domains/chat/` | Chat workspace UI |
-| `web/src/domains/knowledge/` | Knowledge workspace UI |
-| `web/src/domains/search/` | Search UI |
-| `drizzle/` | PostgreSQL migrations |
-| `scripts/verify.ts` | Variant verification pipeline |
+| `src/routes/auth.route.ts` | `/api/auth/*` route module |
+| `src/routes/health.route.ts` | health route |
+| `src/modules/auth/` | Auth service、JWT、cookies、password hashing |
+| `src/middleware/auth.ts` | access-token auth middleware |
+| `web/src/App.tsx` | React Query and Router providers |
+| `web/src/router.tsx` | TanStack Router tree |
+| `web/src/api.ts` | browser API client and auth refresh handling |
+| `web/src/auth-context.tsx` | frontend auth state |
+| `web/src/routes/` | route definitions |
+| `web/src/views/` | Home/Login/Showcase views |
+| `web/src/showcase-*` | showcase state and URL search helpers |
+| `drizzle/` | SQL migrations |
+| `scripts/verify.ts` | verification pipeline |
 
 ## Task Routing
 
 | Task | Start here | Usually also read | Defer unless touched |
 | --- | --- | --- | --- |
-| Change auth/login | `src/routes/auth.route.ts`, `src/modules/auth/`, `web/src/domains/auth/login-domain.tsx`, `web/src/api.ts` | auth tests | RAG retrieval modules |
-| Change RAG retrieval | `src/modules/rag/`, `src/repositories/RagRepository.ts` | `src/core/RagEngine.ts`, search tests | admin UI |
-| Change agentic search | `src/modules/agentic-search/` | provider adapter tests, tool registry | auth UI |
-| Change chat | `src/routes/chat.route.ts`, `src/modules/chat/`, `web/src/domains/chat/` | artifacts module | source import |
-| Change wiki/markdown import | `src/modules/sources/`, `src/cli/import-markdown.ts`, `src/cli/wiki-*` | `wiki-knowledge/` sample files | login UI |
-| Change admin users | `src/routes/admin-users.route.ts`, `web/src/admin-user-management.tsx` | auth service | RAG retrieval |
-| Change env/config | `src/config/readEnv.ts`, `src/config/appDefaults.ts`, `.env.example` | affected route/service tests | frontend domains not using it |
-| Change build/dev tooling | `package.json`, `vite.config.ts`, `tsup.config.ts`, `vitest.config.ts` | failing config-specific tests | app features |
+| Change auth API | `src/routes/auth.route.ts`, `src/modules/auth/`, `src/middleware/auth.ts` | `web/src/api.ts`, `web/src/auth-context.tsx` | showcase UI |
+| Change login UI | `web/src/views/login-view.tsx`, `web/src/domains/auth/login-domain.tsx` | `web/src/auth-context.tsx`, `web/src/api.ts` | DB schema |
+| Change app shell/routing | `web/src/routes/root-route.tsx`, `web/src/router.tsx` | `web/src/App.tsx`, affected view | auth service internals |
+| Change showcase UI | `web/src/views/showcase-view.tsx`, `web/src/showcase-settings-context.tsx`, `web/src/showcase-table-search.ts` | `web/src/styles.css` | backend auth |
+| Change env/config | `src/app/env.ts`, `src/config/appDefaults.ts`, `.env.example` | `docker-compose.yml`, `drizzle.config.ts` | frontend views |
+| Change DB schema/migration | `src/db/schema.ts`, `drizzle/`, `src/cli/migrate.ts` | `src/modules/auth/auth.service.ts`, `src/modules/auth/token.service.ts` | showcase UI |
+| Change build/dev tooling | `package.json`, `vite.config.ts`, `vitest.config.ts`, `scripts/verify.ts` | failing config-specific output | feature code |
 
 ## Implementation Contracts
 
-- Do not treat this branch as the minimal SQLite starter. This is the RAG app template.
-- PostgreSQL is required for normal RAG operation; keep DB changes aligned with `src/db/schema.ts` and `drizzle/`.
-- API unauthorized handling is centralized in `web/src/api.ts`; initial `/api/auth/me` checks should not show session-expired UI.
-- Auth cookies and tokens live under `src/modules/auth/`; frontend auth state lives in `web/src/App.tsx`.
-- Agentic search tools must stay registered through `src/modules/agentic-search/tools/registry.ts`.
-- Fetch-heavy LLM behavior should be guided through indexed wiki/search tools before broad fetches.
-- Keep provider-specific secrets in env only; do not hard-code OpenAI/Azure/Web Search credentials.
+- Keep backend routes on Hono; do not introduce a parallel API framework.
+- Keep `/api/*` on Hono and non-API paths on Vite/static frontend.
+- `web/src/api.ts` owns browser fetch behavior, credential inclusion, refresh retry, and unauthorized events.
+- `/api/auth/me` is protected by `requireAuth`; public pages should not require login by default.
+- Auth cookies and tokens live under `src/modules/auth/`.
+- DB defaults, Docker compose DB name, `.env.example`, and Drizzle config must agree.
+- `JWT_SECRET` is optional only for local development; production must fail closed when it is missing or still set to the dev default.
+- `drizzle.config.ts` should resolve `DATABASE_URL` from process env first, then local `.env`, then app defaults.
+- Do not reintroduce RAG, pgvector, wiki, provider, or agentic-search docs unless the implementation is restored in code.
 
 ## Verification Matrix
 
 | Change type | Minimum useful verification |
 | --- | --- |
-| Auth/login | targeted auth tests plus browser login check |
-| RAG retrieval | `src/modules/rag/*.test.ts` and search evidence tests |
-| Agentic search | `src/modules/agentic-search/*.test.ts` and tool tests |
-| Markdown/wiki import | source module tests plus import CLI smoke if data changes |
-| Frontend domain UI | browser smoke for the affected workflow |
+| Auth/backend | `bun run typecheck` and targeted Vitest when tests are touched |
+| Frontend UI | `bun run typecheck` and `bun run build` |
+| Env/DB/docs | `bun run typecheck`, `bun run lint`, `bun run format:check` |
 | Broad template change | `bun run verify` |
 
 ## Commands
@@ -76,28 +73,19 @@ README は人間向けの説明です。通常の実装作業では、この文�
 | Command | Purpose |
 | --- | --- |
 | `bun install` | Install dependencies |
-| `bun run dev` | Start Vite + Hono dev server with Bun runtime |
+| `bun run dev` | Start Vite + Hono dev server |
+| `docker compose up -d db` | Start local PostgreSQL |
+| `bun run db:migrate` | Apply SQL migrations |
+| `bun run auth:create-admin -- --email <email> --name <name>` | Create admin user |
 | `bun run typecheck` | TypeScript check |
-| `bun run test` | Vitest test suite |
-| `bun run build` | Server and web build |
-| `bun run verify` | Variant verification pipeline |
-| `bun run db:migrate` | Apply PostgreSQL migrations |
-| `bun run auth:create-admin -- --email <email>` | Create admin user |
-| `bun run db:seed:users -- <file>` | Seed users from JSON |
-
-## Expensive Areas
-
-- `src/modules/agentic-search/**`: read when changing LLM/tool behavior.
-- `src/modules/sources/wiki/**`: read when changing wiki storage, indexing, or markdown source behavior.
-- `wiki-knowledge/**`: sample corpus; inspect only when source data or retrieval examples matter.
-- `web/src/knowledge-workspace.tsx`: large UI surface; read only for knowledge workspace changes.
-- `drizzle/**`: read for DB schema/migration changes.
+| `bun run test` | Vitest |
+| `bun run build` | Vite production build |
+| `bun run verify` | Full local verification pipeline |
 
 ## Clone Adaptation Checklist
 
-- Configure `DATABASE_URL` for PostgreSQL.
-- Configure `JWT_SECRET`, `APP_URL`, and `CORS_ORIGINS`.
-- Create an admin user before expecting UI login.
-- Configure Azure OpenAI or OpenAI provider env before running embedding/agentic workflows.
-- Decide whether wiki storage is local or Azure Blob.
-- Replace or remove sample `wiki-knowledge/` content.
+- Set `DATABASE_URL` if not using the default local compose DB.
+- Set a production-grade `JWT_SECRET`.
+- Set `APP_URL`, `CORS_ORIGINS`, cookie secure mode, and security headers for the deployment protocol.
+- Create an admin user before expecting login to succeed.
+- Rename package metadata and README copy for the target app.

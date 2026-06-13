@@ -15,7 +15,7 @@
 - 継続保守する差分は branch で管理し、固定スナップショットは tag と archive で残す。
 - `main` は最小共通の標準 baseline とし、DB や deploy の強い前提を持ちすぎない。
 - DB、auth、deploy、AI/RAG などの大きな前提差分は `variant/*` branch に分離する。
-- SSG、SSR、認証追加、Storybook 強化など、既存 variant に重ねられる小さめの差分はまず `overlay/*` branch または patch として管理する。
+- SSG、SSR、認証追加など、既存 variant に重ねられる小さめの差分はまず `overlay/*` branch または patch として管理する。
 - 既存プロダクト向けの実験 branch とテンプレート variant branch を混ぜない。
 
 ## Branch 構成
@@ -24,7 +24,7 @@
 
 | Branch | 用途 |
 | --- | --- |
-| `main` | 共通 baseline。Hono + React + Vite + Tailwind CSS + `@repo/design-system` + TanStack + Drizzle の標準構成。 |
+| `main` | 共通 baseline。Hono + React + Vite + Tailwind CSS + design tokens + Drizzle の最小構成。 |
 | `variant/sqlite` | local-first、desktop、prototype、小規模 single-user 向け。SQLite/libSQL を既定にする。 |
 | `variant/postgres` | 通常の Web app 向け。PostgreSQL を既定にする。 |
 | `variant/pgvector` | RAG、embedding、AI 検索向け。PostgreSQL + pgvector を既定にする。 |
@@ -41,7 +41,6 @@
 | `overlay/ssr` | React/Vite の client-only baseline に SSR entry、server render、hydration、SSR build を追加する。 |
 | `overlay/ssg` | prerender、static route manifest、build-time data loading などを追加する。 |
 | `overlay/auth-oauth` | baseline / DB variant に OAuth provider 設定を追加する。 |
-| `overlay/storybook` | Storybook や visual regression を厚くする。 |
 
 overlay は「単独で clone する完成テンプレート」ではなく、`main` または `variant/*` に適用できる差分として扱う。差分が大きくなり、単独 clone の需要が明確になった場合だけ `variant/ssr` や `variant/ssg` に昇格する。
 
@@ -253,8 +252,6 @@ git switch -c variant/sqlite
 bun run typecheck
 bun run lint
 bun run test run
-bun run --cwd designSystem type-check
-bun run --cwd designSystem test run
 bun run build
 ```
 
@@ -336,7 +333,7 @@ git push origin overlay/ssr overlay-ssr-v0.1.0
 ### `main`
 
 - PostgreSQL / SQLite / Cloudflare のいずれかに強く寄りすぎない。
-- Hono RPC、OpenAPI、React、Vite、TanStack、Tailwind、`@repo/design-system`、Drizzle の基本構成を保つ。
+- Hono、React、Vite、Tailwind CSS、design tokens、Drizzle の基本構成を保つ。
 - security middleware の考え方を README に残す。
 - サンプル機能は小さく、削除しやすくする。
 
@@ -451,7 +448,7 @@ release tag を打つ前に確認する。
 ## Avoid
 
 - tag だけで variant 差分を長期保守する。
-- SSG / SSR / auth / Storybook のような直交差分で branch の掛け算を増やす。
+- SSG / SSR / auth のような直交差分で branch の掛け算を増やす。
 - `main` に pgvector、Cloudflare、特定 auth provider などの強い前提を詰め込む。
 - サンプルアプリ branch を標準 variant として扱う。
 - テンプレート repo 内に利用先プロダクトの仕様や seed を混ぜる。
