@@ -48,3 +48,14 @@ export const requireAuth = (deps: AuthMiddlewareDeps) =>
 		});
 		await next();
 	});
+
+export const requireAdmin = () =>
+	createMiddleware(async (c, next) => {
+		const authUser = c.get("authUser") as
+			| { userId: string; email: string; role: "admin" | "member" }
+			| undefined;
+		if (authUser?.role !== "admin") {
+			throw new HttpError(403, "Forbidden");
+		}
+		await next();
+	});

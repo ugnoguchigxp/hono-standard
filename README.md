@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-Hono backend と React + Vite frontend を同一 origin で動かす、最小構成の Web app template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
+Hono backend と React + Vite frontend を同一 origin で動かす、RAG app template です。PostgreSQL + pgvector + Drizzle のユーザー認証、Markdown ingestion、hybrid retrieval、chat endpoint、React Router ベースの画面、コンポーネント showcase を含みます。
 
 ## 構成
 
@@ -20,7 +20,13 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 | `api/db/schema.ts` | Drizzle schema |
 | `api/routes/auth.route.ts` | `/api/auth/*` route |
 | `api/routes/health.route.ts` | `/api/health` route |
+| `api/routes/sources.route.ts` | Markdown source reindex / category API |
+| `api/routes/search.route.ts` | `/api/search` hybrid retrieval API |
+| `api/routes/chat.route.ts` | `/api/chat` RAG chat API |
 | `api/modules/auth/` | password hash、JWT、cookie、auth service |
+| `api/modules/sources/` | Markdown ingestion、source repository |
+| `api/modules/rag/` | source retriever、search evidence |
+| `api/providers/` | LLM / embedding provider interface と Azure OpenAI 実装 |
 | `api/middleware/auth.ts` | protected API middleware |
 | `web/src/` | React frontend |
 | `shared/schemas/` | frontend/backend で共有する Zod schema と API object type |
@@ -33,7 +39,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 | --- | --- |
 | Bun | package manager、runtime、scripts |
 | Docker | local PostgreSQL を使う場合 |
-| PostgreSQL | auth user / refresh token storage |
+| PostgreSQL + pgvector | auth user / refresh token / RAG source storage |
 
 ## セットアップ
 
@@ -43,6 +49,7 @@ cp .env.example .env
 docker compose up -d db
 bun run db:migrate
 bun run auth:create-admin -- --email admin@example.com --name "Admin User"
+bun run import:markdown
 bun run dev
 ```
 
@@ -62,6 +69,11 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | --- | --- | --- | --- |
 | `NODE_ENV` | no | `development` / `test` / `production` | `development` |
 | `DATABASE_URL` | no | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/hono_standard` |
+| `CONTENT_ROOT` | no | Markdown source root。`pages/<category>/*.md` を index する | `./wiki-knowledge` |
+| `AZURE_OPENAI_ENDPOINT` | chat/embedding yes | Azure OpenAI endpoint | none |
+| `AZURE_OPENAI_API_KEY` | chat/embedding yes | Azure OpenAI API key | none |
+| `AZURE_OPENAI_DEPLOYMENT` | no | chat completion deployment | `gpt-4o-mini` |
+| `AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT` | no | embedding deployment。1536 dimensions が必要 | `text-embedding-3-small` |
 | `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
 | `APP_URL` | no | public origin。cookie secure 既定値と CORS に使う | `http://localhost:5173` |
 | `CORS_ORIGINS` | no | 追加許可 origin。カンマ区切り | `http://localhost:5173` |
@@ -78,6 +90,7 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `bun run dev` | Vite + Hono dev server |
 | `bun run start` | Bun server を直接起動 |
 | `bun run auth:create-admin -- --email <email> --name "<name>"` | admin user 作成 |
+| `bun run import:markdown` | `CONTENT_ROOT/pages/**.md` を source index に取り込む |
 | `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
 | `bun run db:generate` | Drizzle migration 生成 |
 | `bun run db:migrate:drizzle` | drizzle-kit migration。`DATABASE_URL` は process env または `.env` から読む |
@@ -98,6 +111,11 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `POST` | `/api/auth/refresh` | refresh token rotation |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
 | `GET` | `/api/auth/me` | 現在の login user |
+| `GET` | `/api/sources/health` | source index 設定確認 |
+| `GET` | `/api/sources/categories` | indexed category 一覧 |
+| `POST` | `/api/sources/reindex` | Markdown source を再取り込み |
+| `POST` | `/api/search` | local Markdown の hybrid retrieval |
+| `POST` | `/api/chat` | retrieved context を使った chat response |
 
 `/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
 
@@ -112,9 +130,11 @@ NODE_ENV=production bun run start
 
 production では `JWT_SECRET` を必ず強いランダム値に変更してください。未設定または dev default のままの場合、アプリは起動時に失敗します。HTTPS で公開する場合は `APP_URL=https://...` とし、必要に応じて `AUTH_COOKIE_SECURE=true`、`SECURITY_HEADERS_MODE=https` を明示します。
 
-## Template Notes
+## RAG Notes
 
-- この branch は RAG / pgvector / agentic search template ではありません。
+- この branch は `variant/rag` です。RAG の基本機能は `api/` に配置し、frontend/backend 共通 request schema は `shared/schemas/rag.schema.ts` にあります。
 - 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
-- PostgreSQL は auth user と refresh token 保存に使います。
+- `/api/sources/*`, `/api/search`, `/api/chat` は login が必要です。
+- `CONTENT_ROOT/pages/<category>/*.md` を `bun run import:markdown` または `/api/sources/reindex` で index します。
+- Azure OpenAI が未設定でも全文検索 API は動きます。embedding と chat response には Azure OpenAI の設定が必要です。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。

@@ -28,7 +28,7 @@
 | `variant/sqlite` | local-first、desktop、prototype、小規模 single-user 向け。SQLite/libSQL を既定にする。 |
 | `variant/postgres` | 通常の Web app 向け。PostgreSQL を既定にする。 |
 | `variant/pgvector` | RAG、embedding、AI 検索向け。PostgreSQL + pgvector を既定にする。 |
-| `variant/rag` | Markdown ingestion、hybrid retrieval、chat、artifacts、agentic search、admin auth を含む RAG app template。 |
+| `variant/rag` | Markdown ingestion、hybrid retrieval、chat、artifacts、auth を含む RAG app template。agentic search / wiki editor UI は含めない。 |
 | `variant/auth` | 認証・認可サンプルを厚めに持つ variant。DB variant と組み合わせる場合は派生 branch にする。 |
 | `variant/cloudflare` | Cloudflare Workers / D1 / KV / R2 など edge deploy 前提。Bun server 前提と分ける。 |
 

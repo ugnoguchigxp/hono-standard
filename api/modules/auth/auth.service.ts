@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { AppEnv } from "../../app/env";
 import { users } from "../../db/schema";
@@ -9,6 +9,7 @@ import {
 	consumeRefreshToken,
 	generateAccessToken,
 	generateRefreshToken,
+	revokeAllRefreshTokensForUser,
 	revokeRefreshToken,
 } from "./token.service";
 import {
@@ -100,6 +101,34 @@ export class AuthService {
 		};
 	}
 
+	private async countActiveAdmins(excludeUserId?: string): Promise<number> {
+		const filters = [
+			eq(users.role, "admin"),
+			eq(users.isActive, true),
+			...(excludeUserId ? [ne(users.id, excludeUserId)] : []),
+		];
+		const [result] = await this.db
+			.select({ count: sql<number>`cast(count(*) as integer)` })
+			.from(users)
+			.where(and(...filters));
+		return result?.count ?? 0;
+	}
+
+	private async assertCanRemoveAdminPrivileges(
+		targetUser: AuthUser,
+	): Promise<void> {
+		if (targetUser.role !== "admin" || !targetUser.isActive) {
+			return;
+		}
+		const activeAdminCount = await this.countActiveAdmins(targetUser.id);
+		if (activeAdminCount === 0) {
+			throw new HttpError(
+				400,
+				"At least one active admin account is required.",
+			);
+		}
+	}
+
 	async login(params: {
 		email: string;
 		password: string;
@@ -138,7 +167,15 @@ export class AuthService {
 		await revokeRefreshToken(refreshToken, this.db);
 	}
 
-	async createAdmin(input: Omit<CreateUserInput, "role">): Promise<AuthUser> {
+	async listUsers(): Promise<AuthUser[]> {
+		const rows = await this.db
+			.select()
+			.from(users)
+			.orderBy(desc(users.createdAt));
+		return rows.map((row) => toAuthUser(row));
+	}
+
+	async createUser(input: CreateUserInput): Promise<AuthUser> {
 		const existing = await this.findUserByEmail(input.email);
 		if (existing) {
 			throw new HttpError(409, "Email already in use.");
@@ -150,10 +187,94 @@ export class AuthService {
 				email: input.email.toLowerCase(),
 				passwordHash,
 				displayName: input.displayName,
-				role: "admin",
+				role: input.role ?? "member",
 				isActive: true,
 			})
 			.returning();
 		return toAuthUser(created);
+	}
+
+	async createAdmin(input: Omit<CreateUserInput, "role">): Promise<AuthUser> {
+		return this.createUser({
+			...input,
+			role: "admin",
+		});
+	}
+
+	async updateUserProfile(
+		targetUserId: string,
+		input: {
+			displayName?: string;
+			role?: UserRole;
+		},
+	): Promise<AuthUser> {
+		const target = await this.findUserById(targetUserId);
+		if (!target) {
+			throw new HttpError(404, "User not found.");
+		}
+
+		if (input.role && target.role === "admin" && input.role !== "admin") {
+			await this.assertCanRemoveAdminPrivileges(target);
+		}
+
+		const [updated] = await this.db
+			.update(users)
+			.set({
+				displayName: input.displayName ?? target.displayName,
+				role: input.role ?? target.role,
+				updatedAt: new Date(),
+			})
+			.where(eq(users.id, targetUserId))
+			.returning();
+		return toAuthUser(updated);
+	}
+
+	async setUserActive(
+		actorUserId: string,
+		targetUserId: string,
+		isActive: boolean,
+	): Promise<AuthUser> {
+		if (actorUserId === targetUserId && !isActive) {
+			throw new HttpError(400, "You cannot disable your own account.");
+		}
+
+		const target = await this.findUserById(targetUserId);
+		if (!target) {
+			throw new HttpError(404, "User not found.");
+		}
+
+		if (!isActive) {
+			await this.assertCanRemoveAdminPrivileges(target);
+			await revokeAllRefreshTokensForUser(target.id, this.db);
+		}
+
+		const [updated] = await this.db
+			.update(users)
+			.set({
+				isActive,
+				updatedAt: new Date(),
+			})
+			.where(eq(users.id, targetUserId))
+			.returning();
+		return toAuthUser(updated);
+	}
+
+	async resetPassword(
+		targetUserId: string,
+		newPassword: string,
+	): Promise<void> {
+		const target = await this.findUserById(targetUserId);
+		if (!target) {
+			throw new HttpError(404, "User not found.");
+		}
+		const passwordHash = await hashPassword(newPassword);
+		await this.db
+			.update(users)
+			.set({
+				passwordHash,
+				updatedAt: new Date(),
+			})
+			.where(eq(users.id, targetUserId));
+		await revokeAllRefreshTokensForUser(targetUserId, this.db);
 	}
 }

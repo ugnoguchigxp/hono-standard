@@ -121,3 +121,10 @@ export async function revokeRefreshToken(
 		.delete(refreshTokens)
 		.where(eq(refreshTokens.token, hashToken(token)));
 }
+
+export async function revokeAllRefreshTokensForUser(
+	userId: string,
+	db: NodePgDatabase<typeof schema>,
+): Promise<void> {
+	await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+}
