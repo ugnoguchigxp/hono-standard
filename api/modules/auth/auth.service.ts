@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import type { AppEnv } from "../../app/env";
 import { users } from "../../db/schema";
 import type * as schema from "../../db/schema";
@@ -57,7 +57,7 @@ const toSessionUser = (user: AuthUser): AuthSessionUser => ({
 
 export class AuthService {
 	constructor(
-		private readonly db: NodePgDatabase<typeof schema>,
+		private readonly db: LibSQLDatabase<typeof schema>,
 		private readonly env: AppEnv,
 	) {}
 

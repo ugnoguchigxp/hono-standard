@@ -3,11 +3,11 @@
 [![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh/)
 [![Hono](https://img.shields.io/badge/Hono-%23E36022.svg?style=for-the-badge&logo=hono&logoColor=white)](https://hono.dev/)
 [![React](https://img.shields.io/badge/React-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://react.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Turso](https://img.shields.io/badge/Turso-4FF8D2.svg?style=for-the-badge&logoColor=black)](https://turso.tech/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-Hono backend と React + Vite frontend を同一 origin で動かす、最小構成の Web app template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
+Hono backend と React + Vite frontend を同一 origin で動かす、Turso/libSQL 対応の Web app template です。Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
 
 ## 構成
 
@@ -17,7 +17,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 | `api/app/server.ts` | Bun server bootstrap |
 | `api/app/env.ts` | runtime env parser |
 | `api/config/appDefaults.ts` | 非シークレットの既定値 |
-| `api/db/schema.ts` | Drizzle schema |
+| `api/db/schema.ts` | Drizzle libSQL schema |
 | `api/routes/auth.route.ts` | `/api/auth/*` route |
 | `api/routes/health.route.ts` | `/api/health` route |
 | `api/modules/auth/` | password hash、JWT、cookie、auth service |
@@ -32,15 +32,13 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 | Tool | 用途 |
 | --- | --- |
 | Bun | package manager、runtime、scripts |
-| Docker | local PostgreSQL を使う場合 |
-| PostgreSQL | auth user / refresh token storage |
+| Turso / libSQL | auth user / refresh token storage |
 
 ## セットアップ
 
 ```bash
 bun install
 cp .env.example .env
-docker compose up -d db
 bun run db:migrate
 bun run auth:create-admin -- --email admin@example.com --name "Admin User"
 bun run dev
@@ -61,7 +59,8 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | Variable | Required | Description | Default |
 | --- | --- | --- | --- |
 | `NODE_ENV` | no | `development` / `test` / `production` | `development` |
-| `DATABASE_URL` | no | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/hono_standard` |
+| `DATABASE_URL` | no | libSQL connection string | `file:sqlite.db` |
+| `DATABASE_AUTH_TOKEN` | no | Turso auth token。local file DB では空でよい | empty |
 | `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
 | `APP_URL` | no | public origin。cookie secure 既定値と CORS に使う | `http://localhost:5173` |
 | `CORS_ORIGINS` | no | 追加許可 origin。カンマ区切り | `http://localhost:5173` |
@@ -116,5 +115,5 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 - この branch は RAG / pgvector / agentic search template ではありません。
 - 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
-- PostgreSQL は auth user と refresh token 保存に使います。
+- Turso/libSQL は auth user と refresh token 保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。

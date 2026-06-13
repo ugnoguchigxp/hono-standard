@@ -43,6 +43,7 @@ const EnvSchema = z.object({
 		.enum(["development", "test", "production"])
 		.default(APP_CONFIG_DEFAULTS.nodeEnv),
 	DATABASE_URL: optionalTrimmedString,
+	DATABASE_AUTH_TOKEN: optionalTrimmedString,
 	APP_URL: optionalUrl,
 	CORS_ORIGINS: optionalTrimmedString,
 	AUTH_COOKIE_SECURE: optionalBoolean,
@@ -60,6 +61,7 @@ export type AppEnv = {
 	host: string;
 	port: number;
 	databaseUrl: string;
+	databaseAuthToken?: string;
 	jwtSecret: string;
 	jwtAccessExpiresIn: string;
 	jwtRefreshExpiresIn: string;
@@ -118,6 +120,7 @@ export function readAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
 		host: APP_CONFIG_DEFAULTS.host,
 		port: APP_CONFIG_DEFAULTS.port,
 		databaseUrl: parsed.DATABASE_URL ?? APP_CONFIG_DEFAULTS.databaseUrl,
+		databaseAuthToken: parsed.DATABASE_AUTH_TOKEN,
 		jwtSecret: parsed.JWT_SECRET ?? APP_CONFIG_DEFAULTS.jwtSecret,
 		jwtAccessExpiresIn: APP_CONFIG_DEFAULTS.jwtAccessExpiresIn,
 		jwtRefreshExpiresIn: APP_CONFIG_DEFAULTS.jwtRefreshExpiresIn,
