@@ -9,6 +9,7 @@
 /dist
 /dist-web
 /dist-server
+/dist-ssg
 /build
 *.tgz
 

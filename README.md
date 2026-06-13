@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-Hono backend と React + Vite frontend を同一 origin で動かす、SSR overlay template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase、production SSR fallback を含みます。
+Hono backend と React + Vite frontend を同一 origin で動かす、SSG overlay template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase、production SSR fallback、静的 HTML 生成を含みます。
 
 ## 構成
 
@@ -90,6 +90,7 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `bun run test` | Vitest |
 | `bun run build` | Vite production build |
 | `bun run build:ssr` | SSR server bundle build |
+| `bun run build:ssg` | static HTML generation |
 | `bun run verify` | typecheck、lint、format:check、test、build |
 
 ## API
@@ -117,7 +118,7 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 ## Template Notes
 
-- この branch は SSR overlay です。RAG / pgvector / agentic search template ではありません。
+- この branch は SSG overlay です。RAG / pgvector / agentic search template ではありません。
 - 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
 - PostgreSQL は auth user と refresh token 保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。

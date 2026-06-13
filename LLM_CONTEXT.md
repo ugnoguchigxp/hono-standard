@@ -1,6 +1,6 @@
 # LLM Context: Hono Standard
 
-この文書は、`hono-standard` を clone した直後に作業入口を決めるための圧縮コンテキストです。現行 branch は SSR overlay template です。RAG、pgvector、agentic search、wiki ingestion は含みません。
+この文書は、`hono-standard` を clone した直後に作業入口を決めるための圧縮コンテキストです。現行 branch は SSG overlay template です。RAG、pgvector、agentic search、wiki ingestion は含みません。
 
 ## Repository Snapshot
 
@@ -39,6 +39,7 @@
 | `web/src/showcase-*` | showcase state and URL search helpers |
 | `drizzle/` | SQL migrations |
 | `scripts/verify.ts` | verification pipeline |
+| `scripts/build-ssg.ts` | static HTML generation into `dist-ssg` |
 
 ## Task Routing
 

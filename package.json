@@ -27,7 +27,8 @@
 		"format:check": "biome format api web shared",
 		"build:web": "vite build",
 		"build:ssr": "vite build --ssr src/entry-server.tsx",
-		"build": "bun run build:web && bun run build:ssr",
+		"build:ssg": "bun scripts/build-ssg.ts",
+		"build": "bun run build:web && bun run build:ssr && bun run build:ssg",
 		"verify": "bun scripts/verify.ts",
 		"verify:strict": "bun run verify"
 	},
