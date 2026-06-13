@@ -108,21 +108,24 @@ app.onError(async (error, c) => {
 	return c.json({ message }, 500);
 });
 
-app.route("/api/health", createHealthRoute());
-app.use(
-	"/api/auth/me",
-	requireAuth({
-		env: runtime.env,
-		authService: runtime.authService,
-	}),
-);
-app.route(
-	"/api/auth",
-	createAuthRoute({
-		authService: runtime.authService,
-		env: runtime.env,
-	}),
-);
+const apiRoutes = new Hono()
+	.route("/health", createHealthRoute())
+	.use(
+		"/auth/me",
+		requireAuth({
+			env: runtime.env,
+			authService: runtime.authService,
+		}),
+	)
+	.route(
+		"/auth",
+		createAuthRoute({
+			authService: runtime.authService,
+			env: runtime.env,
+		}),
+	);
+
+app.route("/api", apiRoutes);
 
 app.use("/assets/*", serveStatic({ root: "./dist-web" }));
 app.use("/favicon.ico", serveStatic({ root: "./dist-web" }));
@@ -142,3 +145,4 @@ app.get("*", async (c) => {
 });
 
 export default app;
+export type AppType = typeof apiRoutes;

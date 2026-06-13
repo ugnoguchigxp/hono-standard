@@ -2,13 +2,16 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "."
   },
   "include": [
-    "src/**/*.ts"
+    "api/**/*.ts",
+    "shared/**/*.ts"
   ],
   "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.spec.ts"
+    "api/**/*.test.ts",
+    "api/**/*.spec.ts",
+    "shared/**/*.test.ts",
+    "shared/**/*.spec.ts"
   ]
 }

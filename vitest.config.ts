@@ -2,17 +2,17 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.ts', 'web/**/*.test.ts'],
+    include: ['api/**/*.test.ts', 'web/**/*.test.ts', 'shared/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/**/*.ts'],
+      include: ['api/**/*.ts', 'shared/**/*.ts'],
       exclude: [
-        'src/db/schema.ts',
-        'src/db/index.ts',
-        'src/app/server.ts',
-        'src/cli/migrate.ts',
-        'src/cli/auth-create-admin.ts',
+        'api/db/schema.ts',
+        'api/db/index.ts',
+        'api/app/server.ts',
+        'api/cli/migrate.ts',
+        'api/cli/auth-create-admin.ts',
       ],
       thresholds: {
         lines: 80,

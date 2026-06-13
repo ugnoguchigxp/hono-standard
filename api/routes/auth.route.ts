@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
-import { z } from "zod";
+import { loginSchema } from "../../shared/schemas/auth.schema";
 import type { AppEnv } from "../app/env";
 import type { AuthService } from "../modules/auth/auth.service";
 import {
@@ -11,11 +11,6 @@ import {
 } from "../modules/auth/auth-cookies";
 import { getAuthContextUser } from "../modules/auth/context";
 import { HttpError } from "../modules/auth/errors";
-
-const loginSchema = z.object({
-	email: z.string().trim().email(),
-	password: z.string().min(1),
-});
 
 type AuthRouteDeps = {
 	authService: AuthService;

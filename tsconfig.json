@@ -12,11 +12,13 @@
     "paths": {
       "@/*": ["./web/src/*"],
       "@web/*": ["./web/src/*"],
-      "@server/*": ["./src/*"]
+      "@api/*": ["./api/*"],
+      "@shared/*": ["./shared/*"]
     }
   },
   "include": [
-    "src/**/*",
+    "api/**/*",
+    "shared/**/*",
     "web/**/*",
     "drizzle.config.ts",
     "vite.config.ts",

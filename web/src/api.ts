@@ -4,26 +4,18 @@ import {
 	useQueryClient,
 	type UseMutationOptions,
 } from "@tanstack/react-query";
+import type { AppType } from "@api/app/hono";
+import { hc } from "hono/client";
+import type {
+	AuthResponse,
+	AuthSessionUser,
+	LoginInput,
+	LogoutResponse,
+} from "@shared/schemas/auth.schema";
 
-export type AuthUser = {
-	id: string;
-	email: string;
-	displayName: string;
-	role: "admin" | "member";
-};
-
-export type LoginParams = {
-	email: string;
-	password: string;
-};
-
-export type LoginResponse = {
-	user: AuthUser;
-};
-
-type RequestInitJson = Omit<RequestInit, "body"> & {
-	body?: unknown;
-};
+export type AuthUser = AuthSessionUser;
+export type LoginParams = LoginInput;
+export type LoginResponse = AuthResponse;
 
 export const UNAUTHORIZED_EVENT_NAME = "hono-standard:unauthorized";
 export const authMeQueryKey = ["auth", "me"] as const;
@@ -48,6 +40,18 @@ const notifyUnauthorized = () => {
 	window.dispatchEvent(new Event(UNAUTHORIZED_EVENT_NAME));
 };
 
+const getRequestPath = (input: RequestInfo | URL): string => {
+	const url =
+		input instanceof Request
+			? input.url
+			: input instanceof URL
+				? input.href
+				: input.toString();
+	const base =
+		typeof window === "undefined" ? "http://localhost" : window.location.origin;
+	return new URL(url, base).pathname;
+};
+
 const isAuthPath = (path: string): boolean => path.startsWith("/api/auth/");
 
 const canRetryWithRefresh = (path: string): boolean =>
@@ -66,27 +70,22 @@ const parseErrorMessage = async (response: Response): Promise<string> => {
 	return message;
 };
 
-async function requestJson<T>(
-	path: string,
-	init?: RequestInitJson,
-): Promise<T> {
-	const execute = async (): Promise<Response> => {
-		const headers = new Headers(init?.headers);
-		if (init?.body !== undefined && !headers.has("Content-Type")) {
-			headers.set("Content-Type", "application/json");
-		}
+const customFetch = async (
+	input: RequestInfo | URL,
+	init?: RequestInit,
+): Promise<Response> => {
+	const headers = new Headers(init?.headers);
+	const requestPath = getRequestPath(input);
 
-		const { body, ...restInit } = init || {};
-		return fetch(path, {
-			...restInit,
+	const execute = () =>
+		fetch(input, {
+			...init,
 			headers,
 			credentials: "include",
-			body: body !== undefined ? JSON.stringify(body) : undefined,
 		});
-	};
 
 	let response = await execute();
-	if (response.status === 401 && canRetryWithRefresh(path)) {
+	if (response.status === 401 && canRetryWithRefresh(requestPath)) {
 		const refreshResponse = await fetch("/api/auth/refresh", {
 			method: "POST",
 			credentials: "include",
@@ -94,35 +93,37 @@ async function requestJson<T>(
 		if (refreshResponse.ok) response = await execute();
 	}
 
+	if (response.status === 401 && shouldNotifyUnauthorized(requestPath)) {
+		notifyUnauthorized();
+	}
+	return response;
+};
+
+const client = hc<AppType>("/api", {
+	fetch: customFetch,
+});
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
 	if (!response.ok) {
-		if (response.status === 401 && shouldNotifyUnauthorized(path)) {
-			notifyUnauthorized();
-		}
 		throw new Error(await parseErrorMessage(response));
 	}
 	return (await response.json()) as T;
 }
 
-async function requestVoid(
-	path: string,
-	init?: RequestInitJson,
-): Promise<void> {
-	await requestJson(path, init);
-}
-
 export async function login(params: LoginParams): Promise<LoginResponse> {
-	return requestJson("/api/auth/login", {
-		method: "POST",
-		body: params,
-	});
+	const response = await client.auth.login.$post({ json: params });
+	return parseJsonResponse<LoginResponse>(response);
 }
 
 export async function logout(): Promise<void> {
-	await requestVoid("/api/auth/logout", { method: "POST" });
+	const response = await client.auth.logout.$post();
+	await parseJsonResponse<LogoutResponse>(response);
 }
 
 export async function fetchMe(): Promise<AuthUser> {
-	const response = await requestJson<{ user: AuthUser }>("/api/auth/me");
+	const response = await parseJsonResponse<AuthResponse>(
+		await client.auth.me.$get(),
+	);
 	return response.user;
 }
 

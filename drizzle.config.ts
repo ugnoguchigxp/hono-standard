@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Config } from "drizzle-kit";
-import { APP_CONFIG_DEFAULTS } from "./src/config/appDefaults";
+import { APP_CONFIG_DEFAULTS } from "./api/config/appDefaults";
 
 function loadDotenvValue(key: string): string | undefined {
 	const envPath = path.resolve(process.cwd(), ".env");
@@ -26,7 +26,7 @@ const databaseUrl =
 	APP_CONFIG_DEFAULTS.databaseUrl;
 
 export default {
-	schema: "./src/db/schema.ts",
+	schema: "./api/db/schema.ts",
 	out: "./drizzle",
 	dialect: "postgresql",
 	dbCredentials: {

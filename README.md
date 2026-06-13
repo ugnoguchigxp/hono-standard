@@ -13,16 +13,17 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 
 | Path | Role |
 | --- | --- |
-| `src/app/hono.ts` | Hono app composition。middleware、API route、静的配信を登録 |
-| `src/app/server.ts` | Bun server bootstrap |
-| `src/app/env.ts` | runtime env parser |
-| `src/config/appDefaults.ts` | 非シークレットの既定値 |
-| `src/db/schema.ts` | Drizzle schema |
-| `src/routes/auth.route.ts` | `/api/auth/*` route |
-| `src/routes/health.route.ts` | `/api/health` route |
-| `src/modules/auth/` | password hash、JWT、cookie、auth service |
-| `src/middleware/auth.ts` | protected API middleware |
+| `api/app/hono.ts` | Hono app composition。middleware、API route、静的配信、`AppType` を登録 |
+| `api/app/server.ts` | Bun server bootstrap |
+| `api/app/env.ts` | runtime env parser |
+| `api/config/appDefaults.ts` | 非シークレットの既定値 |
+| `api/db/schema.ts` | Drizzle schema |
+| `api/routes/auth.route.ts` | `/api/auth/*` route |
+| `api/routes/health.route.ts` | `/api/health` route |
+| `api/modules/auth/` | password hash、JWT、cookie、auth service |
+| `api/middleware/auth.ts` | protected API middleware |
 | `web/src/` | React frontend |
+| `shared/schemas/` | frontend/backend で共有する Zod schema と API object type |
 | `drizzle/` | SQL migrations |
 | `scripts/verify.ts` | typecheck / lint / format / test / build の検証 pipeline |
 
@@ -55,7 +56,7 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 
 ## 環境変数
 
-非シークレットの既定値は `src/config/appDefaults.ts` にあります。`.env.example` は local development 向けの値です。
+非シークレットの既定値は `api/config/appDefaults.ts` にあります。`.env.example` は local development 向けの値です。
 
 | Variable | Required | Description | Default |
 | --- | --- | --- | --- |
@@ -99,6 +100,8 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `GET` | `/api/auth/me` | 現在の login user |
 
 `/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
+
+API request / response の共有 schema は `shared/schemas/` に置きます。Backend route はその schema を `zValidator` で使い、frontend は `api/app/hono.ts` から export される `AppType` を `hono/client` に渡して API 型を共有します。
 
 ## Build / Runtime
 

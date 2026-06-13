@@ -1,7 +1,11 @@
 import { z } from "zod";
+import {
+	userRoleSchema,
+	type UserRole,
+} from "../../../shared/schemas/auth.schema";
 
-export const userRoleSchema = z.enum(["admin", "member"]);
-export type UserRole = z.infer<typeof userRoleSchema>;
+export { userRoleSchema };
+export type { UserRole };
 
 export const jwtPayloadSchema = z.object({
 	userId: z.string().uuid(),
