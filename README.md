@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-Hono backend と React + Vite frontend を同一 origin で動かす、最小構成の Web app template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
+Hono backend と React + Vite frontend を同一 origin で動かす、pgvector 対応の Web app template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase、3 次元ベクトル検索の最小 API を含みます。
 
 ## 構成
 
@@ -19,6 +19,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 | `api/config/appDefaults.ts` | 非シークレットの既定値 |
 | `api/db/schema.ts` | Drizzle schema |
 | `api/routes/auth.route.ts` | `/api/auth/*` route |
+| `api/routes/documents.route.ts` | `/api/documents/*` pgvector route |
 | `api/routes/health.route.ts` | `/api/health` route |
 | `api/modules/auth/` | password hash、JWT、cookie、auth service |
 | `api/middleware/auth.ts` | protected API middleware |
@@ -33,7 +34,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、最小構
 | --- | --- |
 | Bun | package manager、runtime、scripts |
 | Docker | local PostgreSQL を使う場合 |
-| PostgreSQL | auth user / refresh token storage |
+| PostgreSQL + pgvector | auth user / refresh token storage、vector search |
 
 ## セットアップ
 
@@ -98,6 +99,8 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `POST` | `/api/auth/refresh` | refresh token rotation |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
 | `GET` | `/api/auth/me` | 現在の login user |
+| `POST` | `/api/documents` | document + vector insert |
+| `POST` | `/api/documents/search` | pgvector cosine search |
 
 `/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
 
@@ -114,7 +117,7 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 ## Template Notes
 
-- この branch は RAG / pgvector / agentic search template ではありません。
+- この branch は pgvector の最小 API を含みます。RAG / agentic search template ではありません。
 - 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
 - PostgreSQL は auth user と refresh token 保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。

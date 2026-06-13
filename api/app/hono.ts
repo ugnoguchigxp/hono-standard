@@ -13,6 +13,7 @@ import { requireAuth } from "../middleware/auth";
 import { AuthService } from "../modules/auth/auth.service";
 import { HttpError } from "../modules/auth/errors";
 import { createAuthRoute } from "../routes/auth.route";
+import { createDocumentsRoute } from "../routes/documents.route";
 import { createHealthRoute } from "../routes/health.route";
 import { readAppEnv, type AppEnv } from "./env";
 
@@ -110,6 +111,12 @@ app.onError(async (error, c) => {
 
 const apiRoutes = new Hono()
 	.route("/health", createHealthRoute())
+	.route(
+		"/documents",
+		createDocumentsRoute({
+			db: runtime.dbConnection.db,
+		}),
+	)
 	.use(
 		"/auth/me",
 		requireAuth({

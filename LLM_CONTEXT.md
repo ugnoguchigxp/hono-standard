@@ -1,14 +1,15 @@
 # LLM Context: Hono Standard
 
-この文書は、`hono-standard` を clone した直後に作業入口を決めるための圧縮コンテキストです。現行 branch は minimal auth/showcase template です。RAG、pgvector、agentic search、wiki ingestion は含みません。
+この文書は、`hono-standard` を clone した直後に作業入口を決めるための圧縮コンテキストです。現行 branch は pgvector-enabled auth/showcase template です。RAG、agentic search、wiki ingestion は含みません。
 
 ## Repository Snapshot
 
 - Bun + Hono backend と React + Vite frontend を同一 origin で動かす template。
-- DB は PostgreSQL。Drizzle schema は `api/db/schema.ts`、migration は `drizzle/`。
+- DB は PostgreSQL + pgvector。Drizzle schema は `api/db/schema.ts`、migration は `drizzle/`。
 - Backend app composition は `api/app/hono.ts`、server bootstrap は `api/app/server.ts`。
 - Frontend entry は `web/src/App.tsx`、router は `web/src/router.tsx`、API client は `web/src/api.ts`。
 - Auth 実装は `api/modules/auth/`、route は `api/routes/auth.route.ts`、login UI は `web/src/domains/auth/login-domain.tsx`。
+- Vector document API は `api/routes/documents.route.ts`、table は `api/db/schema.ts` の `documents`。
 - Shared API schema/object は `shared/schemas/`。Backend は `zValidator`、frontend は `hono/client` + `AppType` で同じ契約を参照する。
 - Home と Showcase は未ログインでも表示する。ログイン状態がある場合だけ header に user chip と logout button を表示する。
 - Package manager / runtime は Bun。dev server は `bunx --bun vite` で起動する。
@@ -23,6 +24,7 @@
 | `api/config/appDefaults.ts` | non-secret app defaults |
 | `api/db/` | PostgreSQL connection and Drizzle schema |
 | `api/routes/auth.route.ts` | `/api/auth/*` route module |
+| `api/routes/documents.route.ts` | `/api/documents/*` pgvector route module |
 | `api/routes/health.route.ts` | health route |
 | `api/modules/auth/` | Auth service、JWT、cookies、password hashing |
 | `api/middleware/auth.ts` | access-token auth middleware |
@@ -42,6 +44,7 @@
 | Task | Start here | Usually also read | Defer unless touched |
 | --- | --- | --- | --- |
 | Change auth API | `api/routes/auth.route.ts`, `api/modules/auth/`, `api/middleware/auth.ts`, `shared/schemas/auth.schema.ts` | `web/src/api.ts`, `web/src/auth-context.tsx` | showcase UI |
+| Change vector API | `api/routes/documents.route.ts`, `api/db/schema.ts`, `drizzle/0002_documents.sql` | `docker-compose.yml` | auth UI |
 | Change login UI | `web/src/views/login-view.tsx`, `web/src/domains/auth/login-domain.tsx` | `web/src/auth-context.tsx`, `web/src/api.ts` | DB schema |
 | Change app shell/routing | `web/src/routes/root-route.tsx`, `web/src/router.tsx` | `web/src/App.tsx`, affected view | auth service internals |
 | Change showcase UI | `web/src/views/showcase-view.tsx`, `web/src/showcase-settings-context.tsx`, `web/src/showcase-table-search.ts` | `web/src/styles.css` | backend auth |
@@ -61,7 +64,7 @@
 - DB defaults, Docker compose DB name, `.env.example`, and Drizzle config must agree.
 - `JWT_SECRET` is optional only for local development; production must fail closed when it is missing or still set to the dev default.
 - `drizzle.config.ts` should resolve `DATABASE_URL` from process env first, then local `.env`, then app defaults.
-- Do not reintroduce RAG, pgvector, wiki, provider, or agentic-search docs unless the implementation is restored in code.
+- Do not reintroduce RAG, wiki, provider, or agentic-search docs unless the implementation is restored in code.
 
 ## Verification Matrix
 
