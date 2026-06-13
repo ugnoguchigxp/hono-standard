@@ -8,6 +8,7 @@
 # build
 /dist
 /dist-web
+/dist-server
 /build
 *.tgz
 

@@ -5,7 +5,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { APP_CONFIG_DEFAULTS } from "./api/config/appDefaults";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, isSsrBuild }) => {
 	// Load env file from project root (one level up from 'web' root)
 	const env = loadEnv(mode, __dirname, "");
 	Object.assign(process.env, env);
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
 			port: APP_CONFIG_DEFAULTS.port,
 		},
 		build: {
-			outDir: "../dist-web",
+			outDir: isSsrBuild ? "../dist-server" : "../dist-web",
 			emptyOutDir: true,
 		},
 	};

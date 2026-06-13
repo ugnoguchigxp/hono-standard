@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { serveStatic } from "hono/bun";
 import { csrf } from "hono/csrf";
 import { Hono } from "hono";
@@ -47,6 +48,10 @@ const runtime = await getAppRuntime();
 const app = new Hono();
 const distWebRoot = path.resolve(process.cwd(), "dist-web");
 const distWebIndex = path.resolve(distWebRoot, "index.html");
+const distServerEntry = path.resolve(
+	process.cwd(),
+	"dist-server/entry-server.js",
+);
 const useHttpsSecurityHeaders =
 	runtime.env.securityHeadersMode === "https" ||
 	(runtime.env.securityHeadersMode === "auto" && runtime.env.secureCookie);
@@ -135,7 +140,15 @@ app.get("*", async (c) => {
 	}
 	try {
 		const html = await fs.readFile(distWebIndex, "utf8");
-		return c.html(html);
+		try {
+			const ssrModule = (await import(pathToFileURL(distServerEntry).href)) as {
+				render: (url: string) => Promise<{ html: string }>;
+			};
+			const rendered = await ssrModule.render(c.req.path);
+			return c.html(html.replace("<!--ssr-outlet-->", rendered.html));
+		} catch {
+			return c.html(html);
+		}
 	} catch {
 		return c.text(
 			"Frontend is not built. Run `bun run build:web` or `bun run dev`.",

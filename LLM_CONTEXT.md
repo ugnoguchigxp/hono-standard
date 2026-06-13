@@ -1,6 +1,6 @@
 # LLM Context: Hono Standard
 
-この文書は、`hono-standard` を clone した直後に作業入口を決めるための圧縮コンテキストです。現行 branch は minimal auth/showcase template です。RAG、pgvector、agentic search、wiki ingestion は含みません。
+この文書は、`hono-standard` を clone した直後に作業入口を決めるための圧縮コンテキストです。現行 branch は SSR overlay template です。RAG、pgvector、agentic search、wiki ingestion は含みません。
 
 ## Repository Snapshot
 
@@ -8,6 +8,7 @@
 - DB は PostgreSQL。Drizzle schema は `api/db/schema.ts`、migration は `drizzle/`。
 - Backend app composition は `api/app/hono.ts`、server bootstrap は `api/app/server.ts`。
 - Frontend entry は `web/src/App.tsx`、router は `web/src/router.tsx`、API client は `web/src/api.ts`。
+- Client entry は `web/src/entry-client.tsx`、SSR entry は `web/src/entry-server.tsx`。
 - Auth 実装は `api/modules/auth/`、route は `api/routes/auth.route.ts`、login UI は `web/src/domains/auth/login-domain.tsx`。
 - Shared API schema/object は `shared/schemas/`。Backend は `zValidator`、frontend は `hono/client` + `AppType` で同じ契約を参照する。
 - Home と Showcase は未ログインでも表示する。ログイン状態がある場合だけ header に user chip と logout button を表示する。
@@ -28,6 +29,8 @@
 | `api/middleware/auth.ts` | access-token auth middleware |
 | `shared/schemas/` | Zod schema and public API object types shared by api and web |
 | `web/src/App.tsx` | React Query and Router providers |
+| `web/src/entry-client.tsx` | client hydration entry |
+| `web/src/entry-server.tsx` | SSR render entry |
 | `web/src/router.tsx` | TanStack Router tree |
 | `web/src/api.ts` | browser API client and auth refresh handling |
 | `web/src/auth-context.tsx` | frontend auth state |
