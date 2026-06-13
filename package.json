@@ -24,7 +24,8 @@
     }
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "bunx --bun vite",
+    "dev:vite": "vite",
     "start": "bun run src/app/server.ts",
     "import:markdown": "bun run src/cli/import-markdown.ts",
     "wiki:index": "bun run src/cli/wiki-index.ts",

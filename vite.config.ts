@@ -29,6 +29,7 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		server: {
+			host: APP_CONFIG_DEFAULTS.host,
 			port: APP_CONFIG_DEFAULTS.port,
 		},
 		optimizeDeps: {

@@ -223,8 +223,7 @@ const isAuthPath = (path: string): boolean => path.startsWith("/api/auth/");
 const canRetryWithRefresh = (path: string): boolean =>
 	!isAuthPath(path) || path === "/api/auth/me";
 
-const shouldNotifyUnauthorized = (path: string): boolean =>
-	path !== "/api/auth/login";
+const shouldNotifyUnauthorized = (path: string): boolean => !isAuthPath(path);
 
 const parseErrorMessage = async (response: Response): Promise<string> => {
 	let message = `Request failed: ${response.status}`;
