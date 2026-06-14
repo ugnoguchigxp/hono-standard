@@ -1697,6 +1697,22 @@ select {
 	margin: 12px;
 }
 
+.search-row-advanced .search-select {
+	flex: 0 0 180px;
+	width: 180px;
+	min-width: 180px;
+}
+
+.search-row-advanced .search-input-wrapper {
+	flex: 1 1 320px;
+	min-width: 280px;
+}
+
+.search-row-advanced .search-btn {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+
 .search-select {
 	min-width: 140px;
 	padding: 10px 14px;
@@ -1827,8 +1843,11 @@ select {
 		gap: 10px;
 	}
 
-	.search-select {
+	.search-row-advanced .search-select,
+	.search-row-advanced .search-input-wrapper {
+		flex: 0 0 auto;
 		width: 100%;
+		min-width: 0;
 	}
 
 	.search-btn {

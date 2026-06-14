@@ -1,6 +1,46 @@
 @reference "./styles.css";
 
 @layer components {
+	:root {
+		--showcase-accent: var(--color-brand, #1f7a6a);
+		--showcase-accent-strong: var(--color-brand-strong, #176456);
+		--showcase-accent-soft: var(--color-brand-soft, #e6f5ef);
+		--showcase-accent-surface: #f6fffb;
+		--showcase-accent-border: var(--color-brand-border, #a9cfc3);
+		--showcase-accent-text: var(--color-brand-strong, #176456);
+		--showcase-focus-ring: rgba(31, 122, 106, 0.12);
+		--showcase-page: var(--color-page, #f6f7f9);
+		--showcase-surface: var(--color-surface, #ffffff);
+		--showcase-surface-muted: var(--color-surface-muted, #eef7f4);
+		--showcase-border: var(--color-border, #dde3ea);
+		--showcase-border-strong: #cbd7e2;
+		--showcase-ink: var(--color-ink, #17202a);
+		--showcase-muted: var(--color-muted, #52606f);
+		--showcase-muted-strong: var(--color-muted-strong, #3b4754);
+		--showcase-on-accent: #ffffff;
+		--showcase-shadow: rgba(23, 32, 42, 0.08);
+		--showcase-danger: var(--color-danger, #9f1d1d);
+		--showcase-danger-surface: #fff1f1;
+		--showcase-danger-border: #efb5b5;
+		--showcase-skeleton: linear-gradient(90deg, #e8edf4, #f7f9fb, #e8edf4);
+		--showcase-backdrop: rgba(23, 32, 42, 0.4);
+		--showcase-gap: 16px;
+		--showcase-gap-tight: 10px;
+		--showcase-gap-loose: 32px;
+		--showcase-section-gap: 16px;
+		--showcase-card-padding: 20px;
+		--showcase-control-height: 38px;
+		--showcase-input-height: 40px;
+		--showcase-table-padding: 12px 14px;
+		--showcase-control-radius: var(--radius-control);
+		--showcase-card-radius: var(--radius-control);
+		--showcase-panel-radius: var(--radius-control);
+		--showcase-font-size: 16px;
+		--showcase-font-size-small: 13px;
+		--showcase-heading-size: 24px;
+		--showcase-card-title-size: 18px;
+	}
+
 	.showcase-shell {
 		--showcase-accent: var(--color-brand);
 		--showcase-accent-strong: var(--color-brand-strong);
@@ -39,18 +79,24 @@
 		--showcase-font-size-small: 13px;
 		--showcase-heading-size: 24px;
 		--showcase-card-title-size: 18px;
-		@apply px-6 pb-24 pt-12;
+		@apply px-6 pb-16 pt-6;
 		background: var(--showcase-page);
 		color: var(--showcase-ink);
 		font-size: var(--showcase-font-size);
 	}
 
 	.showcase-kicker {
-		@apply w-fit rounded-pill border px-2.5 py-2 font-extrabold;
+		@apply inline-flex w-fit items-center gap-1.5 rounded-pill border px-2.5 py-1.5 font-extrabold;
 		border-color: var(--showcase-accent-border);
 		background: var(--showcase-accent-soft);
 		color: var(--showcase-accent-text);
-		font-size: var(--showcase-font-size-small);
+		font-size: 12px;
+		line-height: 1.2;
+	}
+
+	.showcase-kicker .icon {
+		width: 14px;
+		height: 14px;
 	}
 
 	.component-showcase,
@@ -77,7 +123,7 @@
 	}
 
 	.component-showcase {
-		@apply gap-12;
+		@apply gap-8;
 	}
 
 	.showcase-section,
@@ -86,11 +132,12 @@
 	}
 
 	.component-showcase-header {
-		@apply flex flex-col items-start gap-3 border-b border-border pb-[22px];
+		@apply flex flex-col items-start gap-2 border-b border-border pb-4;
 	}
 
 	.component-showcase-header h1 {
-		@apply mb-2.5 mt-0 text-[clamp(34px,5vw,56px)] leading-none tracking-normal;
+		@apply m-0 break-words text-[36px] leading-tight tracking-normal;
+		max-width: 100%;
 	}
 
 	.component-showcase-header p,
@@ -101,7 +148,8 @@
 	}
 
 	.component-showcase-header p {
-		@apply m-0 text-lg leading-[1.6];
+		@apply m-0 leading-[1.6];
+		font-size: var(--showcase-font-size);
 	}
 
 	.showcase-section h2,
@@ -698,6 +746,17 @@
 
 	.table-panel {
 		@apply overflow-hidden;
+	}
+
+	.table-demo,
+	.side-data,
+	.mini-table,
+	.file-tree,
+	.table-toolbar,
+	.table-panel,
+	.table-pagination-bar {
+		min-width: 0;
+		max-width: 100%;
 	}
 
 	.table-toolbar,
