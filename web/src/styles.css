@@ -111,10 +111,14 @@ select {
 }
 
 .topbar {
-	height: 56px;
-	padding: 0 16px;
-	background: #ffffff;
-	border-bottom: 1px solid #dde2ea;
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	min-height: 64px;
+	padding: 12px 24px;
+	background: rgb(255 255 255 / 0.9);
+	backdrop-filter: blur(12px);
+	border-bottom: 1px solid #dde3ea;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -137,6 +141,12 @@ select {
 	flex: 0 0 auto;
 }
 
+.brand .icon {
+	width: 22px;
+	height: 22px;
+	color: #1f7a6a;
+}
+
 .topbar-actions {
 	display: inline-flex;
 	align-items: center;
@@ -145,17 +155,18 @@ select {
 }
 
 .auth-chip {
-	height: 34px;
+	min-height: 36px;
 	padding: 0 10px;
 	border: 1px solid #d6dce7;
-	border-radius: 6px;
+	border-radius: 999px;
 	background: #f8fafc;
 	color: #334155;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	font-size: 12px;
-	font-weight: 500;
+	font-size: 14px;
+	font-weight: 600;
+	white-space: nowrap;
 }
 
 .menu-nav {
@@ -180,6 +191,12 @@ select {
 	text-decoration: none;
 	font-size: 14px;
 	font-weight: 700;
+	white-space: nowrap;
+}
+
+.menu-link .icon {
+	width: 1em;
+	height: 1em;
 }
 
 .menu-link:hover,
@@ -191,6 +208,8 @@ select {
 .icon-button {
 	width: 36px;
 	height: 36px;
+	flex: 0 0 36px;
+	padding: 0;
 	border: 1px solid #cbd7e2;
 	background: #ffffff;
 	color: #17202a;
@@ -199,6 +218,12 @@ select {
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
+}
+
+.icon-button .icon,
+.demo-icon-button .icon {
+	width: 16px;
+	height: 16px;
 }
 
 .icon-button:hover:not(:disabled) {
@@ -281,9 +306,9 @@ select {
 	gap: 6px;
 }
 
-.actions button,
-.search-row button,
-.composer button {
+.actions button:not(.demo-button):not(.demo-icon-button):not(.icon-button),
+.search-row button:not(.demo-button):not(.demo-icon-button):not(.icon-button),
+.composer button:not(.demo-button):not(.demo-icon-button):not(.icon-button) {
 	height: 30px;
 	min-width: 30px;
 	padding: 0 10px;
@@ -299,7 +324,10 @@ select {
 
 .actions button:disabled,
 .search-row button:disabled,
-.composer button:disabled {
+.composer button:disabled,
+.demo-button:disabled,
+.demo-icon-button:disabled,
+.icon-button:disabled {
 	opacity: 0.55;
 	cursor: default;
 }

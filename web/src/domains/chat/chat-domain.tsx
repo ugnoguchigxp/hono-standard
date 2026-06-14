@@ -509,7 +509,7 @@ export const ChatDomainSection = ({
 									{formatDateTime(conversation.updatedAt)}
 								</small>
 							</button>
-							<button
+							<IconButton
 								type="button"
 								className="conversation-delete-btn"
 								title="Delete conversation"
@@ -520,7 +520,7 @@ export const ChatDomainSection = ({
 								disabled={busy}
 							>
 								<Trash2 className="icon" />
-							</button>
+							</IconButton>
 						</div>
 					))}
 				</div>

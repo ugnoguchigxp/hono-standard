@@ -8,7 +8,6 @@ import {
 	Search,
 	Settings,
 	Shield,
-	Users,
 } from "lucide-react";
 import type { AuthUser } from "./api";
 import { defaultShowcaseTableSearch } from "./showcase-table-search";
@@ -61,12 +60,6 @@ export function AppHeader({
 						<Settings className="icon" />
 						Settings
 					</Link>
-					{authUser?.role === "admin" ? (
-						<Link to="/admin" className={menuClass(active === "admin")}>
-							<Users className="icon" />
-							Admin
-						</Link>
-					) : null}
 					<Link
 						to="/showcase"
 						search={defaultShowcaseTableSearch}

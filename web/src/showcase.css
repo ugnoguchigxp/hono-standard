@@ -39,7 +39,7 @@
 		--showcase-font-size-small: 13px;
 		--showcase-heading-size: 24px;
 		--showcase-card-title-size: 18px;
-		@apply pb-24 pt-12;
+		@apply px-6 pb-24 pt-12;
 		background: var(--showcase-page);
 		color: var(--showcase-ink);
 		font-size: var(--showcase-font-size);
@@ -261,6 +261,41 @@
 		width: var(--showcase-control-height);
 		height: var(--showcase-control-height);
 		@apply border-[#cbd7e2];
+	}
+
+	.demo-icon-button.icon-btn.inline {
+		width: 22px;
+		height: 22px;
+		min-height: 22px;
+		flex: 0 0 22px;
+		border-radius: 4px;
+		@apply p-0;
+	}
+
+	.demo-icon-button.icon-btn.inline.small {
+		width: 18px;
+		height: 18px;
+		min-height: 18px;
+		flex-basis: 18px;
+	}
+
+	.demo-icon-button.conversation-delete-btn {
+		width: 32px;
+		height: 32px;
+		min-height: 32px;
+		flex: 0 0 32px;
+		@apply p-0;
+	}
+
+	.demo-icon-button.admin-modal-close-btn {
+		@apply p-0;
+	}
+
+	.demo-button.admin-row-btn {
+		min-height: 28px;
+		padding: 0 8px;
+		border-radius: 6px;
+		font-size: 12px;
 	}
 
 	.demo-badge {
@@ -1107,12 +1142,8 @@
 }
 
 @media (max-width: 720px) {
-	.topbar {
+	.showcase-shell {
 		@apply px-4;
-	}
-
-	.auth-chip span {
-		@apply max-w-45 overflow-hidden text-ellipsis whitespace-nowrap;
 	}
 
 	.component-grid,

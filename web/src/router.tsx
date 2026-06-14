@@ -4,6 +4,8 @@ import {
 	createRouter,
 	Outlet,
 } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
+import { type AuthUser, fetchMe, logout, UNAUTHORIZED_EVENT_NAME } from "./api";
 import { App, type AppViewId } from "./App";
 import { AppHeader } from "./app-header";
 import { ShowcaseSettingsProvider } from "./showcase-settings-context";
@@ -52,10 +54,54 @@ const adminRoute = createRoute({
 	component: renderAppView("admin"),
 });
 
+const isUnauthorizedError = (error: unknown): boolean =>
+	error instanceof Error && /unauthorized/i.test(error.message);
+
 function ShowcasePage() {
+	const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+	const [busy, setBusy] = useState(false);
+
+	useEffect(() => {
+		let active = true;
+		void fetchMe()
+			.then((user) => {
+				if (active) setAuthUser(user);
+			})
+			.catch((error) => {
+				if (!isUnauthorizedError(error)) {
+					console.error(error);
+				}
+				if (active) setAuthUser(null);
+			});
+		const handleUnauthorized = () => setAuthUser(null);
+		window.addEventListener(UNAUTHORIZED_EVENT_NAME, handleUnauthorized);
+		return () => {
+			active = false;
+			window.removeEventListener(UNAUTHORIZED_EVENT_NAME, handleUnauthorized);
+		};
+	}, []);
+
+	const handleLogout = useCallback(async () => {
+		if (busy) return;
+		setBusy(true);
+		try {
+			await logout();
+			setAuthUser(null);
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setBusy(false);
+		}
+	}, [busy]);
+
 	return (
 		<div className="app-root">
-			<AppHeader active="showcase" />
+			<AppHeader
+				active="showcase"
+				authUser={authUser}
+				busy={busy}
+				onLogout={handleLogout}
+			/>
 			<ShowcaseSettingsProvider>
 				<ShowcaseView />
 			</ShowcaseSettingsProvider>

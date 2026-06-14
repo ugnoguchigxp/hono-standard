@@ -1,6 +1,6 @@
 import { ArrowRight, AtSign, Database, KeyRound, Shield } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Button } from "../../ui";
+import { Button, TextInput } from "../../ui";
 
 type LoginFormValues = {
 	email: string;
@@ -61,7 +61,7 @@ export const LoginDomainSection = ({
 					<label htmlFor="login-email">Email</label>
 					<div className="auth-input-wrap">
 						<AtSign className="icon" />
-						<input
+						<TextInput
 							id="login-email"
 							type="email"
 							placeholder="admin@example.com"
@@ -72,7 +72,7 @@ export const LoginDomainSection = ({
 					<label htmlFor="login-password">Password</label>
 					<div className="auth-input-wrap">
 						<KeyRound className="icon" />
-						<input
+						<TextInput
 							id="login-password"
 							type="password"
 							placeholder="********"

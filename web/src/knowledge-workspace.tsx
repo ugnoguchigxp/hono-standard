@@ -39,6 +39,7 @@ import {
 	type SourceTreeResponse,
 	updateSourcePage,
 } from "./api";
+import { IconButton, SelectInput, TextInput } from "./ui";
 
 mermaid.initialize({ startOnLoad: false });
 
@@ -831,7 +832,7 @@ export function KnowledgeWorkspace({
 						className={`explorer-row folder ${isSelected ? "selected" : ""} ${isDropTarget ? "drop-target" : ""}`}
 						style={{ paddingLeft: `${depth * 14 + 6}px` }}
 					>
-						<button
+						<IconButton
 							type="button"
 							className="icon-btn inline small"
 							onClick={() => toggleFolder(node.path)}
@@ -842,7 +843,7 @@ export function KnowledgeWorkspace({
 							) : (
 								<ChevronRight className="icon" />
 							)}
-						</button>
+						</IconButton>
 						<button
 							type="button"
 							className="explorer-main-btn"
@@ -857,7 +858,7 @@ export function KnowledgeWorkspace({
 							<span>{node.name}</span>
 						</button>
 						<div className="explorer-inline-actions">
-							<button
+							<IconButton
 								type="button"
 								className="icon-btn inline"
 								title="New page"
@@ -865,8 +866,8 @@ export function KnowledgeWorkspace({
 								disabled={busy}
 							>
 								<FilePlus2 className="icon" />
-							</button>
-							<button
+							</IconButton>
+							<IconButton
 								type="button"
 								className="icon-btn inline"
 								title="New folder"
@@ -874,8 +875,8 @@ export function KnowledgeWorkspace({
 								disabled={busy}
 							>
 								<FolderPlus className="icon" />
-							</button>
-							<button
+							</IconButton>
+							<IconButton
 								type="button"
 								className="icon-btn inline"
 								title="Rename folder"
@@ -883,8 +884,8 @@ export function KnowledgeWorkspace({
 								disabled={busy}
 							>
 								<Pencil className="icon" />
-							</button>
-							<button
+							</IconButton>
+							<IconButton
 								type="button"
 								className="icon-btn inline danger"
 								title="Delete folder"
@@ -892,7 +893,7 @@ export function KnowledgeWorkspace({
 								disabled={busy}
 							>
 								<Trash2 className="icon" />
-							</button>
+							</IconButton>
 						</div>
 					</div>
 					{isExpanded
@@ -933,7 +934,7 @@ export function KnowledgeWorkspace({
 					<span>{node.name}</span>
 				</button>
 				<div className="explorer-inline-actions">
-					<button
+					<IconButton
 						type="button"
 						className="icon-btn inline"
 						title="Rename page"
@@ -941,8 +942,8 @@ export function KnowledgeWorkspace({
 						disabled={busy}
 					>
 						<Pencil className="icon" />
-					</button>
-					<button
+					</IconButton>
+					<IconButton
 						type="button"
 						className="icon-btn inline danger"
 						title="Delete page"
@@ -950,7 +951,7 @@ export function KnowledgeWorkspace({
 						disabled={busy}
 					>
 						<Trash2 className="icon" />
-					</button>
+					</IconButton>
 				</div>
 			</div>
 		);
@@ -962,27 +963,38 @@ export function KnowledgeWorkspace({
 				<div className="panel-header">
 					<h2>Explorer</h2>
 					<div className="actions">
-						<button type="button" onClick={() => startCreate()} disabled={busy}>
-							<FilePlus2 className="icon" />
-						</button>
-						<button
+						<IconButton
 							type="button"
+							title="New page"
+							onClick={() => startCreate()}
+							disabled={busy}
+						>
+							<FilePlus2 className="icon" />
+						</IconButton>
+						<IconButton
+							type="button"
+							title="New folder"
 							onClick={() => void promptCreateFolder()}
 							disabled={busy}
 						>
 							<FolderPlus className="icon" />
-						</button>
+						</IconButton>
 					</div>
 				</div>
 				<div className="search-row">
-					<input
+					<TextInput
 						value={sourceSearchQuery}
 						onChange={(event) => setSourceSearchQuery(event.target.value)}
 						placeholder="Search pages"
 					/>
-					<button type="button" onClick={handleSearchSource} disabled={busy}>
+					<IconButton
+						type="button"
+						title="Search pages"
+						onClick={handleSearchSource}
+						disabled={busy}
+					>
 						<Search className="icon" />
-					</button>
+					</IconButton>
 				</div>
 				<button
 					type="button"
@@ -1026,39 +1038,39 @@ export function KnowledgeWorkspace({
 				<div className="panel-header">
 					<h2>{mode === "edit" ? "Edit" : "View"} Page</h2>
 					<div className="actions">
-						<button
+						<IconButton
 							type="button"
 							title="Edit"
 							onClick={() => setMode("edit")}
 							disabled={mode === "edit"}
 						>
 							<Edit2 className="icon" />
-						</button>
-						<button
+						</IconButton>
+						<IconButton
 							type="button"
 							title="View"
 							onClick={() => setMode("view")}
 							disabled={mode === "view"}
 						>
 							<Eye className="icon" />
-						</button>
-						<button
+						</IconButton>
+						<IconButton
 							type="button"
 							title="Save"
 							onClick={handleSave}
 							disabled={busy}
 						>
 							<Save className="icon" />
-						</button>
-						<button
+						</IconButton>
+						<IconButton
 							type="button"
 							title="Delete selected"
 							onClick={() => void handleDelete()}
 							disabled={busy}
 						>
 							<Trash2 className="icon" />
-						</button>
-						<button
+						</IconButton>
+						<IconButton
 							type="button"
 							title="Reindex"
 							onClick={() =>
@@ -1073,28 +1085,31 @@ export function KnowledgeWorkspace({
 							disabled={busy}
 						>
 							<RefreshCw className="icon" />
-						</button>
+						</IconButton>
 					</div>
 				</div>
 
 				<div className="editor-fields">
-					<label>
+					<label htmlFor="knowledge-slug">
 						Slug
-						<input
+						<TextInput
+							id="knowledge-slug"
 							value={draftSlug}
 							onChange={(event) => setDraftSlug(event.target.value)}
 						/>
 					</label>
-					<label>
+					<label htmlFor="knowledge-title">
 						Title
-						<input
+						<TextInput
+							id="knowledge-title"
 							value={draftTitle}
 							onChange={(event) => setDraftTitle(event.target.value)}
 						/>
 					</label>
-					<label className="span-2">
+					<label htmlFor="knowledge-tags" className="span-2">
 						Tags (comma separated)
-						<input
+						<TextInput
+							id="knowledge-tags"
 							value={draftTags}
 							onChange={(event) => {
 								const value = event.target.value;
@@ -1166,9 +1181,10 @@ export function KnowledgeWorkspace({
 					) : null}
 				</div>
 				<div className="history-selects">
-					<label>
+					<label htmlFor="knowledge-diff-from">
 						From
-						<select
+						<SelectInput
+							id="knowledge-diff-from"
 							className="history-select"
 							value={diffFrom}
 							onChange={(event) => setDiffFrom(event.target.value)}
@@ -1179,11 +1195,12 @@ export function KnowledgeWorkspace({
 									{shortCommit(item.commit)} {item.message}
 								</option>
 							))}
-						</select>
+						</SelectInput>
 					</label>
-					<label>
+					<label htmlFor="knowledge-diff-to">
 						To
-						<select
+						<SelectInput
+							id="knowledge-diff-to"
 							className="history-select"
 							value={diffTo}
 							onChange={(event) => setDiffTo(event.target.value)}
@@ -1194,7 +1211,7 @@ export function KnowledgeWorkspace({
 									{shortCommit(item.commit)} {item.message}
 								</option>
 							))}
-						</select>
+						</SelectInput>
 					</label>
 				</div>
 				<div className="diff-view grow">

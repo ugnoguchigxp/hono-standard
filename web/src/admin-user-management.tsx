@@ -7,6 +7,7 @@ import {
 	RefreshCw,
 	Search,
 	Users,
+	X,
 } from "lucide-react";
 import {
 	createContext,
@@ -26,6 +27,7 @@ import {
 	resetAdminUserPassword,
 	updateAdminUser,
 } from "./api";
+import { Button, IconButton, SelectInput, TextInput } from "./ui";
 
 type AdminUserManagementPanelProps = {
 	busy: boolean;
@@ -392,15 +394,16 @@ const AdminToolbar = () => {
 					<Users className="icon" />
 					<h2>User Management</h2>
 				</div>
-				<button
+				<Button
 					type="button"
-					className="search-btn btn-primary admin-create-btn"
+					variant="primary"
+					className="admin-create-btn"
 					onClick={openCreateForm}
 					disabled={busy}
 				>
 					<Plus className="icon" />
 					<span>Add user</span>
-				</button>
+				</Button>
 			</div>
 			<div className="admin-toolbar">
 				<form
@@ -412,7 +415,7 @@ const AdminToolbar = () => {
 				>
 					<div className="search-input-wrapper">
 						<Search className="admin-search-icon" />
-						<input
+						<TextInput
 							type="search"
 							className="search-input admin-search-input"
 							value={searchInput}
@@ -420,17 +423,13 @@ const AdminToolbar = () => {
 							placeholder="Search by name, email, role..."
 						/>
 					</div>
-					<button
-						type="submit"
-						className="search-btn btn-primary"
-						disabled={busy}
-					>
+					<Button type="submit" variant="primary" disabled={busy}>
 						<Search className="icon" />
 						<span>Search</span>
-					</button>
+					</Button>
 				</form>
 				<div className="admin-filter-row">
-					<select
+					<SelectInput
 						value={filters.role}
 						onChange={(event) =>
 							setFilters({
@@ -441,8 +440,8 @@ const AdminToolbar = () => {
 						<option value="all">All roles</option>
 						<option value="admin">Admin</option>
 						<option value="member">Member</option>
-					</select>
-					<select
+					</SelectInput>
+					<SelectInput
 						value={filters.status}
 						onChange={(event) =>
 							setFilters({
@@ -453,16 +452,17 @@ const AdminToolbar = () => {
 						<option value="all">All status</option>
 						<option value="active">Active</option>
 						<option value="disabled">Disabled</option>
-					</select>
-					<button
+					</SelectInput>
+					<Button
 						type="button"
-						className="search-btn admin-clear-btn"
+						variant="outline"
+						className="admin-clear-btn"
 						onClick={clearFilters}
 						disabled={busy}
 					>
 						<RefreshCw className="icon" />
 						<span>Clear</span>
-					</button>
+					</Button>
 				</div>
 			</div>
 		</>
@@ -523,8 +523,9 @@ const AdminUsersTable = () => {
 								<td>{formatDateTime(user.createdAt)}</td>
 								<td>
 									<div className="admin-row-actions">
-										<button
+										<Button
 											type="button"
+											variant="outline"
 											className="admin-row-btn"
 											onClick={() => openEditForm(user)}
 											disabled={busy}
@@ -532,9 +533,10 @@ const AdminUsersTable = () => {
 										>
 											<Pencil className="icon" />
 											<span>Edit</span>
-										</button>
-										<button
+										</Button>
+										<Button
 											type="button"
+											variant={user.isActive ? "destructive" : "primary"}
 											className={`admin-row-btn ${
 												user.isActive
 													? "admin-row-btn-danger"
@@ -550,9 +552,10 @@ const AdminUsersTable = () => {
 												<CircleCheck className="icon" />
 											)}
 											<span>{user.isActive ? "Disable" : "Enable"}</span>
-										</button>
-										<button
+										</Button>
+										<Button
 											type="button"
+											variant="outline"
 											className="admin-row-btn"
 											onClick={() => openResetDialog(user)}
 											disabled={busy}
@@ -560,7 +563,7 @@ const AdminUsersTable = () => {
 										>
 											<KeyRound className="icon" />
 											<span>Reset PW</span>
-										</button>
+										</Button>
 									</div>
 								</td>
 							</tr>
@@ -603,19 +606,21 @@ const AdminUserFormModal = () => {
 			<section className="admin-modal" role="dialog" aria-modal="true">
 				<header className="admin-modal-header">
 					<h3>{adminFormMode === "create" ? "Create User" : "Edit User"}</h3>
-					<button
+					<IconButton
 						type="button"
 						className="admin-modal-close-btn"
 						onClick={closeForm}
 						disabled={busy}
+						aria-label="Close"
+						title="Close"
 					>
-						Close
-					</button>
+						<X className="icon" />
+					</IconButton>
 				</header>
 				<div className="admin-modal-body">
 					<label htmlFor="admin-form-email">
 						Email
-						<input
+						<TextInput
 							id="admin-form-email"
 							type="email"
 							value={adminFormEmail}
@@ -626,7 +631,7 @@ const AdminUserFormModal = () => {
 					</label>
 					<label htmlFor="admin-form-display-name">
 						Display name
-						<input
+						<TextInput
 							id="admin-form-display-name"
 							type="text"
 							value={adminFormDisplayName}
@@ -636,7 +641,7 @@ const AdminUserFormModal = () => {
 					</label>
 					<label htmlFor="admin-form-role">
 						Role
-						<select
+						<SelectInput
 							id="admin-form-role"
 							value={adminFormRole}
 							onChange={(event) =>
@@ -645,12 +650,12 @@ const AdminUserFormModal = () => {
 						>
 							<option value="member">member</option>
 							<option value="admin">admin</option>
-						</select>
+						</SelectInput>
 					</label>
 					{adminFormMode === "create" ? (
 						<label htmlFor="admin-form-password">
 							Initial password
-							<input
+							<TextInput
 								id="admin-form-password"
 								type="password"
 								value={adminFormPassword}
@@ -661,22 +666,22 @@ const AdminUserFormModal = () => {
 					) : null}
 				</div>
 				<footer className="admin-modal-footer">
-					<button
+					<Button
 						type="button"
-						className="search-btn"
+						variant="outline"
 						onClick={closeForm}
 						disabled={busy}
 					>
 						Cancel
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
-						className="search-btn btn-primary"
+						variant="primary"
 						onClick={() => void submitForm()}
 						disabled={busy}
 					>
 						{adminFormMode === "create" ? "Create" : "Save"}
-					</button>
+					</Button>
 				</footer>
 			</section>
 		</div>
@@ -705,22 +710,23 @@ const AdminUserToggleDialog = () => {
 					</p>
 				</div>
 				<footer className="admin-modal-footer">
-					<button
+					<Button
 						type="button"
-						className="search-btn"
+						variant="outline"
 						onClick={closeToggleDialog}
 						disabled={busy}
 					>
 						Cancel
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
-						className={`search-btn ${adminToggleUser.isActive ? "admin-btn-danger" : "btn-primary"}`}
+						variant={adminToggleUser.isActive ? "destructive" : "primary"}
+						className={adminToggleUser.isActive ? "admin-btn-danger" : ""}
 						onClick={() => void confirmToggleUser()}
 						disabled={busy}
 					>
 						{adminToggleUser.isActive ? "Disable" : "Enable"}
-					</button>
+					</Button>
 				</footer>
 			</section>
 		</div>
@@ -751,7 +757,7 @@ const AdminUserResetPasswordDialog = () => {
 					<p>{adminResetUser.email}</p>
 					<label htmlFor="admin-reset-password">
 						New password
-						<input
+						<TextInput
 							id="admin-reset-password"
 							type="password"
 							value={adminResetPassword}
@@ -761,22 +767,22 @@ const AdminUserResetPasswordDialog = () => {
 					</label>
 				</div>
 				<footer className="admin-modal-footer">
-					<button
+					<Button
 						type="button"
-						className="search-btn"
+						variant="outline"
 						onClick={closeResetDialog}
 						disabled={busy}
 					>
 						Cancel
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
-						className="search-btn btn-primary"
+						variant="primary"
 						onClick={() => void confirmResetPassword()}
 						disabled={busy}
 					>
 						Update password
-					</button>
+					</Button>
 				</footer>
 			</section>
 		</div>
