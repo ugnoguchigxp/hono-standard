@@ -152,6 +152,7 @@ select {
 	align-items: center;
 	gap: 8px;
 	cursor: pointer;
+	text-decoration: none;
 }
 
 .tab.active {

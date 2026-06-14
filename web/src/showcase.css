@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@reference "tailwindcss";
 
 @theme {
 	--color-page: #f6f7f9;
