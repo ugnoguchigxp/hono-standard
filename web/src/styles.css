@@ -1850,7 +1850,7 @@ select {
 		min-width: 0;
 	}
 
-	.search-btn {
+	.search-row-advanced .search-btn {
 		width: 100%;
 	}
 }
