@@ -1,5 +1,6 @@
 import { ArrowRight, AtSign, Database, KeyRound, Shield } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { Button } from "../../ui";
 
 type LoginFormValues = {
 	email: string;
@@ -79,15 +80,17 @@ export const LoginDomainSection = ({
 							{...register("password", { required: true })}
 						/>
 					</div>
-					<button
+					<Button
 						type="submit"
+						variant="primary"
+						full
 						className="auth-submit"
 						disabled={busy || isSubmitting}
 					>
 						<Shield className="icon" />
 						<span>ログイン</span>
 						<ArrowRight className="icon" />
-					</button>
+					</Button>
 				</form>
 			</section>
 		</main>

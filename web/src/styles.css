@@ -1,4 +1,23 @@
+@import "tailwindcss";
 @import "../../node_modules/markdown-wysiwyg-editor/dist/bundle.css";
+
+@theme {
+	--color-page: #f6f7f9;
+	--color-surface: #ffffff;
+	--color-surface-muted: #eef7f4;
+	--color-border: #dde3ea;
+	--color-border-strong: #d7dee7;
+	--color-ink: #17202a;
+	--color-muted: #52606f;
+	--color-muted-strong: #3b4754;
+	--color-brand: #1f7a6a;
+	--color-brand-strong: #176456;
+	--color-brand-soft: #e6f5ef;
+	--color-brand-border: #a9cfc3;
+	--color-danger: #9f1d1d;
+	--radius-control: 8px;
+	--radius-pill: 999px;
+}
 
 :root {
 	color-scheme: light;
@@ -106,7 +125,10 @@ select {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-	font-weight: 600;
+	font-weight: 800;
+	color: inherit;
+	text-decoration: none;
+	letter-spacing: 0;
 }
 
 .icon {
@@ -115,16 +137,11 @@ select {
 	flex: 0 0 auto;
 }
 
-.tab-nav {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-}
-
 .topbar-actions {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
+	flex-wrap: wrap;
 }
 
 .auth-chip {
@@ -141,24 +158,52 @@ select {
 	font-weight: 500;
 }
 
-.tab {
-	height: 34px;
-	padding: 0 12px;
-	border: 1px solid #ccd3dd;
+.menu-nav {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: 1px solid #cbd7e2;
 	background: #ffffff;
-	color: #475569;
+	border-radius: 8px;
+	padding: 3px;
+}
+
+.menu-link {
+	min-height: 30px;
+	padding: 0 10px;
 	border-radius: 6px;
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	cursor: pointer;
+	justify-content: center;
+	gap: 6px;
+	color: #3b4754;
 	text-decoration: none;
+	font-size: 14px;
+	font-weight: 700;
 }
 
-.tab.active {
-	background: #0f766e;
-	border-color: #0f766e;
-	color: #ffffff;
+.menu-link:hover,
+.menu-link.active {
+	background: #e6f5ef;
+	color: #176456;
+}
+
+.icon-button {
+	width: 36px;
+	height: 36px;
+	border: 1px solid #cbd7e2;
+	background: #ffffff;
+	color: #17202a;
+	border-radius: 8px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled) {
+	border-color: #a9cfc3;
+	background: #e6f5ef;
 }
 
 .status {
@@ -1570,7 +1615,7 @@ select {
 		padding: 10px 12px;
 	}
 
-	.tab-nav {
+	.menu-nav {
 		flex-wrap: wrap;
 	}
 
@@ -1676,14 +1721,13 @@ select {
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	padding: 10px 20px;
+	padding: 0 14px;
 	height: 38px;
-	border: none;
+	border: 1px solid transparent;
 	border-radius: 8px;
 	font-size: 14px;
-	font-weight: 600;
+	font-weight: 800;
 	cursor: pointer;
-	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 	outline: none;
 }
 
@@ -1699,40 +1743,31 @@ select {
 	box-shadow: none;
 }
 
-/* 通常の検索ボタン：ソリッドな青色ボタン */
 .btn-primary {
-	background: #2563eb;
+	background: #1f7a6a;
 	color: #ffffff;
-	box-shadow: 0 4px 10px rgba(37, 99, 235, 0.15);
 }
 
 .btn-primary:hover:not(:disabled) {
-	background: #1d4ed8;
-	transform: translateY(-1px);
-	box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
+	background: #176456;
 }
 
 .btn-primary:active:not(:disabled) {
-	background: #1e40af;
-	transform: translateY(1px);
+	background: #176456;
 }
 
-/* Agentic Searchボタン：ソリッドな紫色ボタン */
 .btn-agentic {
-	background: #7c3aed;
-	color: #ffffff;
-	box-shadow: 0 4px 10px rgba(124, 58, 237, 0.15);
+	background: #e6f5ef;
+	color: #176456;
+	border-color: #a9cfc3;
 }
 
 .btn-agentic:hover:not(:disabled) {
-	background: #6d28d9;
-	transform: translateY(-1px);
-	box-shadow: 0 6px 14px rgba(124, 58, 237, 0.25);
+	background: #d7eee6;
 }
 
 .btn-agentic:active:not(:disabled) {
-	background: #5b21b6;
-	transform: translateY(1px);
+	background: #d7eee6;
 }
 
 /* Sparklesなどのアイコンをパルス（明滅）させるアニメーション */

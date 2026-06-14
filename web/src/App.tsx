@@ -1,19 +1,6 @@
-import {
-	Activity,
-	Brain,
-	BookOpen,
-	Bot,
-	Database,
-	GitBranch,
-	Search,
-	Shield,
-	Settings,
-	Users,
-	LogOut,
-	Grid2X2,
-} from "lucide-react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { Activity, BookOpen, Brain, Database, GitBranch } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
 	type AuthUser,
 	type SourceHealth,
@@ -27,6 +14,7 @@ import {
 	updateSystemContext,
 } from "./api";
 import { AdminUserManagementPanel } from "./admin-user-management";
+import { AppHeader } from "./app-header";
 import { LoginDomainSection } from "./domains/auth/login-domain";
 import { ChatDomainSection } from "./domains/chat/chat-domain";
 import {
@@ -34,7 +22,7 @@ import {
 	KnowledgeNavigationProvider,
 } from "./domains/knowledge/knowledge-domain";
 import { SearchDomainSection } from "./domains/search/search-domain";
-import { defaultShowcaseTableSearch } from "./showcase-table-search";
+import { Button, TextArea } from "./ui";
 
 export type AppViewId = "knowledge" | "chat" | "search" | "settings" | "admin";
 
@@ -76,26 +64,6 @@ export function App({ view }: AppProps) {
 		string | null
 	>(null);
 	const [systemContextSaving, setSystemContextSaving] = useState(false);
-
-	const tabItems = useMemo<
-		Array<{ id: AppViewId; label: string; icon: typeof BookOpen; to: string }>
-	>(() => {
-		const items: Array<{
-			id: AppViewId;
-			label: string;
-			icon: typeof BookOpen;
-			to: string;
-		}> = [
-			{ id: "knowledge", label: "Knowledge", icon: BookOpen, to: "/knowledge" },
-			{ id: "chat", label: "Chat", icon: Bot, to: "/chat" },
-			{ id: "search", label: "Search", icon: Search, to: "/search" },
-			{ id: "settings", label: "Settings", icon: Settings, to: "/settings" },
-		];
-		if (authUser?.role === "admin") {
-			items.push({ id: "admin", label: "Admin", icon: Users, to: "/admin" });
-		}
-		return items;
-	}, [authUser?.role]);
 
 	const loadHealth = async () => {
 		const [source, app] = await Promise.all([
@@ -225,54 +193,12 @@ export function App({ view }: AppProps) {
 
 	return (
 		<div className="app-root">
-			<header className="topbar">
-				<div className="brand">
-					<Database className="icon" />
-					<span>hono-standard rag</span>
-				</div>
-				{authUser ? (
-					<div className="topbar-actions">
-						<nav className="tab-nav" aria-label="Primary">
-							{tabItems.map((item) => {
-								const Icon = item.icon;
-								return (
-									<Link
-										key={item.id}
-										className={view === item.id ? "tab active" : "tab"}
-										to={item.to}
-									>
-										<Icon className="icon" />
-										<span>{item.label}</span>
-									</Link>
-								);
-							})}
-							<Link
-								className="tab"
-								to="/showcase"
-								search={defaultShowcaseTableSearch}
-							>
-								<Grid2X2 className="icon" />
-								<span>Showcase</span>
-							</Link>
-						</nav>
-						<div className="auth-chip">
-							<Shield className="icon" />
-							<span>
-								{authUser.displayName} ({authUser.role})
-							</span>
-						</div>
-						<button
-							type="button"
-							className="tab"
-							onClick={() => void handleLogout()}
-							disabled={busy}
-						>
-							<LogOut className="icon" />
-							<span>Logout</span>
-						</button>
-					</div>
-				) : null}
-			</header>
+			<AppHeader
+				active={view}
+				authUser={authUser}
+				busy={busy}
+				onLogout={() => void handleLogout()}
+			/>
 
 			{errorText ? <div className="status error">{errorText}</div> : null}
 
@@ -348,7 +274,7 @@ export function App({ view }: AppProps) {
 									<label htmlFor="system-context-input">
 										Agentic Search Prompt
 									</label>
-									<textarea
+									<TextArea
 										id="system-context-input"
 										value={systemContextText}
 										onChange={(event) =>
@@ -357,15 +283,16 @@ export function App({ view }: AppProps) {
 										placeholder="System context for this user..."
 									/>
 									<div className="actions">
-										<button
+										<Button
 											type="button"
-											className="search-btn btn-primary"
+											variant="primary"
+											className="search-btn"
 											onClick={() => void handleSaveSystemContext()}
 											disabled={systemContextSaving}
 										>
 											<Brain className="icon" />
 											<span>Save</span>
-										</button>
+										</Button>
 										<small>
 											updated:{" "}
 											{formatDateTime(systemContextUpdatedAt ?? undefined)}

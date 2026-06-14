@@ -16,6 +16,7 @@ import {
 	toAgenticSourceKey,
 	toAgenticSourceLabel,
 } from "../../agentic-markdown";
+import { Button, SelectInput, TextInput } from "../../ui";
 import { useKnowledgeNavigation } from "../knowledge/knowledge-domain";
 
 type SearchResultsState = {
@@ -313,7 +314,7 @@ export const SearchDomainSection = ({
 					<h2>Fragment Search</h2>
 				</div>
 				<div className="search-row-advanced">
-					<select
+					<SelectInput
 						value={searchCategory}
 						onChange={(event) => handleSearchCategoryChange(event.target.value)}
 						className="search-select"
@@ -324,33 +325,35 @@ export const SearchDomainSection = ({
 								{category}
 							</option>
 						))}
-					</select>
+					</SelectInput>
 					<div className="search-input-wrapper">
-						<input
+						<TextInput
 							value={searchQuery}
 							onChange={(event) => handleSearchQueryChange(event.target.value)}
 							placeholder="Search knowledge fragments..."
 							className="search-input"
 						/>
 					</div>
-					<button
+					<Button
 						type="button"
-						className="search-btn btn-primary"
+						variant="primary"
+						className="search-btn"
 						onClick={() => void handleSearchFragments()}
 						disabled={busy}
 					>
 						<Search className="icon" />
 						<span>Search</span>
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
+						variant="secondary"
 						className="search-btn btn-agentic"
 						onClick={() => void handleAgenticSearch()}
 						disabled={busy}
 					>
 						<Sparkles className="icon" />
 						<span>Agentic Search</span>
-					</button>
+					</Button>
 				</div>
 				<div className="list search-list">
 					{agenticResult ? (

@@ -13,6 +13,7 @@ import {
 	sendChat,
 } from "../../api";
 import { normalizeAgenticAnswerMarkdown } from "../../agentic-markdown";
+import { Button, IconButton, SelectInput, TextArea } from "../../ui";
 
 type ChatDomainSectionProps = {
 	active: boolean;
@@ -476,14 +477,14 @@ export const ChatDomainSection = ({
 				<div className="panel-header">
 					<h2>Conversations</h2>
 					<div className="actions">
-						<button
+						<IconButton
 							type="button"
 							title="Refresh conversations"
 							onClick={() => void runWithBusy(loadConversations)}
 							disabled={busy}
 						>
 							<RefreshCw className="icon" />
-						</button>
+						</IconButton>
 					</div>
 				</div>
 				<div className="list">
@@ -529,7 +530,7 @@ export const ChatDomainSection = ({
 				<div className="panel-header">
 					<h2>Messages</h2>
 					<div className="actions">
-						<button
+						<IconButton
 							type="button"
 							title={artifactPanelVisible ? "Hide artifacts" : "Show artifacts"}
 							aria-label={
@@ -543,7 +544,7 @@ export const ChatDomainSection = ({
 							) : (
 								<Eye className="icon" />
 							)}
-						</button>
+						</IconButton>
 					</div>
 				</div>
 				<div className="chat-log">
@@ -574,7 +575,7 @@ export const ChatDomainSection = ({
 				<div className="composer">
 					<div className="composer-controls">
 						<label htmlFor="chat-category">Category</label>
-						<select
+						<SelectInput
 							id="chat-category"
 							value={chatCategory}
 							onChange={(event) => setChatCategory(event.target.value)}
@@ -585,9 +586,9 @@ export const ChatDomainSection = ({
 									{category}
 								</option>
 							))}
-						</select>
+						</SelectInput>
 					</div>
-					<textarea
+					<TextArea
 						value={composerText}
 						onChange={(event) => setComposerText(event.target.value)}
 						onKeyDown={(event) => {
@@ -598,14 +599,15 @@ export const ChatDomainSection = ({
 						}}
 						placeholder="Ask with markdown context..."
 					/>
-					<button
+					<Button
 						type="button"
+						variant="primary"
 						onClick={() => void handleSendMessage()}
 						disabled={busy}
 					>
 						<Send className="icon" />
 						<span>Send</span>
-					</button>
+					</Button>
 				</div>
 			</section>
 
