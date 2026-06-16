@@ -13,7 +13,7 @@
 
 - テンプレート本体は NightWorkers などの利用側 repo に vendoring しない。必要時に `git clone` または archive 展開で取得する。
 - 継続保守する差分は branch で管理し、固定スナップショットは tag と archive で残す。
-- `main` は最小共通の標準 baseline とし、DB や deploy の強い前提を持ちすぎない。
+- `main` は local SQLite を既定にした標準 baseline とする。Docker なしで起動できることを優先し、PostgreSQL、pgvector、Cloudflare のような追加前提は `variant/*` branch に分離する。
 - DB、auth、deploy、AI/RAG などの大きな前提差分は `variant/*` branch に分離する。
 - SSG、SSR、認証追加など、既存 variant に重ねられる小さめの差分はまず `overlay/*` branch または patch として管理する。
 - 既存プロダクト向けの実験 branch とテンプレート variant branch を混ぜない。
@@ -24,12 +24,12 @@
 
 | Branch | 用途 |
 | --- | --- |
-| `main` | 共通 baseline。Hono + React + Vite + Tailwind CSS + design tokens + Drizzle の最小構成。 |
-| `variant/sqlite` | local-first、desktop、prototype、小規模 single-user 向け。SQLite/libSQL を既定にする。 |
+| `main` | SQLite baseline。Hono + React + Vite + Tailwind CSS + design tokens + Drizzle を Docker なしで起動できる最小構成。 |
+| `variant/sqlite` | `main` と同じ SQLite baseline を明示 branch として残す。既存 clone / tag / archive 利用者向けの互換入口。 |
 | `variant/postgres` | 通常の Web app 向け。PostgreSQL を既定にする。 |
 | `variant/pgvector` | RAG、embedding、AI 検索向け。PostgreSQL + pgvector を既定にする。 |
 | `variant/rag` | Markdown ingestion、hybrid retrieval、chat、artifacts、agentic search、admin auth を含む RAG app template。 |
-| `variant/auth` | 認証・認可サンプルを厚めに持つ variant。DB variant と組み合わせる場合は派生 branch にする。 |
+| `variant/turso` | Turso/libSQL を既定にする。local file DB fallback と remote Turso 接続を扱う。 |
 | `variant/cloudflare` | Cloudflare Workers / D1 / KV / R2 など edge deploy 前提。Bun server 前提と分ける。 |
 
 ### Overlay branches
@@ -40,7 +40,6 @@
 | --- | --- |
 | `overlay/ssr` | React/Vite の client-only baseline に SSR entry、server render、hydration、SSR build を追加する。 |
 | `overlay/ssg` | prerender、static route manifest、build-time data loading などを追加する。 |
-| `overlay/auth-oauth` | baseline / DB variant に OAuth provider 設定を追加する。 |
 
 overlay は「単独で clone する完成テンプレート」ではなく、`main` または `variant/*` に適用できる差分として扱う。差分が大きくなり、単独 clone の需要が明確になった場合だけ `variant/ssr` や `variant/ssg` に昇格する。
 
@@ -332,17 +331,17 @@ git push origin overlay/ssr overlay-ssr-v0.1.0
 
 ### `main`
 
-- PostgreSQL / SQLite / Cloudflare のいずれかに強く寄りすぎない。
+- local SQLite を既定にし、Docker なしでも動くことを優先する。
 - Hono、React、Vite、Tailwind CSS、design tokens、Drizzle の基本構成を保つ。
+- SQLite DB ファイル保存先を README と `.env.example` に明示する。
 - security middleware の考え方を README に残す。
 - サンプル機能は小さく、削除しやすくする。
 
 ### `variant/sqlite`
 
-- local-first で Docker なしでも動くことを優先する。
-- SQLite または libSQL の DB ファイル保存先を明示する。
-- migration / bootstrap / seed が fresh DB で再現できる。
-- single-user と multi-user の境界を README に書く。
+- `main` と同じ SQLite baseline に追従する。
+- `main` と差分を作る場合は、互換維持の理由を README とこの文書に明記する。
+- tag / archive 利用者向けに、SQLite variant 名を安定して残す。
 
 ### `variant/postgres`
 
@@ -357,6 +356,12 @@ git push origin overlay/ssr overlay-ssr-v0.1.0
 - embedding table、index、distance metric の最小サンプルを持つ。
 - embedding provider は固定しすぎず、環境変数で差し替え可能にする。
 - RAG サンプルは小さく保ち、アプリ固有のプロンプトを入れない。
+
+### `variant/turso`
+
+- Turso/libSQL の remote 接続と local file DB fallback を README に明記する。
+- `DATABASE_URL` と `DATABASE_AUTH_TOKEN` の用途を `.env.example` に揃える。
+- SQLite baseline と同じ auth / showcase 構成を保ち、差分を libSQL adapter に限定する。
 
 ### `variant/cloudflare`
 
@@ -420,13 +425,14 @@ NightWorkers や agent が新規 Web app を作る場合:
 
 1. 既存 repo がある場合は、その repo の stack を優先する。
 2. ユーザーが技術スタックを指定している場合は、その指定を優先する。
-3. 指定がなく Web app であれば、`hono-standard` の variant を候補にする。
-4. local-first / desktop / prototype なら `variant/sqlite`。
+3. 指定がなく Web app であれば、まず `main` の SQLite baseline を候補にする。
+4. local-first / desktop / prototype なら `main` または互換入口の `variant/sqlite`。
 5. 通常 Web app / team / deploy 前提なら `variant/postgres`。
-6. RAG / embedding / semantic search が主目的なら `variant/pgvector`。
-7. Cloudflare Workers 前提なら `variant/cloudflare`。
-8. SSR が必要なら `overlay/ssr`、SSG が必要なら `overlay/ssg` を差分として適用する。
-9. clone 後はテンプレート名、DB、auth、security、sample 機能を要件に合わせて調整する。
+6. Turso / remote libSQL 前提なら `variant/turso`。
+7. RAG / embedding / semantic search が主目的なら `variant/pgvector`。
+8. Cloudflare Workers 前提なら `variant/cloudflare`。
+9. SSR が必要なら `overlay/ssr`、SSG が必要なら `overlay/ssg` を差分として適用する。
+10. clone 後はテンプレート名、DB、auth、security、sample 機能を要件に合わせて調整する。
 
 テンプレートの既定値をプロダクトの設計判断として扱わない。特に DB 種別、auth 方式、CORS、CSRF、CSP、rate limit、deploy runtime は要件ごとに確認する。
 
@@ -449,7 +455,7 @@ release tag を打つ前に確認する。
 
 - tag だけで variant 差分を長期保守する。
 - SSG / SSR / auth のような直交差分で branch の掛け算を増やす。
-- `main` に pgvector、Cloudflare、特定 auth provider などの強い前提を詰め込む。
+- `main` に PostgreSQL、pgvector、Cloudflare、特定 auth provider などの強い前提を詰め込む。
 - サンプルアプリ branch を標準 variant として扱う。
 - テンプレート repo 内に利用先プロダクトの仕様や seed を混ぜる。
 - clone 後の app から upstream template の履歴を無理に保ち続ける。必要なら新規 repo として `git init` する。
