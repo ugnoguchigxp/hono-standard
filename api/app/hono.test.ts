@@ -13,8 +13,8 @@ vi.mock("../db", () => ({
 				},
 			},
 		},
-		pgClient: {
-			end: vi.fn(),
+		client: {
+			close: vi.fn(),
 		},
 		ownsConnection: false,
 	}),
@@ -25,7 +25,7 @@ vi.mock("./env", () => ({
 		nodeEnv: "test",
 		host: "127.0.0.1",
 		port: 5173,
-		databaseUrl: "postgres://mock",
+		databaseUrl: "mock.db",
 		jwtSecret: "x".repeat(32),
 		jwtAccessExpiresIn: "15m",
 		jwtRefreshExpiresIn: "7d",

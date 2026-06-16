@@ -33,6 +33,9 @@ Thumbs.db
 !/drizzle/*.sql
 /drizzle/meta/
 .db-data/
+*.db
+*.db-shm
+*.db-wal
 
 # coverage
 /coverage

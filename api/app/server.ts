@@ -20,11 +20,8 @@ const shutdown = async (signal: string) => {
 	try {
 		const runtime = await getAppRuntime();
 		if (runtime?.dbConnection?.ownsConnection) {
-			const client = runtime.dbConnection.pgClient;
-			if ("end" in client && typeof client.end === "function") {
-				console.log("Closing database connection pool...");
-				await client.end();
-			}
+			console.log("Closing database connection...");
+			runtime.dbConnection.client.close();
 		}
 		console.log("Shutdown complete.");
 		process.exit(0);

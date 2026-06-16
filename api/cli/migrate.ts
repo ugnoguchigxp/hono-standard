@@ -1,11 +1,11 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { Client } from "pg";
+import { Database } from "bun:sqlite";
 import { readAppEnv } from "../app/env";
 
 type MigrationRecord = {
 	filename: string;
-	applied_at: Date;
+	applied_at: string;
 };
 
 const MIGRATIONS_TABLE = "hono_standard_schema_migrations";
@@ -18,49 +18,47 @@ async function listSqlMigrations(dir: string): Promise<string[]> {
 		.sort((a, b) => a.localeCompare(b));
 }
 
-async function ensureMigrationsTable(client: Client): Promise<void> {
-	await client.query(`
+async function ensureMigrationsTable(client: Database): Promise<void> {
+	client.run(`
 		CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
 			filename text PRIMARY KEY,
-			applied_at timestamptz NOT NULL DEFAULT now()
+			applied_at text NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)
 	`);
 }
 
-async function appliedMigrations(client: Client): Promise<Set<string>> {
-	const result = await client.query<MigrationRecord>(
-		`SELECT filename, applied_at FROM ${MIGRATIONS_TABLE}`,
-	);
-	return new Set(result.rows.map((row) => row.filename));
+async function appliedMigrations(client: Database): Promise<Set<string>> {
+	const rows = client
+		.query(`SELECT filename, applied_at FROM ${MIGRATIONS_TABLE}`)
+		.all() as MigrationRecord[];
+	return new Set(rows.map((row) => row.filename));
 }
 
 async function applyMigrationFile(
-	client: Client,
+	client: Database,
 	migrationsDir: string,
 	filename: string,
 ): Promise<void> {
 	const fullPath = path.resolve(migrationsDir, filename);
 	const sqlText = await readFile(fullPath, "utf8");
-	await client.query("BEGIN");
+	client.run("BEGIN");
 	try {
-		await client.query(sqlText);
-		await client.query(
-			`INSERT INTO ${MIGRATIONS_TABLE} (filename) VALUES ($1)`,
-			[filename],
-		);
-		await client.query("COMMIT");
+		client.run(sqlText);
+		client
+			.query(`INSERT INTO ${MIGRATIONS_TABLE} (filename) VALUES (?)`)
+			.run(filename);
+		client.run("COMMIT");
 	} catch (error) {
-		await client.query("ROLLBACK");
+		client.run("ROLLBACK");
 		throw error;
 	}
 }
 
 async function main() {
 	const env = readAppEnv();
-	const client = new Client({ connectionString: env.databaseUrl });
+	const client = new Database(env.databaseUrl, { create: true });
 	const migrationsDir = path.resolve(process.cwd(), "drizzle");
 
-	await client.connect();
 	try {
 		await ensureMigrationsTable(client);
 		const allMigrations = await listSqlMigrations(migrationsDir);
@@ -85,7 +83,7 @@ async function main() {
 			),
 		);
 	} finally {
-		await client.end();
+		client.close();
 	}
 }
 
