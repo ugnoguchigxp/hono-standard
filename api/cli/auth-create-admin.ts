@@ -1,7 +1,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { readAppEnv } from "../app/env";
-import { createDbConnection } from "../db";
+import { createDbRuntime } from "../db";
 import { AuthService } from "../modules/auth/auth.service";
 
 type CliArgs = {
@@ -68,9 +68,9 @@ async function main() {
 	}
 
 	const env = readAppEnv();
-	const db = createDbConnection(env.databaseUrl);
+	const dbRuntime = createDbRuntime(env);
 	try {
-		const authService = new AuthService(db.db, env);
+		const authService = new AuthService(dbRuntime.db, env);
 		const user = await authService.createAdmin({
 			email: args.email,
 			displayName: args.name,
@@ -92,9 +92,7 @@ async function main() {
 			),
 		);
 	} finally {
-		if (db.ownsConnection) {
-			db.client.close();
-		}
+		dbRuntime.close();
 	}
 }
 

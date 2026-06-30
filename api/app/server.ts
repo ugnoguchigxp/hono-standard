@@ -19,10 +19,8 @@ const shutdown = async (signal: string) => {
 
 	try {
 		const runtime = await getAppRuntime();
-		if (runtime?.dbConnection?.ownsConnection) {
-			console.log("Closing database connection...");
-			runtime.dbConnection.client.close();
-		}
+		console.log("Closing database connection...");
+		runtime.dbRuntime.close();
 		console.log("Shutdown complete.");
 		process.exit(0);
 	} catch (error) {

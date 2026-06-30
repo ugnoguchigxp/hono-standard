@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { Shield } from "lucide-react";
 import { useAuth } from "../auth-context";
 import { LoginDomainSection } from "../domains/auth/login-domain";
@@ -6,6 +6,7 @@ import { defaultShowcaseTableSearch } from "../showcase-table-search";
 
 export function LoginView() {
 	const { authUser, authLoading, busy, loginWithPassword } = useAuth();
+	const search = useSearch({ from: "/login" });
 
 	if (authLoading) {
 		return (
@@ -31,10 +32,20 @@ export function LoginView() {
 					>
 						Showcase
 					</Link>
+					<Link to="/protected" className="auth-open-button">
+						Protected sample
+					</Link>
 				</section>
 			</main>
 		);
 	}
 
-	return <LoginDomainSection active busy={busy} onLogin={loginWithPassword} />;
+	return (
+		<LoginDomainSection
+			active
+			busy={busy}
+			redirectTo={search.redirect}
+			onLogin={loginWithPassword}
+		/>
+	);
 }

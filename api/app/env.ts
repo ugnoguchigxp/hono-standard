@@ -23,6 +23,13 @@ const optionalBoolean = z.preprocess((value) => {
 	return value;
 }, z.boolean().optional());
 
+const optionalPort = z.preprocess((value) => {
+	if (typeof value === "number") return value;
+	if (typeof value !== "string") return value;
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? Number(trimmed) : undefined;
+}, z.number().int().min(1).max(65535).optional());
+
 const optionalCookieSameSite = z.preprocess((value) => {
 	if (typeof value !== "string") return value;
 	const normalized = value.trim().toLowerCase();
@@ -42,6 +49,8 @@ const EnvSchema = z.object({
 	NODE_ENV: z
 		.enum(["development", "test", "production"])
 		.default(APP_CONFIG_DEFAULTS.nodeEnv),
+	HOST: optionalTrimmedString,
+	PORT: optionalPort,
 	DATABASE_URL: optionalTrimmedString,
 	DATABASE_AUTH_TOKEN: optionalTrimmedString,
 	APP_URL: optionalUrl,
@@ -83,6 +92,8 @@ function parseCorsOrigins(value?: string): string[] | undefined {
 
 export function readAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
 	const parsed = EnvSchema.parse(env);
+	const databaseUrl = parsed.DATABASE_URL ?? APP_CONFIG_DEFAULTS.databaseUrl;
+
 	if (
 		parsed.NODE_ENV === "production" &&
 		(!parsed.JWT_SECRET || parsed.JWT_SECRET === APP_CONFIG_DEFAULTS.jwtSecret)
@@ -117,9 +128,9 @@ export function readAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
 
 	return {
 		nodeEnv: parsed.NODE_ENV,
-		host: APP_CONFIG_DEFAULTS.host,
-		port: APP_CONFIG_DEFAULTS.port,
-		databaseUrl: parsed.DATABASE_URL ?? APP_CONFIG_DEFAULTS.databaseUrl,
+		host: parsed.HOST ?? APP_CONFIG_DEFAULTS.host,
+		port: parsed.PORT ?? APP_CONFIG_DEFAULTS.port,
+		databaseUrl,
 		databaseAuthToken: parsed.DATABASE_AUTH_TOKEN,
 		jwtSecret: parsed.JWT_SECRET ?? APP_CONFIG_DEFAULTS.jwtSecret,
 		jwtAccessExpiresIn: APP_CONFIG_DEFAULTS.jwtAccessExpiresIn,

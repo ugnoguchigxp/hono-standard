@@ -8,9 +8,9 @@ export function HomeView() {
 					with a React and Vite frontend on a single origin.
 				</p>
 				<p>
-					It includes Turso/libSQL-backed authentication, httpOnly cookie
-					sessions, typed routing, and a reusable component showcase without
-					forcing login on public screens.
+					It includes SQLite-backed authentication, httpOnly cookie sessions,
+					typed routing, and a reusable component showcase without forcing login
+					on public screens.
 				</p>
 			</section>
 		</main>
