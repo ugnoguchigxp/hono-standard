@@ -8,7 +8,7 @@ services:
       HOST: 0.0.0.0
       PORT: 5173
       DATABASE_URL: /data/sqlite.db
-      JWT_SECRET: hono-standard-compose-jwt-secret-change-before-production
+      JWT_SECRET: ${COMPOSE_JWT_SECRET:?Set COMPOSE_JWT_SECRET to a 32+ character production secret before running docker compose.}
       APP_URL: http://localhost:5173
       CORS_ORIGINS: http://localhost:5173
       AUTH_COOKIE_SECURE: "false"

@@ -2,18 +2,35 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-const cwd = process.cwd();
-const envPath = path.resolve(cwd, ".env");
-const envExamplePath = path.resolve(cwd, ".env.example");
-const nodeModulesPath = path.resolve(cwd, "node_modules");
 const defaultDatabaseUrl = "data/sqlite.db";
 const urlWithAuthorityPattern = /^[a-z][a-z0-9+.-]*:\/\//i;
+
+type BootstrapPaths = {
+	cwd: string;
+	envPath: string;
+	envExamplePath: string;
+	nodeModulesPath: string;
+};
 
 type DotenvEntry =
 	| { type: "assignment"; key: string; value: string; raw: string }
 	| { type: "raw"; raw: string };
 
-function runCommand(command: string, args: string[], env = process.env): void {
+function resolveBootstrapPaths(cwd = process.cwd()): BootstrapPaths {
+	return {
+		cwd,
+		envPath: path.resolve(cwd, ".env"),
+		envExamplePath: path.resolve(cwd, ".env.example"),
+		nodeModulesPath: path.resolve(cwd, "node_modules"),
+	};
+}
+
+function runCommand(
+	cwd: string,
+	command: string,
+	args: string[],
+	env = process.env,
+): void {
 	const result = spawnSync(command, args, {
 		cwd,
 		env,
@@ -58,7 +75,8 @@ function serializeDotenv(entries: DotenvEntry[]): string {
 	return `${lines.join("\n")}\n`;
 }
 
-function ensureEnvFile(): string {
+export function ensureEnvFile(cwd = process.cwd()): string {
+	const { envPath, envExamplePath } = resolveBootstrapPaths(cwd);
 	if (!fs.existsSync(envPath)) {
 		fs.copyFileSync(envExamplePath, envPath);
 		console.log("created .env from .env.example");
@@ -96,21 +114,25 @@ function ensureEnvFile(): string {
 	return databaseUrl;
 }
 
-function ensureDependencies(): void {
+function ensureDependencies(paths: BootstrapPaths): void {
+	const { cwd, nodeModulesPath } = paths;
 	if (fs.existsSync(nodeModulesPath)) return;
 
 	console.log("installing dependencies");
-	runCommand("bun", ["install", "--frozen-lockfile"]);
+	runCommand(cwd, "bun", ["install", "--frozen-lockfile"]);
 }
 
-function main(): void {
-	const databaseUrl = ensureEnvFile();
-	ensureDependencies();
-	runCommand("bun", ["run", "db:migrate"], {
+export function main(cwd = process.cwd()): void {
+	const paths = resolveBootstrapPaths(cwd);
+	const databaseUrl = ensureEnvFile(cwd);
+	ensureDependencies(paths);
+	runCommand(cwd, "bun", ["run", "db:migrate"], {
 		...process.env,
 		DATABASE_URL: databaseUrl,
 	});
 	console.log("bootstrap complete");
 }
 
-main();
+if (import.meta.main) {
+	main();
+}

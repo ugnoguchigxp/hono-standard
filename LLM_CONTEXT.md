@@ -78,6 +78,7 @@
 - DB defaults, `.env.example`, and Drizzle config must agree.
 - `HOST` / `PORT` are runtime env. Keep Docker bind host at `0.0.0.0`, local default at `127.0.0.1`.
 - `JWT_SECRET` is optional only for local development; production must fail closed when it is missing or still set to the dev default.
+- `docker compose` requires `COMPOSE_JWT_SECRET` from the caller environment and maps it to container `JWT_SECRET`; do not put a reusable production secret in `docker-compose.yml`.
 - `drizzle.config.ts` should resolve `DATABASE_URL` from process env first, then local `.env`, then app defaults.
 - Keep DI lightweight: use explicit dependency objects and composition roots. Do not add a DI container.
 - Keep SQLite driver-specific imports inside DB adapter/migration files. Service modules should depend on exported DB types from `api/db`.
@@ -122,6 +123,7 @@
 - Set `APP_URL`, `CORS_ORIGINS`, cookie secure mode, and security headers for the deployment protocol.
 - Create an admin user before expecting login to succeed.
 - Rename package metadata and README copy for the target app.
+- If auth/showcase are too heavy for the target app, keep the removal as `variant/minimal` or `overlay/authless` and require fresh `bootstrap`, `verify`, and updated E2E scope.
 
 ## Generated Files Policy
 

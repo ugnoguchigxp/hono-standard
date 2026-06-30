@@ -57,6 +57,15 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 
 開発サーバーは `http://localhost:5173` で起動します。Vite dev server が frontend を配信し、`/api/*` は Hono に渡されます。
 
+初回 clone 後に template の動作確認まで済ませる場合は、次を実行します。
+
+```bash
+bun run verify
+bun run verify:e2e
+```
+
+認証を使う app では `auth:create-admin` または `seed:dev` で admin を作成してから `/login` を確認します。認証を使わない app では、この README 後半の auth removal checklist に沿って auth route、DB table、login/protected screen、E2E scope をまとめて削ります。
+
 ## 生成物と管理対象
 
 この template では、source と docs は追跡し、local runtime や検証の生成物は追跡しません。
@@ -156,10 +165,10 @@ SQLite baseline では `DATABASE_URL` は永続化される file path にして�
 SQLite baseline を container で試す場合:
 
 ```bash
-docker compose up --build
+COMPOSE_JWT_SECRET='<32+ random chars>' docker compose up --build
 ```
 
-compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。production 公開時は `JWT_SECRET` と `APP_URL` を必ず環境に合わせて変更してください。
+compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。production 公開時は `COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header mode を必ず環境に合わせて変更してください。
 
 ## 品質ゲート
 
@@ -182,6 +191,7 @@ bun run verify:e2e
 - `/protected` と `/api/protected/profile` は protected route の最小サンプルです。新しい login-required 画面や API を追加するときの起点にしてください。
 - SQLite は auth user と refresh token 保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。
+- さらに小さい starter が必要な場合は、この branch を直接削るより `variant/minimal` または `overlay/authless` として auth/showcase removal を固定化してください。
 
 ## Template Usage Checklist
 
@@ -205,6 +215,13 @@ protected API を追加する最小手順:
 6. unit test と E2E smoke の必要箇所を追加する。
 
 auth を使わない template にする場合は、`api/modules/auth/`、`api/routes/auth.route.ts`、`api/middleware/auth.ts`、auth cookies/token schema、login/protected route、admin CLI、auth DB tables をまとめて削ります。削除後は `bun run verify` と `bun run verify:e2e` の smoke scope を更新してください。
+
+auth/showcase を削った軽量 variant を保守する場合は、削除差分を `variant/minimal` または `overlay/authless` に固定し、次を最低限の完了条件にします。
+
+- `bun run bootstrap` が fresh clone で通る。
+- `bun run verify` が通る。
+- E2E は残した public route と API health check を確認する。
+- README、`.env.example`、DB migration、Template Usage Checklist から auth 前提を外す。
 
 development の demo admin は次で作成できます。
 

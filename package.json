@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"description": "Minimal Hono + React template with optional login and showcase screens.",
 	"type": "module",
-	"author": "",
+	"author": "ugnoguchigxp <ugnoguchigxp@gmail.com>",
 	"license": "MIT",
 	"keywords": [
 		"hono",
@@ -11,6 +11,14 @@
 		"vite",
 		"typescript"
 	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ugnoguchigxp/hono-standard.git"
+	},
+	"bugs": {
+		"url": "https://github.com/ugnoguchigxp/hono-standard/issues"
+	},
+	"homepage": "https://github.com/ugnoguchigxp/hono-standard#readme",
 	"scripts": {
 		"dev": "bunx --bun vite",
 		"dev:vite": "vite",
