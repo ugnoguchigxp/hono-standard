@@ -1,40 +1,18 @@
-import { Database } from "bun:sqlite";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-
+import type { AppEnv } from "../app/env";
 import * as schema from "./schema";
+import { createSqliteDbRuntime, type DbRuntime } from "./sqlite";
+export {
+	connectDb,
+	createDbConnection,
+	createSqliteDbRuntime,
+	wrapExternalClient,
+	type AppDatabase,
+	type DbConnection,
+	type DbRuntime,
+} from "./sqlite";
 
-export type DbConnection = {
-	client: Database;
-	db: BunSQLiteDatabase<typeof schema>;
-	/** このパッケージが接続を所有しているか（close責任があるか） */
-	ownsConnection: boolean;
-};
-
-/**
- * databasePath から新しい SQLite database を作成してDrizzleでラップする
- * 接続の所有権はこのパッケージに帰属する
- */
-export function createDbConnection(databasePath: string): DbConnection {
-	const client = new Database(databasePath, { create: true });
-	const db = drizzle(client, { schema });
-	return { client, db, ownsConnection: true };
-}
-
-/**
- * 外部の SQLite database をDrizzleでラップする
- * 接続の所有権はホスト側に帰属（closeしない）
- */
-export function wrapExternalClient(client: Database): DbConnection {
-	const db = drizzle(client, { schema });
-	return { client, db, ownsConnection: false };
-}
-
-/**
- * 接続を確立する
- */
-export async function connectDb(client: Database) {
-	client.query("SELECT 1").get();
+export function createDbRuntime(env: AppEnv): DbRuntime {
+	return createSqliteDbRuntime(env);
 }
 
 export { schema };

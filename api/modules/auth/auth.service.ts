@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import type { AppEnv } from "../../app/env";
+import type { AppDatabase } from "../../db";
 import { users } from "../../db/schema";
-import type * as schema from "../../db/schema";
 import { HttpError } from "./errors";
 import { hashPassword, verifyPassword } from "./password";
 import {
@@ -57,7 +56,7 @@ const toSessionUser = (user: AuthUser): AuthSessionUser => ({
 
 export class AuthService {
 	constructor(
-		private readonly db: BunSQLiteDatabase<typeof schema>,
+		private readonly db: AppDatabase,
 		private readonly env: AppEnv,
 	) {}
 

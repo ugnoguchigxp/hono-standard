@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import type * as schema from "../../db/schema";
+import type { AppDatabase } from "../../db";
 import type { AppEnv } from "../../app/env";
 import { HttpError } from "./errors";
 import {
@@ -57,7 +56,7 @@ describe("token.service", () => {
 		it("should throw error when verifying a refresh token as an access token", async () => {
 			const refreshToken = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+				mockDb as unknown as AppDatabase,
 				mockEnv,
 			);
 			await expect(verifyAccessToken(refreshToken, mockEnv)).rejects.toThrow(
@@ -70,7 +69,7 @@ describe("token.service", () => {
 		it("should generate refresh token and insert hash to database", async () => {
 			const token = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+				mockDb as unknown as AppDatabase,
 				mockEnv,
 			);
 			expect(token).toBeDefined();
@@ -87,7 +86,7 @@ describe("token.service", () => {
 		it("should consume a valid refresh token", async () => {
 			const token = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+				mockDb as unknown as AppDatabase,
 				mockEnv,
 			);
 
@@ -101,7 +100,7 @@ describe("token.service", () => {
 
 			const payload = await consumeRefreshToken(
 				token,
-				mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+				mockDb as unknown as AppDatabase,
 				mockEnv,
 			);
 
@@ -116,7 +115,7 @@ describe("token.service", () => {
 			await expect(
 				consumeRefreshToken(
 					"some-token",
-					mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+					mockDb as unknown as AppDatabase,
 					mockEnv,
 				),
 			).rejects.toThrowError(new HttpError(401, "Invalid refresh token."));
@@ -125,7 +124,7 @@ describe("token.service", () => {
 		it("should throw HttpError 401 when refresh token is expired", async () => {
 			const token = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+				mockDb as unknown as AppDatabase,
 				mockEnv,
 			);
 
@@ -140,7 +139,7 @@ describe("token.service", () => {
 			await expect(
 				consumeRefreshToken(
 					token,
-					mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+					mockDb as unknown as AppDatabase,
 					mockEnv,
 				),
 			).rejects.toThrowError(new HttpError(401, "Refresh token expired."));
@@ -149,7 +148,7 @@ describe("token.service", () => {
 		it("should throw HttpError 401 when refresh token userId does not match", async () => {
 			const token = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+				mockDb as unknown as AppDatabase,
 				mockEnv,
 			);
 
@@ -164,7 +163,7 @@ describe("token.service", () => {
 			await expect(
 				consumeRefreshToken(
 					token,
-					mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+					mockDb as unknown as AppDatabase,
 					mockEnv,
 				),
 			).rejects.toThrowError(new HttpError(401, "Invalid refresh token."));
@@ -173,7 +172,7 @@ describe("token.service", () => {
 		it("should revoke refresh token by deleting it from database", async () => {
 			await revokeRefreshToken(
 				"revoke-me",
-				mockDb as unknown as BunSQLiteDatabase<typeof schema>,
+				mockDb as unknown as AppDatabase,
 			);
 			expect(mockDb.delete).toHaveBeenCalled();
 		});

@@ -258,6 +258,40 @@ bun run build
 
 6. README とこの文書の variant 表を更新する。
 
+## Variant Contract
+
+各 `variant/*` branch は、DB driver や deploy runtime が違っても次の contract を満たす。
+
+| Contract | SQLite baseline | Turso variant | PostgreSQL variant |
+| --- | --- | --- | --- |
+| install | `bun install --frozen-lockfile` | 同左 | 同左 |
+| bootstrap | `bun run bootstrap` | Turso/local fallback 手順を README に明記 | PostgreSQL 接続と migration 手順を README に明記 |
+| migration | `bun run db:migrate` | libSQL/Turso 用 migration runner | PostgreSQL 用 migration runner |
+| app verify | `bun run verify` | 同左 | 同左 |
+| smoke | `bun run verify:e2e` | 同左 | 同左 |
+| admin user | `bun run auth:create-admin` | 同じ CLI contract を維持 | 同じ CLI contract を維持 |
+| production start | `bun run build` 後 `bun run db:migrate`、`bun run start` | Turso env と migration を明記 | PostgreSQL env と migration を明記 |
+
+`main` は SQLite baseline として、`api/db/index.ts` の public entry から `api/db/sqlite.ts` と `api/db/migrate-sqlite.ts` を呼ぶ。variant branch は次の差分を局所化する。
+
+- DB runtime implementation。
+- Drizzle schema。
+- Drizzle config。
+- migration runner。
+- `.env.example`。
+- README の setup / production / troubleshooting。
+- variant 固有の smoke test setup。
+
+共通維持するもの:
+
+- Hono route contract。
+- `shared/schemas/` の API request / response shape。
+- auth cookie / token の外部 behavior。
+- `bun run verify` と `bun run verify:e2e` のコマンド名。
+- `docs/template-variant-management.md` の branch / tag / snapshot 方針。
+
+variant は `main` に全 driver を詰め込んで runtime switch する形にしない。`main` は SQLite で動く最小 baseline を保ち、Turso / PostgreSQL / pgvector は branch ごとに driver、schema、migration、docs を差し替える。
+
 7. tag を作成する。
 
 ```bash

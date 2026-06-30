@@ -9,6 +9,16 @@
 
 Hono backend と React + Vite frontend を同一 origin で動かす、local SQLite 対応の Web app template です。Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
 
+## Screens
+
+![Home](docs/assets/home.png)
+
+![Login](docs/assets/login.png)
+
+![Protected route](docs/assets/protected.png)
+
+![Showcase](docs/assets/showcase.png)
+
 ## 構成
 
 | Path | Role |
@@ -17,9 +27,14 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 | `api/app/server.ts` | Bun server bootstrap |
 | `api/app/env.ts` | runtime env parser |
 | `api/config/appDefaults.ts` | 非シークレットの既定値 |
+| `api/db/index.ts` | DB runtime の public entry。variant はここから差し替える |
+| `api/db/sqlite.ts` | SQLite baseline の Drizzle runtime |
 | `api/db/schema.ts` | Drizzle SQLite schema |
+| `api/db/migrate.ts` | migration runner の public entry |
+| `api/db/migrate-sqlite.ts` | SQLite baseline の migration runner |
 | `api/routes/auth.route.ts` | `/api/auth/*` route |
 | `api/routes/health.route.ts` | `/api/health` route |
+| `api/routes/protected.route.ts` | `/api/protected/*` の server-side protected sample |
 | `api/modules/auth/` | password hash、JWT、cookie、auth service |
 | `api/middleware/auth.ts` | protected API middleware |
 | `web/src/` | React frontend |
@@ -37,12 +52,12 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 ## セットアップ
 
 ```bash
-bun install
-cp .env.example .env
-bun run db:migrate
+bun run bootstrap
 bun run auth:create-admin -- --email admin@example.com --name "Admin User"
 bun run dev
 ```
+
+`bootstrap` は `.env` を用意し、dependency が未導入なら `bun install --frozen-lockfile` を実行し、SQLite database に migration を適用します。
 
 `auth:create-admin` は対話で password を読みます。自動化する場合は次のように標準入力から渡せます。
 
@@ -59,6 +74,8 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | Variable | Required | Description | Default |
 | --- | --- | --- | --- |
 | `NODE_ENV` | no | `development` / `test` / `production` | `development` |
+| `HOST` | no | HTTP bind host。container では `0.0.0.0` を指定 | `127.0.0.1` |
+| `PORT` | no | HTTP server port | `5173` |
 | `DATABASE_URL` | no | SQLite database file path | `sqlite.db` |
 | `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
 | `APP_URL` | no | public origin。cookie secure 既定値と CORS に使う | `http://localhost:5173` |
@@ -73,6 +90,8 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 
 | Command | Purpose |
 | --- | --- |
+| `bun run bootstrap` | clone 後の初期化。`.env` を用意し、SQLite database に migration を適用 |
+| `bun run seed:dev` | development 専用の demo admin 作成。production では失敗 |
 | `bun run dev` | Vite + Hono dev server |
 | `bun run start` | Bun server を直接起動 |
 | `bun run auth:create-admin -- --email <email> --name "<name>"` | admin user 作成 |
@@ -84,8 +103,12 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `bun run format` | Biome format write |
 | `bun run format:check` | Biome format check |
 | `bun run test` | Vitest |
+| `bun run test:coverage` | Vitest coverage。global threshold 80% を検証 |
+| `bun run test:e2e` | Playwright smoke test。login と protected route を検証 |
 | `bun run build` | Vite production build |
-| `bun run verify` | typecheck、lint、format:check、test、build |
+| `bun run verify` | typecheck、lint、format:check、test、coverage、build |
+| `bun run verify:e2e` | Playwright smoke test |
+| `bun run verify:all` | `verify` と `verify:e2e` |
 
 ## API
 
@@ -96,23 +119,93 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `POST` | `/api/auth/refresh` | refresh token rotation |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
 | `GET` | `/api/auth/me` | 現在の login user |
+| `GET` | `/api/protected/profile` | `requireAuth` を通る protected API sample |
 
 `/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
 
+`/api/protected/*` は server-side で `requireAuth` を適用しています。画面だけで保護しているわけではないことを確認するサンプルとして、`/protected` から `/api/protected/profile` を呼び出します。
+
 API request / response の共有 schema は `shared/schemas/` に置きます。Backend route はその schema を `zValidator` で使い、frontend は `api/app/hono.ts` から export される `AppType` を `hono/client` に渡して API 型を共有します。
+
+## Frontend Routes
+
+| Path | Access | Description |
+| --- | --- | --- |
+| `/` | public | Home |
+| `/showcase` | public | Component showcase |
+| `/login` | public/session-aware | Login。`?redirect=/protected` のような same-origin path redirect を受け付ける |
+| `/protected` | login required | Protected route sample。ログイン後だけ表示し、server protected API も呼び出す |
 
 ## Build / Runtime
 
 ```bash
 bun run build
-NODE_ENV=production bun run start
+NODE_ENV=production JWT_SECRET='<32+ random chars>' bun run db:migrate
+NODE_ENV=production JWT_SECRET='<32+ random chars>' bun run start
 ```
 
 production では `JWT_SECRET` を必ず強いランダム値に変更してください。未設定または dev default のままの場合、アプリは起動時に失敗します。HTTPS で公開する場合は `APP_URL=https://...` とし、必要に応じて `AUTH_COOKIE_SECURE=true`、`SECURITY_HEADERS_MODE=https` を明示します。
 
+SQLite baseline では `DATABASE_URL` は永続化される file path にしてください。container や VM で動かす場合は、DB file を volume に置き、起動前に `bun run db:migrate` を実行します。`PORT` は platform 側が指定する値に合わせて上書きできます。
+
+## Docker
+
+SQLite baseline を container で試す場合:
+
+```bash
+docker compose up --build
+```
+
+compose は `./.db-data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。production 公開時は `JWT_SECRET` と `APP_URL` を必ず環境に合わせて変更してください。
+
+## Screenshots
+
+E2E smoke から README 用スクリーンショットを更新できます。
+
+```bash
+bun run test:e2e:update-screenshots
+```
+
+出力先は `docs/assets/` です。
+
 ## Template Notes
 
+- この repo は npm package 配布ではなく、GitHub template / branch clone / tag clone / archive snapshot を主配布にします。
 - この branch は RAG / pgvector / agentic search template ではありません。
+- Drizzle は前提です。DB driver / schema / migration の大きな差分は `variant/*` branch で管理します。
+- `main` は SQLite baseline です。Turso / PostgreSQL / pgvector は `docs/template-variant-management.md` の contract に沿って branch を分けます。
 - 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
+- `/protected` と `/api/protected/profile` は protected route の最小サンプルです。新しい login-required 画面や API を追加するときの起点にしてください。
 - SQLite は auth user と refresh token 保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。
+
+## Template Usage Checklist
+
+clone 後に見直す項目:
+
+- `package.json` の `name` / `version` / `description` / repository metadata。
+- README のプロジェクト名、セットアップ手順、production 手順。
+- `.env.example` と deployment secret。
+- `DATABASE_URL`、DB 永続化 path、migration 実行タイミング。
+- cookie / CORS / CSRF / CSP / security header の本番設定。
+- sample route と showcase を残すか削るか。
+- license / author。
+
+protected API を追加する最小手順:
+
+1. request / response schema を `shared/schemas/` に追加する。
+2. Hono route を `api/routes/` に追加し、必要なら `requireAuth` を適用する。
+3. `api/app/hono.ts` の `createApiRoutes` に route を登録する。
+4. `web/src/api.ts` に `hono/client` 経由の fetch function / hook を追加する。
+5. React route / view を `web/src/routes/` と `web/src/views/` に追加する。
+6. unit test と E2E smoke の必要箇所を追加する。
+
+auth を使わない template にする場合は、`api/modules/auth/`、`api/routes/auth.route.ts`、`api/middleware/auth.ts`、auth cookies/token schema、login/protected route、admin CLI、auth DB tables をまとめて削ります。削除後は `bun run verify` と `bun run verify:e2e` の smoke scope を更新してください。
+
+development の demo admin は次で作成できます。
+
+```bash
+bun run seed:dev
+```
+
+既定値は `admin@example.com` / `password123456` です。変更する場合は `DEV_ADMIN_EMAIL`、`DEV_ADMIN_NAME`、`DEV_ADMIN_PASSWORD` を使います。この command は `NODE_ENV=production` では失敗します。

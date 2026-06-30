@@ -11,6 +11,7 @@
 - Auth 実装は `api/modules/auth/`、route は `api/routes/auth.route.ts`、login UI は `web/src/domains/auth/login-domain.tsx`。
 - Shared API schema/object は `shared/schemas/`。Backend は `zValidator`、frontend は `hono/client` + `AppType` で同じ契約を参照する。
 - Home と Showcase は未ログインでも表示する。ログイン状態がある場合だけ header に user chip と logout button を表示する。
+- Protected sample は `/protected` と `/api/protected/profile`。frontend guard と server-side `requireAuth` の両方を示す。
 - Package manager / runtime は Bun。dev server は `bunx --bun vite` で起動する。
 
 ## Top-Level Map
@@ -24,6 +25,7 @@
 | `api/db/` | SQLite connection and Drizzle schema |
 | `api/routes/auth.route.ts` | `/api/auth/*` route module |
 | `api/routes/health.route.ts` | health route |
+| `api/routes/protected.route.ts` | server-side protected API sample |
 | `api/modules/auth/` | Auth service、JWT、cookies、password hashing |
 | `api/middleware/auth.ts` | access-token auth middleware |
 | `shared/schemas/` | Zod schema and public API object types shared by api and web |
@@ -42,6 +44,7 @@
 | Task | Start here | Usually also read | Defer unless touched |
 | --- | --- | --- | --- |
 | Change auth API | `api/routes/auth.route.ts`, `api/modules/auth/`, `api/middleware/auth.ts`, `shared/schemas/auth.schema.ts` | `web/src/api.ts`, `web/src/auth-context.tsx` | showcase UI |
+| Change protected sample | `api/routes/protected.route.ts`, `web/src/views/protected-view.tsx`, `web/src/routes/protected-route.tsx` | `api/middleware/auth.ts`, `shared/schemas/protected.schema.ts`, `web/src/api.ts` | showcase UI |
 | Change login UI | `web/src/views/login-view.tsx`, `web/src/domains/auth/login-domain.tsx` | `web/src/auth-context.tsx`, `web/src/api.ts` | DB schema |
 | Change app shell/routing | `web/src/routes/root-route.tsx`, `web/src/router.tsx` | `web/src/App.tsx`, affected view | auth service internals |
 | Change showcase UI | `web/src/views/showcase-view.tsx`, `web/src/showcase-settings-context.tsx`, `web/src/showcase-table-search.ts` | `web/src/styles.css` | backend auth |
@@ -57,6 +60,7 @@
 - `web/src/api.ts` must use `hc<AppType>` from `api/app/hono.ts`; do not duplicate API request/response types by hand.
 - Shared request/response validation should use schemas under `shared/schemas/` when the shape is used on both sides.
 - `/api/auth/me` is protected by `requireAuth`; public pages should not require login by default.
+- `/api/protected/*` must stay protected by `requireAuth`; `/protected` should demonstrate server-backed auth, not only client auth state.
 - Auth cookies and tokens live under `api/modules/auth/`.
 - DB defaults, `.env.example`, and Drizzle config must agree.
 - `JWT_SECRET` is optional only for local development; production must fail closed when it is missing or still set to the dev default.
@@ -76,6 +80,7 @@
 
 | Command | Purpose |
 | --- | --- |
+| `bun run bootstrap` | Prepare `.env`, dependencies, and local SQLite migrations after clone |
 | `bun install` | Install dependencies |
 | `bun run dev` | Start Vite + Hono dev server |
 | `bun run db:migrate` | Apply SQL migrations |
