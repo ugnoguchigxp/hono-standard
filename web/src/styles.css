@@ -122,6 +122,118 @@
 		@apply border border-[#efb5b5] bg-[#fff1f1] text-danger;
 	}
 
+	.dev-error-shell {
+		@apply min-h-screen bg-[#101418] px-4 py-6 text-[#f3f6f8];
+	}
+
+	.dev-error-panel {
+		width: min(100%, 1180px);
+		@apply relative mx-auto rounded-control border border-[#34404b] bg-[#171d23] p-5;
+		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+	}
+
+	.dev-error-header {
+		@apply flex items-start border-b border-[#34404b] pb-5 pr-[300px];
+	}
+
+	.dev-error-title-row,
+	.dev-error-actions,
+	.dev-error-action {
+		@apply flex items-center gap-2;
+	}
+
+	.dev-error-icon {
+		@apply grid size-11 shrink-0 place-items-center rounded-control bg-[#4a1e22] text-xl text-[#ff8f8f];
+	}
+
+	.dev-error-kicker {
+		@apply m-0 text-xs font-extrabold uppercase tracking-normal text-[#9ba8b5];
+	}
+
+	.dev-error-title-row h1 {
+		@apply m-0 max-w-[850px] break-words text-[clamp(24px,4vw,40px)] leading-tight tracking-normal;
+	}
+
+	.dev-error-actions {
+		@apply absolute right-5 top-5 flex-wrap justify-end;
+	}
+
+	.dev-error-action {
+		@apply min-h-8 rounded-md border border-[#4d5a66] bg-[#202832] px-2.5 text-xs font-extrabold text-[#f3f6f8];
+	}
+
+	.dev-error-action .icon {
+		@apply size-3.5;
+	}
+
+	.dev-error-action:hover {
+		@apply border-[#7d8c9b] bg-[#28313c];
+	}
+
+	@media (max-width: 760px) {
+		.dev-error-header {
+			@apply flex-wrap gap-4 pr-0;
+		}
+
+		.dev-error-actions {
+			@apply static justify-start;
+		}
+	}
+
+	.dev-error-meta {
+		@apply grid gap-3 py-5;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+
+	.dev-error-meta div {
+		@apply min-w-0 rounded-control border border-[#34404b] bg-[#12171d] p-3;
+	}
+
+	.dev-error-meta span {
+		@apply block text-xs font-extrabold uppercase tracking-normal text-[#9ba8b5];
+	}
+
+	.dev-error-meta strong {
+		@apply mt-1 block overflow-hidden text-ellipsis whitespace-nowrap text-sm text-[#f3f6f8];
+	}
+
+	.dev-error-section {
+		@apply overflow-hidden rounded-control border border-[#34404b] bg-[#0e1318];
+	}
+
+	.dev-error-section + .dev-error-section {
+		@apply mt-4;
+	}
+
+	.dev-error-section-header {
+		@apply border-b border-[#34404b] bg-[#151b21] px-4 py-3;
+	}
+
+	.dev-error-section-header h2 {
+		@apply m-0 text-sm tracking-normal text-[#d6dde4];
+	}
+
+	.dev-error-section pre {
+		@apply m-0 overflow-auto p-4 text-[13px] leading-relaxed text-[#f2b8b8];
+		font-family:
+			"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+		white-space: pre-wrap;
+	}
+
+	.dev-error-section details {
+		@apply bg-[#0e1318];
+	}
+
+	.dev-error-section summary {
+		@apply cursor-pointer border-b border-[#34404b] bg-[#151b21] px-4 py-3 text-sm font-extrabold text-[#d6dde4];
+	}
+
+	.dev-error-list {
+		@apply m-0 grid gap-2 p-4 text-[13px] leading-relaxed text-[#f2b8b8];
+		font-family:
+			"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+	}
+
 	.center-shell,
 	.auth-shell,
 	.showcase-shell {
