@@ -6,7 +6,7 @@ const cwd = process.cwd();
 const envPath = path.resolve(cwd, ".env");
 const envExamplePath = path.resolve(cwd, ".env.example");
 const nodeModulesPath = path.resolve(cwd, "node_modules");
-const defaultDatabaseUrl = "sqlite.db";
+const defaultDatabaseUrl = "data/sqlite.db";
 const urlWithAuthorityPattern = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 type DotenvEntry =
@@ -78,7 +78,10 @@ function ensureEnvFile(): string {
 			value: databaseUrl,
 			raw: "",
 		});
-	} else if (urlWithAuthorityPattern.test(databaseEntry.value)) {
+	} else if (
+		urlWithAuthorityPattern.test(databaseEntry.value) ||
+		databaseEntry.value === "sqlite.db"
+	) {
 		databaseUrl = defaultDatabaseUrl;
 		databaseEntry.value = databaseUrl;
 	}

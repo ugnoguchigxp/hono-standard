@@ -9,16 +9,6 @@
 
 Hono backend と React + Vite frontend を同一 origin で動かす、local SQLite 対応の Web app template です。Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
 
-## Screens
-
-![Home](docs/assets/home.png)
-
-![Login](docs/assets/login.png)
-
-![Protected route](docs/assets/protected.png)
-
-![Showcase](docs/assets/showcase.png)
-
 ## 構成
 
 | Path | Role |
@@ -40,7 +30,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 | `web/src/` | React frontend |
 | `shared/schemas/` | frontend/backend で共有する Zod schema と API object type |
 | `drizzle/` | SQL migrations |
-| `scripts/verify.ts` | typecheck / lint / format / test / build の検証 pipeline |
+| `scripts/verify.ts` | typecheck / lint / format / test / coverage / build の検証 pipeline |
 
 ## 前提
 
@@ -67,6 +57,19 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 
 開発サーバーは `http://localhost:5173` で起動します。Vite dev server が frontend を配信し、`/api/*` は Hono に渡されます。
 
+## 生成物と管理対象
+
+この template では、source と docs は追跡し、local runtime や検証の生成物は追跡しません。
+
+| Path / Pattern | 扱い |
+| --- | --- |
+| `drizzle/*.sql` | Drizzle migration source。commit 対象 |
+| `.env.example` | local development の雛形。commit 対象 |
+| `.env*` | local secret / runtime env。`.env.example` 以外は commit しない |
+| `data/`, `*.db`, `*.sqlite`, `*.sqlite3` | local SQLite database。commit しない |
+| `coverage/`, `playwright-report/`, `test-results/` | verification output。commit しない |
+| `dist/`, `dist-web/`, `build/`, `*.tgz` | build / archive output。commit しない |
+
 ## 環境変数
 
 非シークレットの既定値は `api/config/appDefaults.ts` にあります。`.env.example` は local development 向けの値です。
@@ -76,7 +79,7 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `NODE_ENV` | no | `development` / `test` / `production` | `development` |
 | `HOST` | no | HTTP bind host。container では `0.0.0.0` を指定 | `127.0.0.1` |
 | `PORT` | no | HTTP server port | `5173` |
-| `DATABASE_URL` | no | SQLite database file path | `sqlite.db` |
+| `DATABASE_URL` | no | SQLite database file path | `data/sqlite.db` |
 | `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
 | `APP_URL` | no | public origin。cookie secure 既定値と CORS に使う | `http://localhost:5173` |
 | `CORS_ORIGINS` | no | 追加許可 origin。カンマ区切り | `http://localhost:5173` |
@@ -156,17 +159,18 @@ SQLite baseline を container で試す場合:
 docker compose up --build
 ```
 
-compose は `./.db-data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。production 公開時は `JWT_SECRET` と `APP_URL` を必ず環境に合わせて変更してください。
+compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。production 公開時は `JWT_SECRET` と `APP_URL` を必ず環境に合わせて変更してください。
 
-## Screenshots
+## 品質ゲート
 
-E2E smoke から README 用スクリーンショットを更新できます。
+通常の closeout は次を通します。
 
 ```bash
-bun run test:e2e:update-screenshots
+bun run verify
+bun run verify:e2e
 ```
 
-出力先は `docs/assets/` です。
+`verify` は `typecheck`、Biome `lint`、`format:check`、Vitest、coverage threshold、production build を含みます。`verify:e2e` は Playwright smoke で public screens、login、protected route、logout を確認します。
 
 ## Template Notes
 

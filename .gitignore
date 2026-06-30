@@ -17,6 +17,7 @@
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.example
 
 # debug logs
 npm-debug.log*
@@ -32,12 +33,17 @@ Thumbs.db
 /drizzle/*
 !/drizzle/*.sql
 /drizzle/meta/
-.db-data/
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
 
-# coverage
+# verification artifacts
 /coverage
 /playwright-report
 /test-results

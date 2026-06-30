@@ -24,7 +24,6 @@
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"test:e2e": "playwright test",
-		"test:e2e:update-screenshots": "UPDATE_TEMPLATE_SCREENSHOTS=1 playwright test tests/e2e/smoke.spec.ts",
 		"test:watch": "vitest",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint api web shared scripts tests drizzle.config.ts playwright.config.ts vite.config.ts vitest.config.ts",

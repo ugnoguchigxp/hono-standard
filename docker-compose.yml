@@ -15,4 +15,4 @@ services:
       AUTH_COOKIE_SAME_SITE: lax
       SECURITY_HEADERS_MODE: http
     volumes:
-      - ./.db-data:/data
+      - ./data:/data

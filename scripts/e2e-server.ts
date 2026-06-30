@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-const databaseUrl = ".db-data/e2e.sqlite";
+const databaseUrl = "data/e2e.sqlite";
 const appUrl = "http://127.0.0.1:5174";
 
 process.env.NODE_ENV = "development";
