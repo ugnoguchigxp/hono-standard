@@ -1,8 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { AppDatabase } from "../../db";
 import { SignJWT, jwtVerify } from "jose";
-import type * as schema from "../../db/schema";
 import { refreshTokens } from "../../db/schema";
 import type { AppEnv } from "../../app/env";
 import { HttpError } from "./errors";
@@ -38,7 +37,7 @@ export async function generateAccessToken(
 
 export async function generateRefreshToken(
 	payload: JwtCorePayload,
-	db: NodePgDatabase<typeof schema>,
+	db: AppDatabase,
 	env: AppEnv,
 ): Promise<string> {
 	const token = await new SignJWT({ ...payload, type: "refresh" })
@@ -79,7 +78,7 @@ export async function verifyAccessToken(
 
 export async function consumeRefreshToken(
 	token: string,
-	db: NodePgDatabase<typeof schema>,
+	db: AppDatabase,
 	env: AppEnv,
 ): Promise<JwtPayload> {
 	const tokenHash = hashToken(token);
@@ -115,7 +114,7 @@ export async function consumeRefreshToken(
 
 export async function revokeRefreshToken(
 	token: string,
-	db: NodePgDatabase<typeof schema>,
+	db: AppDatabase,
 ): Promise<void> {
 	await db
 		.delete(refreshTokens)

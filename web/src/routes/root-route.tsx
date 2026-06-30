@@ -1,7 +1,14 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+	createRootRoute,
+	Link,
+	Outlet,
+	useRouterState,
+} from "@tanstack/react-router";
 import { Database, Home, LayoutGrid, LogOut, Shield } from "lucide-react";
 import { AuthProvider, useAuth } from "../auth-context";
+import { DevErrorPanel } from "../components/dev-error-panel";
 import { defaultShowcaseTableSearch } from "../showcase-table-search";
+import { requiresSessionCheck } from "./route-access";
 
 function AppLayout() {
 	const { authUser, busy, errorText, logoutCurrentUser } = useAuth();
@@ -71,8 +78,12 @@ function AppLayout() {
 }
 
 function AppShell() {
+	const pathname = useRouterState({
+		select: (state) => state.location.pathname,
+	});
+
 	return (
-		<AuthProvider>
+		<AuthProvider sessionCheckEnabled={requiresSessionCheck(pathname)}>
 			<AppLayout />
 		</AuthProvider>
 	);
@@ -80,4 +91,5 @@ function AppShell() {
 
 export const rootRoute = createRootRoute({
 	component: AppShell,
+	errorComponent: DevErrorPanel,
 });

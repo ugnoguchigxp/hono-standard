@@ -5,7 +5,7 @@ import { HTTPException } from "hono/http-exception";
 
 // Mock environment and DB connection before importing app
 vi.mock("../db", () => ({
-	createDbConnection: vi.fn().mockReturnValue({
+	createDbRuntime: vi.fn().mockReturnValue({
 		db: {
 			query: {
 				users: {
@@ -13,10 +13,13 @@ vi.mock("../db", () => ({
 				},
 			},
 		},
-		pgClient: {
-			end: vi.fn(),
+		close: vi.fn(),
+		connection: {
+			client: {
+				close: vi.fn(),
+			},
+			ownsConnection: false,
 		},
-		ownsConnection: false,
 	}),
 }));
 
@@ -25,7 +28,7 @@ vi.mock("./env", () => ({
 		nodeEnv: "test",
 		host: "127.0.0.1",
 		port: 5173,
-		databaseUrl: "postgres://mock",
+		databaseUrl: "mock.db",
 		jwtSecret: "x".repeat(32),
 		jwtAccessExpiresIn: "15m",
 		jwtRefreshExpiresIn: "7d",
@@ -73,6 +76,28 @@ describe("hono app entry", () => {
 		expect(body.status).toBe("ok");
 	});
 
+	it("should apply security headers to API responses", async () => {
+		const res = await app.request("/api/health");
+
+		expect(res.headers.get("Content-Security-Policy")).toContain(
+			"default-src 'self'",
+		);
+		expect(res.headers.get("Content-Security-Policy")).toContain(
+			"object-src 'none'",
+		);
+		expect(res.headers.get("X-Frame-Options")).toBe("SAMEORIGIN");
+		expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+	});
+
+	it("should protect sample protected API routes", async () => {
+		const res = await app.request("/api/protected/profile");
+
+		expect(res.status).toBe(401);
+		expect(res.headers.get("Content-Security-Policy")).toContain(
+			"default-src 'self'",
+		);
+	});
+
 	it("should handle CORS origins", async () => {
 		const res = await app.request("/api/health", {
 			headers: {
@@ -112,6 +137,9 @@ describe("hono app entry", () => {
 		const res = await app.request("/some-frontend-path");
 		expect(res.status).toBe(200);
 		expect(res.headers.get("Content-Type")).toContain("text/html");
+		expect(res.headers.get("Content-Security-Policy")).toContain(
+			"frame-ancestors 'self'",
+		);
 		const body = await res.text();
 		expect(body).toBe("<html>mock-frontend</html>");
 	});
@@ -119,6 +147,7 @@ describe("hono app entry", () => {
 	// Error Handler integration tests
 	describe("Error Handler", () => {
 		it("should handle HttpError and return custom status and message", async () => {
+			const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 			const res = await app.request("http://localhost:5173/api/test-http-error", {
 				method: "POST",
 				headers: {
@@ -128,6 +157,7 @@ describe("hono app entry", () => {
 			expect(res.status).toBe(400);
 			const body = await res.json();
 			expect(body.message).toBe("Bad Parameters");
+			expect(consoleError).not.toHaveBeenCalled();
 		});
 
 		it("should handle HTTPException and return custom status and message", async () => {

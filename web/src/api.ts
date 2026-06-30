@@ -12,13 +12,17 @@ import type {
 	LoginInput,
 	LogoutResponse,
 } from "@shared/schemas/auth.schema";
+import type { ProtectedProfileResponse } from "@shared/schemas/protected.schema";
 
 export type AuthUser = AuthSessionUser;
-export type LoginParams = LoginInput;
+export type LoginParams = LoginInput & {
+	redirectTo?: string;
+};
 export type LoginResponse = AuthResponse;
 
 export const UNAUTHORIZED_EVENT_NAME = "hono-standard:unauthorized";
 export const authMeQueryKey = ["auth", "me"] as const;
+export const protectedProfileQueryKey = ["protected", "profile"] as const;
 
 type LoginMutationOptions = Omit<
 	UseMutationOptions<LoginResponse, Error, LoginParams>,
@@ -54,8 +58,7 @@ const getRequestPath = (input: RequestInfo | URL): string => {
 
 const isAuthPath = (path: string): boolean => path.startsWith("/api/auth/");
 
-const canRetryWithRefresh = (path: string): boolean =>
-	!isAuthPath(path) || path === "/api/auth/me";
+const canRetryWithRefresh = (path: string): boolean => !isAuthPath(path);
 
 const shouldNotifyUnauthorized = (path: string): boolean => !isAuthPath(path);
 
@@ -111,7 +114,12 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 }
 
 export async function login(params: LoginParams): Promise<LoginResponse> {
-	const response = await client.auth.login.$post({ json: params });
+	const response = await client.auth.login.$post({
+		json: {
+			email: params.email,
+			password: params.password,
+		},
+	});
 	return parseJsonResponse<LoginResponse>(response);
 }
 
@@ -120,17 +128,36 @@ export async function logout(): Promise<void> {
 	await parseJsonResponse<LogoutResponse>(response);
 }
 
-export async function fetchMe(): Promise<AuthUser> {
-	const response = await parseJsonResponse<AuthResponse>(
-		await client.auth.me.$get(),
-	);
+export async function fetchMe(): Promise<AuthUser | null> {
+	const rawResponse = await client.auth.me.$get();
+	if (rawResponse.status === 401) return null;
+
+	const response = await parseJsonResponse<AuthResponse>(rawResponse);
 	return response.user;
 }
 
-export function useCurrentUserQuery() {
-	return useQuery<AuthUser, Error, AuthUser | null>({
+export type ProtectedProfile = ProtectedProfileResponse["profile"];
+
+export async function fetchProtectedProfile(): Promise<ProtectedProfile> {
+	const response = await parseJsonResponse<ProtectedProfileResponse>(
+		await client.protected.profile.$get(),
+	);
+	return response.profile;
+}
+
+export function useCurrentUserQuery(enabled = true) {
+	return useQuery<AuthUser | null, Error>({
 		queryKey: authMeQueryKey,
 		queryFn: fetchMe,
+		enabled,
+	});
+}
+
+export function useProtectedProfileQuery(enabled = true) {
+	return useQuery<ProtectedProfile, Error>({
+		queryKey: protectedProfileQueryKey,
+		queryFn: fetchProtectedProfile,
+		enabled,
 	});
 }
 
