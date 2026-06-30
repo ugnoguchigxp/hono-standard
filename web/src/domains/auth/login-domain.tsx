@@ -4,17 +4,20 @@ import { useForm } from "react-hook-form";
 type LoginFormValues = {
 	email: string;
 	password: string;
+	redirectTo?: string;
 };
 
 type LoginDomainSectionProps = {
 	active: boolean;
 	busy: boolean;
+	redirectTo?: string;
 	onLogin: (params: LoginFormValues) => Promise<boolean>;
 };
 
 export const LoginDomainSection = ({
 	active,
 	busy,
+	redirectTo,
 	onLogin,
 }: LoginDomainSectionProps) => {
 	const {
@@ -33,6 +36,7 @@ export const LoginDomainSection = ({
 		const ok = await onLogin({
 			email: values.email.trim(),
 			password: values.password,
+			redirectTo,
 		});
 		if (ok) {
 			resetField("password");

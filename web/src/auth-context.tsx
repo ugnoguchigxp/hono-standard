@@ -25,6 +25,7 @@ type AuthContextValue = {
 	loginWithPassword: (params: {
 		email: string;
 		password: string;
+		redirectTo?: string;
 	}) => Promise<boolean>;
 	logoutCurrentUser: () => Promise<void>;
 };
@@ -43,12 +44,18 @@ export function useAuth() {
 	return value;
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+	children,
+	sessionCheckEnabled = true,
+}: {
+	children: ReactNode;
+	sessionCheckEnabled?: boolean;
+}) {
 	const navigate = useNavigate();
 	const client = useQueryClient();
 	const [errorText, setErrorText] = useState<string | null>(null);
 
-	const meQuery = useCurrentUserQuery();
+	const meQuery = useCurrentUserQuery(sessionCheckEnabled);
 
 	useEffect(() => {
 		if (meQuery.error && !isUnauthorizedError(meQuery.error)) {
@@ -71,9 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}, [client]);
 
 	const loginMutation = useLoginMutation({
-		onSuccess: async () => {
+		onSuccess: async (_response, variables) => {
 			setErrorText(null);
-			await navigate({ to: "/" });
+			await navigate({ to: variables.redirectTo ?? "/" });
 		},
 		onError: (error) => {
 			setErrorText(error instanceof Error ? error.message : "Login failed.");
@@ -89,13 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const value = useMemo<AuthContextValue>(
 		() => ({
 			authUser: meQuery.data ?? null,
-			authLoading: meQuery.isPending,
+			authLoading: sessionCheckEnabled && meQuery.isPending,
 			busy: loginMutation.isPending || logoutMutation.isPending,
 			errorText,
 			loginWithPassword: async (params) => {
 				if (!params.email || !params.password) return false;
 				try {
-					await loginMutation.mutateAsync(params);
+					await loginMutation.mutateAsync({
+						email: params.email,
+						password: params.password,
+						redirectTo: params.redirectTo,
+					});
 					return true;
 				} catch {
 					return false;
@@ -113,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			logoutMutation.mutateAsync,
 			meQuery.data,
 			meQuery.isPending,
+			sessionCheckEnabled,
 		],
 	);
 

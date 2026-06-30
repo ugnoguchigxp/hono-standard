@@ -3,6 +3,10 @@ import devServer from "@hono/vite-dev-server";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
+import {
+	serializeContentSecurityPolicy,
+	viteDevContentSecurityPolicy,
+} from "./api/app/security-headers";
 import { APP_CONFIG_DEFAULTS } from "./api/config/appDefaults";
 
 export default defineConfig(({ mode, isSsrBuild }) => {
@@ -32,6 +36,15 @@ export default defineConfig(({ mode, isSsrBuild }) => {
 		server: {
 			host: APP_CONFIG_DEFAULTS.host,
 			port: APP_CONFIG_DEFAULTS.port,
+			headers: {
+				"Content-Security-Policy": serializeContentSecurityPolicy(
+					viteDevContentSecurityPolicy,
+				),
+				"Referrer-Policy": "no-referrer",
+				"X-Content-Type-Options": "nosniff",
+				"X-DNS-Prefetch-Control": "off",
+				"X-Frame-Options": "SAMEORIGIN",
+			},
 		},
 		build: {
 			outDir: isSsrBuild ? "../dist-server" : "../dist-web",
