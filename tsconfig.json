@@ -20,7 +20,10 @@
     "api/**/*",
     "shared/**/*",
     "web/**/*",
+    "scripts/**/*",
+    "tests/**/*",
     "drizzle.config.ts",
+    "playwright.config.ts",
     "vite.config.ts",
     "vitest.config.ts"
   ],

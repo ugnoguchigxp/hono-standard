@@ -16,7 +16,10 @@ describe("readAppEnv", () => {
 
 	it("accepts database and auth runtime overrides", () => {
 		const env = readAppEnv({
-			DATABASE_URL: "file:example.db",
+			HOST: "0.0.0.0",
+			PORT: "5174",
+			DATABASE_URL: "libsql://example.turso.io",
+			DATABASE_AUTH_TOKEN: "test-token",
 			JWT_SECRET: "x".repeat(32),
 			APP_URL: "https://showcase.example.com",
 			CORS_ORIGINS: "https://showcase.example.com,http://localhost:5173",
@@ -25,7 +28,10 @@ describe("readAppEnv", () => {
 			SECURITY_HEADERS_MODE: "https",
 		});
 
-		expect(env.databaseUrl).toBe("file:example.db");
+		expect(env.host).toBe("0.0.0.0");
+		expect(env.port).toBe(5174);
+		expect(env.databaseUrl).toBe("libsql://example.turso.io");
+		expect(env.databaseAuthToken).toBe("test-token");
 		expect(env.jwtSecret).toBe("x".repeat(32));
 		expect(env.appUrl).toBe("https://showcase.example.com");
 		expect(env.corsOrigins).toEqual([
@@ -35,6 +41,18 @@ describe("readAppEnv", () => {
 		expect(env.secureCookie).toBe(true);
 		expect(env.cookieSameSite).toBe("none");
 		expect(env.securityHeadersMode).toBe("https");
+	});
+
+	it("accepts remote libSQL URLs in production", () => {
+		const env = readAppEnv({
+			NODE_ENV: "production",
+			JWT_SECRET: "x".repeat(32),
+			DATABASE_URL: "libsql://example.turso.io",
+			DATABASE_AUTH_TOKEN: "test-token",
+		});
+
+		expect(env.databaseUrl).toBe("libsql://example.turso.io");
+		expect(env.databaseAuthToken).toBe("test-token");
 	});
 
 	it("rejects SameSite none without secure cookies", () => {

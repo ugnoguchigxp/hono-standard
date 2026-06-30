@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import type * as schema from "../../db/schema";
+import type { AppDatabase } from "../../db";
 import type { AppEnv } from "../../app/env";
 import { AuthService } from "./auth.service";
 import { HttpError } from "./errors";
@@ -45,10 +44,7 @@ describe("AuthService", () => {
 			delete: vi.fn().mockReturnThis(),
 		};
 
-		authService = new AuthService(
-			mockDb as unknown as LibSQLDatabase<typeof schema>,
-			mockEnv,
-		);
+		authService = new AuthService(mockDb as unknown as AppDatabase, mockEnv);
 
 		const passwordHash = await hashPassword("password123");
 		testUserRow.passwordHash = passwordHash;
