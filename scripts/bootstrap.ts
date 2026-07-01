@@ -201,7 +201,14 @@ function ensurePostgresService(cwd: string, databaseUrl: string): void {
 	if (!/^\s{2}db:/m.test(composeText)) return;
 
 	console.log("starting local PostgreSQL service");
-	if (!tryCommand(cwd, "docker", ["compose", "up", "-d", "db"])) {
+	if (
+		!tryCommand(cwd, "docker", ["compose", "up", "-d", "db"], {
+			...process.env,
+			COMPOSE_JWT_SECRET:
+				process.env.COMPOSE_JWT_SECRET ??
+				"hono-standard-local-compose-secret-change-before-production",
+		})
+	) {
 		console.warn(
 			"could not start docker compose db; continuing in case PostgreSQL is already running",
 		);
