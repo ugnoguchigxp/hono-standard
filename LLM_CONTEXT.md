@@ -59,6 +59,60 @@
 | Change RAG chat | `api/modules/chat/`, `api/routes/chat.route.ts`, `api/modules/rag/search-evidence.ts` | `api/providers/`, `api/db/schema.ts` | source importer |
 | Change build/dev tooling | `package.json`, `vite.config.ts`, `vitest.config.ts`, `scripts/verify.ts` | failing config-specific output | feature code |
 
+## Styling / CSS Architecture
+
+UI 変更では、この節を styling 判断の入口にする。まず全 CSS を広く探索せず、以下の entrypoint と pattern source で説明できるか確認する。
+
+- Global app style entrypoint: `web/src/styles.css`。Tailwind v4 の `@import "tailwindcss"`、markdown editor vendor CSS import、`@theme` token、app shell、auth、RAG UI の base/component styles を持つ。
+- Showcase style entrypoint: `web/src/showcase.css`。`@reference "./styles.css"` で global tokens を参照し、`.showcase-*`, `.demo-*`, `.table-*` など showcase 専用 component patterns を持つ。
+- CSS load path: `web/src/main.tsx` が `./styles.css` と `./showcase.css` を import する。Tailwind plugin は `vite.config.ts` の `@tailwindcss/vite`。
+- Design tokens / theme values: `web/src/styles.css` の `@theme` が global token の source of truth。`--color-*` と `--radius-*` を Tailwind utility / `@apply` から使う。
+- Showcase theme values: `web/src/showcase-settings-context.tsx` が `--showcase-*` custom properties を生成し、`web/src/showcase.css` の `.showcase-shell` と `:root[data-showcase-page-theme]` rules がそれを消費する。
+- Shared app patterns: `web/src/styles.css` の `.topbar`, `.menu-*`, `.auth-*`, `.icon-button`, `.wiki-*`, `.search-*`, `.composer`, `.actions` class families。
+- Showcase patterns: `web/src/showcase.css` の `.showcase-*`, `.demo-*`, `.table-*`, `.modal-*`, `.drawer-*` class families。
+- Page and layout source: shell/navigation は `web/src/app-header.tsx`、app composition は `web/src/App.tsx` と `web/src/router.tsx`、page markup は `web/src/views/` と `web/src/domains/auth/login-domain.tsx`。
+- Icons use `lucide-react`; shared icon sizing is `.icon` in `web/src/styles.css`.
+
+### Styling Priority
+
+- Prefer existing class families and tokens before adding new CSS.
+- Use `web/src/styles.css` for shared app/RAG shell patterns and `web/src/showcase.css` for showcase-only patterns.
+- Prefer Tailwind utilities via class names or `@apply` where the existing file already uses them; do not introduce CSS Modules, Sass, or component stylesheet files.
+- Reuse existing button, icon-button, card, form, table, shell, badge, alert, modal, drawer, and pagination patterns before creating new variants.
+- Use existing color, spacing, radius, shadow, and typography tokens when available.
+- Add new tokens or global classes only when the pattern is reused or represents a real design-system concept.
+- For one-off dynamic values, follow the showcase pattern: type CSS custom properties in React and consume them from existing CSS rules.
+
+### Files To Check First
+
+For normal app UI styling changes, check these first before broader search:
+
+1. `web/src/styles.css`
+2. The affected markup in `web/src/views/`, `web/src/app-header.tsx`, `web/src/App.tsx`, or `web/src/domains/auth/login-domain.tsx`
+3. `web/src/ui.tsx` when matching shared UI helper patterns
+
+For showcase UI, theme, density, radius, font-size, or showcase appearance changes, check these first:
+
+1. `web/src/showcase.css`
+2. `web/src/showcase-settings-context.tsx`
+3. `web/src/views/showcase-view.tsx`
+4. `web/src/showcase-table-search.ts` when URL search state is involved
+
+### Do Not Edit
+
+- Generated CSS or build output
+- Vendor or third-party CSS other than the explicit import boundary in `web/src/styles.css`
+- Reset/base CSS unless the task explicitly concerns global defaults
+- Unrelated showcase component families when the task targets RAG, auth, or app shell UI only
+
+### CSS Change Rules
+
+- Keep CSS changes scoped to the UI behavior being changed.
+- Do not introduce one-off color, spacing, radius, shadow, or typography values when an existing token fits.
+- Do not edit global base rules for component-specific behavior unless the style is intentionally shared.
+- Match existing naming, file placement, and styling conventions.
+- After changing styles, verify the target UI and check for obvious regressions in nearby shared components.
+
 ## Implementation Contracts
 
 - Keep backend routes on Hono; do not introduce a parallel API framework.
