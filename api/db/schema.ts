@@ -1,29 +1,28 @@
-import { randomUUID } from "node:crypto";
 import {
+	boolean,
 	index,
-	integer,
-	sqliteTable,
+	pgTable,
 	text,
+	timestamp,
 	uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+	uuid,
+} from "drizzle-orm/pg-core";
 
-export const users = sqliteTable(
+export const users = pgTable(
 	"users",
 	{
-		id: text("id")
-			.primaryKey()
-			.$defaultFn(() => randomUUID()),
+		id: uuid("id").defaultRandom().primaryKey(),
 		email: text("email").notNull().unique(),
 		passwordHash: text("password_hash").notNull(),
 		displayName: text("display_name").notNull(),
 		role: text("role").notNull().default("member"),
-		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-		lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
-		createdAt: integer("created_at", { mode: "timestamp" })
-			.$defaultFn(() => new Date())
+		isActive: boolean("is_active").notNull().default(true),
+		lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
 			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp" })
-			.$defaultFn(() => new Date())
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
 			.notNull(),
 	},
 	(table) => ({
@@ -33,19 +32,17 @@ export const users = sqliteTable(
 	}),
 );
 
-export const refreshTokens = sqliteTable(
+export const refreshTokens = pgTable(
 	"refresh_tokens",
 	{
-		id: text("id")
-			.primaryKey()
-			.$defaultFn(() => randomUUID()),
+		id: uuid("id").defaultRandom().primaryKey(),
 		token: text("token").notNull().unique(),
-		userId: text("user_id")
+		userId: uuid("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-		createdAt: integer("created_at", { mode: "timestamp" })
-			.$defaultFn(() => new Date())
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
 			.notNull(),
 	},
 	(table) => ({

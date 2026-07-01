@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { APP_CONFIG_DEFAULTS } from "../config/appDefaults";
-import { isDatabaseConnectionUrl } from "../db/path";
 
 const optionalTrimmedString = z.preprocess((value) => {
 	if (typeof value !== "string") return value;
@@ -89,23 +88,9 @@ function parseCorsOrigins(value?: string): string[] | undefined {
 	return origins?.length ? origins : undefined;
 }
 
-function resolveDatabaseUrl(
-	databaseUrl: string,
-	nodeEnv: AppEnv["nodeEnv"],
-): string {
-	if (!isDatabaseConnectionUrl(databaseUrl)) return databaseUrl;
-	if (nodeEnv === "production") {
-		throw new Error("DATABASE_URL must be a SQLite database file path.");
-	}
-	return APP_CONFIG_DEFAULTS.databaseUrl;
-}
-
 export function readAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
 	const parsed = EnvSchema.parse(env);
-	const databaseUrl = resolveDatabaseUrl(
-		parsed.DATABASE_URL ?? APP_CONFIG_DEFAULTS.databaseUrl,
-		parsed.NODE_ENV,
-	);
+	const databaseUrl = parsed.DATABASE_URL ?? APP_CONFIG_DEFAULTS.databaseUrl;
 
 	if (
 		parsed.NODE_ENV === "production" &&

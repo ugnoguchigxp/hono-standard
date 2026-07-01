@@ -18,7 +18,7 @@ describe("readAppEnv", () => {
 		const env = readAppEnv({
 			HOST: "0.0.0.0",
 			PORT: "5174",
-			DATABASE_URL: "tmp/test.sqlite",
+			DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:5432/app",
 			JWT_SECRET: "x".repeat(32),
 			APP_URL: "https://showcase.example.com",
 			CORS_ORIGINS: "https://showcase.example.com,http://localhost:5173",
@@ -29,7 +29,9 @@ describe("readAppEnv", () => {
 
 		expect(env.host).toBe("0.0.0.0");
 		expect(env.port).toBe(5174);
-		expect(env.databaseUrl).toBe("tmp/test.sqlite");
+		expect(env.databaseUrl).toBe(
+			"postgres://postgres:postgres@127.0.0.1:5432/app",
+		);
 		expect(env.jwtSecret).toBe("x".repeat(32));
 		expect(env.appUrl).toBe("https://showcase.example.com");
 		expect(env.corsOrigins).toEqual([
@@ -41,22 +43,12 @@ describe("readAppEnv", () => {
 		expect(env.securityHeadersMode).toBe("https");
 	});
 
-	it("falls back to the SQLite default when a dev shell provides a connection URL", () => {
+	it("uses the PostgreSQL default when DATABASE_URL is omitted", () => {
 		const env = readAppEnv({
-			DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:5432/app",
+			NODE_ENV: "development",
 		});
 
 		expect(env.databaseUrl).toBe(APP_CONFIG_DEFAULTS.databaseUrl);
-	});
-
-	it("rejects database connection URLs in production", () => {
-		expect(() =>
-			readAppEnv({
-				NODE_ENV: "production",
-				JWT_SECRET: "x".repeat(32),
-				DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:5432/app",
-			}),
-		).toThrow(/SQLite database file path/);
 	});
 
 	it("rejects SameSite none without secure cookies", () => {

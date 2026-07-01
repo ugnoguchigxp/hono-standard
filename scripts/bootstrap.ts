@@ -5,6 +5,12 @@ import path from "node:path";
 const defaultDatabaseUrl = "data/sqlite.db";
 const urlWithAuthorityPattern = /^[a-z][a-z0-9+.-]*:\/\//i;
 const postgresUrlPattern = /^postgres(?:ql)?:\/\//i;
+const knownTemplateDatabaseDefaults = new Set([
+	"data/sqlite.db",
+	"sqlite.db",
+	"file:sqlite.db",
+	"postgres://postgres:postgres@localhost:5432/hono_standard",
+]);
 
 type BootstrapPaths = {
 	cwd: string;
@@ -118,6 +124,23 @@ function shouldNormalizeToSqliteDefault(
 	);
 }
 
+function shouldUseVariantDatabaseDefault(
+	currentDatabaseUrl: string,
+	defaultDatabaseUrlForVariant: string,
+): boolean {
+	if (currentDatabaseUrl === defaultDatabaseUrlForVariant) return false;
+	if (
+		knownTemplateDatabaseDefaults.has(currentDatabaseUrl) &&
+		knownTemplateDatabaseDefaults.has(defaultDatabaseUrlForVariant)
+	) {
+		return true;
+	}
+	return shouldNormalizeToSqliteDefault(
+		currentDatabaseUrl,
+		defaultDatabaseUrlForVariant,
+	);
+}
+
 export function ensureEnvFile(cwd = process.cwd()): string {
 	const { envPath, envExamplePath } = resolveBootstrapPaths(cwd);
 	if (!fs.existsSync(envPath)) {
@@ -141,7 +164,7 @@ export function ensureEnvFile(cwd = process.cwd()): string {
 			raw: "",
 		});
 	} else if (
-		shouldNormalizeToSqliteDefault(
+		shouldUseVariantDatabaseDefault(
 			databaseEntry.value,
 			defaultDatabaseUrlForVariant,
 		)

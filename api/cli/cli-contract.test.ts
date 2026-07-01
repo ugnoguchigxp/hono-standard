@@ -1,17 +1,9 @@
 import { spawnSync } from "node:child_process";
 import type { SpawnSyncReturns } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-const tempRoots: string[] = [];
-
-function makeTempRoot(): string {
-	const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hono-standard-cli-"));
-	tempRoots.push(tempRoot);
-	return tempRoot;
-}
+const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
 
 function makeCliEnv(databaseUrl: string): NodeJS.ProcessEnv {
 	return {
@@ -54,37 +46,28 @@ function parseLastJsonObject(stdout: string): unknown {
 	return JSON.parse(stdout.slice(jsonStart));
 }
 
-afterEach(() => {
-	for (const tempRoot of tempRoots.splice(0)) {
-		fs.rmSync(tempRoot, { recursive: true, force: true });
-	}
-});
+describeWithDatabase("CLI contract", () => {
+	const databaseUrl = testDatabaseUrl ?? "";
 
-describe("CLI contract", () => {
-	it("applies SQLite migrations and reports idempotent re-runs", () => {
-		const databaseUrl = path.join(makeTempRoot(), "data", "sqlite.db");
-
+	it("applies PostgreSQL migrations and reports idempotent re-runs", () => {
 		const firstRun = runBunScript(["api/cli/migrate.ts"], databaseUrl);
 		expectSuccess(firstRun);
 		expect(parseLastJsonObject(firstRun.stdout)).toMatchObject({
 			ok: true,
-			total: 1,
-			applied: 1,
-			skipped: 0,
+			total: 2,
 		});
 
 		const secondRun = runBunScript(["api/cli/migrate.ts"], databaseUrl);
 		expectSuccess(secondRun);
 		expect(parseLastJsonObject(secondRun.stdout)).toMatchObject({
 			ok: true,
-			total: 1,
+			total: 2,
 			applied: 0,
-			skipped: 1,
+			skipped: 2,
 		});
 	});
 
 	it("creates an admin user from stdin after migrations", () => {
-		const databaseUrl = path.join(makeTempRoot(), "data", "sqlite.db");
 		expectSuccess(runBunScript(["api/cli/migrate.ts"], databaseUrl));
 
 		const result = runBunScript(
