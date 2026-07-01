@@ -34,6 +34,23 @@ describe("bootstrap env setup", () => {
 		);
 	});
 
+	it("uses a PostgreSQL default from the variant .env.example", () => {
+		const tempRoot = makeTempRoot();
+		fs.writeFileSync(
+			path.join(tempRoot, ".env.example"),
+			"NODE_ENV=development\nDATABASE_URL=postgres://postgres:postgres@localhost:5432/hono_standard\n",
+		);
+
+		const databaseUrl = ensureEnvFile(tempRoot);
+
+		expect(databaseUrl).toBe(
+			"postgres://postgres:postgres@localhost:5432/hono_standard",
+		);
+		expect(fs.readFileSync(path.join(tempRoot, ".env"), "utf8")).toContain(
+			"DATABASE_URL=postgres://postgres:postgres@localhost:5432/hono_standard",
+		);
+	});
+
 	it("normalizes URL-style or legacy SQLite database values for local bootstrap", () => {
 		const tempRoot = makeTempRoot();
 		fs.writeFileSync(
@@ -50,6 +67,48 @@ describe("bootstrap env setup", () => {
 		expect(databaseUrl).toBe("data/sqlite.db");
 		expect(fs.readFileSync(path.join(tempRoot, ".env"), "utf8")).toContain(
 			"DATABASE_URL=data/sqlite.db",
+		);
+	});
+
+	it("preserves an existing PostgreSQL URL for PostgreSQL variants", () => {
+		const tempRoot = makeTempRoot();
+		fs.writeFileSync(
+			path.join(tempRoot, ".env.example"),
+			"NODE_ENV=development\nDATABASE_URL=postgres://postgres:postgres@localhost:5432/hono_standard\n",
+		);
+		fs.writeFileSync(
+			path.join(tempRoot, ".env"),
+			"NODE_ENV=development\nDATABASE_URL=postgres://postgres:postgres@localhost:5433/custom\n",
+		);
+
+		const databaseUrl = ensureEnvFile(tempRoot);
+
+		expect(databaseUrl).toBe(
+			"postgres://postgres:postgres@localhost:5433/custom",
+		);
+		expect(fs.readFileSync(path.join(tempRoot, ".env"), "utf8")).toContain(
+			"DATABASE_URL=postgres://postgres:postgres@localhost:5433/custom",
+		);
+	});
+
+	it("replaces another template default with the current variant default", () => {
+		const tempRoot = makeTempRoot();
+		fs.writeFileSync(
+			path.join(tempRoot, ".env.example"),
+			"NODE_ENV=development\nDATABASE_URL=postgres://postgres:postgres@localhost:5432/hono_standard\n",
+		);
+		fs.writeFileSync(
+			path.join(tempRoot, ".env"),
+			"NODE_ENV=development\nDATABASE_URL=data/sqlite.db\n",
+		);
+
+		const databaseUrl = ensureEnvFile(tempRoot);
+
+		expect(databaseUrl).toBe(
+			"postgres://postgres:postgres@localhost:5432/hono_standard",
+		);
+		expect(fs.readFileSync(path.join(tempRoot, ".env"), "utf8")).toContain(
+			"DATABASE_URL=postgres://postgres:postgres@localhost:5432/hono_standard",
 		);
 	});
 });
