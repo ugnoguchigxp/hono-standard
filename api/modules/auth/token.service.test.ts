@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { AppDatabase } from "../../db";
+import type { AppDatabase, DatabaseWriter } from "../../db";
+import { createSingleWriterClient } from "../../db/client";
 import type { AppEnv } from "../../app/env";
 import { HttpError } from "./errors";
 import {
@@ -12,6 +13,7 @@ import {
 
 describe("token.service", () => {
 	let mockDb: any;
+	let mockWriter: DatabaseWriter<AppDatabase>;
 	let mockEnv: AppEnv;
 	const testPayload = {
 		userId: "a1a1a1a1-a1a1-41a1-a1a1-a1a1a1a1a1a1",
@@ -33,6 +35,9 @@ describe("token.service", () => {
 			where: vi.fn().mockReturnThis(),
 			returning: vi.fn(),
 		};
+		mockWriter = createSingleWriterClient(
+			mockDb as unknown as AppDatabase,
+		);
 	});
 
 	describe("AccessToken", () => {
@@ -56,7 +61,7 @@ describe("token.service", () => {
 		it("should throw error when verifying a refresh token as an access token", async () => {
 			const refreshToken = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as AppDatabase,
+				mockWriter,
 				mockEnv,
 			);
 			await expect(verifyAccessToken(refreshToken, mockEnv)).rejects.toThrow(
@@ -69,7 +74,7 @@ describe("token.service", () => {
 		it("should generate refresh token and insert hash to database", async () => {
 			const token = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as AppDatabase,
+				mockWriter,
 				mockEnv,
 			);
 			expect(token).toBeDefined();
@@ -86,7 +91,7 @@ describe("token.service", () => {
 		it("should consume a valid refresh token", async () => {
 			const token = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as AppDatabase,
+				mockWriter,
 				mockEnv,
 			);
 
@@ -100,7 +105,7 @@ describe("token.service", () => {
 
 			const payload = await consumeRefreshToken(
 				token,
-				mockDb as unknown as AppDatabase,
+				mockWriter,
 				mockEnv,
 			);
 
@@ -115,7 +120,7 @@ describe("token.service", () => {
 			await expect(
 				consumeRefreshToken(
 					"some-token",
-					mockDb as unknown as AppDatabase,
+					mockWriter,
 					mockEnv,
 				),
 			).rejects.toThrowError(new HttpError(401, "Invalid refresh token."));
@@ -124,7 +129,7 @@ describe("token.service", () => {
 		it("should throw HttpError 401 when refresh token is expired", async () => {
 			const token = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as AppDatabase,
+				mockWriter,
 				mockEnv,
 			);
 
@@ -139,7 +144,7 @@ describe("token.service", () => {
 			await expect(
 				consumeRefreshToken(
 					token,
-					mockDb as unknown as AppDatabase,
+					mockWriter,
 					mockEnv,
 				),
 			).rejects.toThrowError(new HttpError(401, "Refresh token expired."));
@@ -148,7 +153,7 @@ describe("token.service", () => {
 		it("should throw HttpError 401 when refresh token userId does not match", async () => {
 			const token = await generateRefreshToken(
 				testPayload,
-				mockDb as unknown as AppDatabase,
+				mockWriter,
 				mockEnv,
 			);
 
@@ -163,7 +168,7 @@ describe("token.service", () => {
 			await expect(
 				consumeRefreshToken(
 					token,
-					mockDb as unknown as AppDatabase,
+					mockWriter,
 					mockEnv,
 				),
 			).rejects.toThrowError(new HttpError(401, "Invalid refresh token."));
@@ -172,7 +177,7 @@ describe("token.service", () => {
 		it("should revoke refresh token by deleting it from database", async () => {
 			await revokeRefreshToken(
 				"revoke-me",
-				mockDb as unknown as AppDatabase,
+				mockWriter,
 			);
 			expect(mockDb.delete).toHaveBeenCalled();
 		});

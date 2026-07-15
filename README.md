@@ -19,6 +19,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、Turso/lib
 | `api/config/appDefaults.ts` | 非シークレットの既定値 |
 | `api/db/index.ts` | DB runtime の public entry。variant はここから差し替える |
 | `api/db/index.ts` | Turso/libSQL の Drizzle runtime |
+| `api/db/client.ts` | 単一 writer client と read/write DB access contract |
 | `api/db/schema.ts` | Drizzle SQLite-compatible schema |
 | `api/db/migrate.ts` | migration runner の public entry |
 | `api/routes/auth.route.ts` | `/api/auth/*` route |
@@ -159,6 +160,12 @@ NODE_ENV=production JWT_SECRET='<32+ random chars>' bun run start
 production では `JWT_SECRET` を必ず強いランダム値に変更してください。未設定または dev default のままの場合、アプリは起動時に失敗します。HTTPS で公開する場合は `APP_URL=https://...` とし、必要に応じて `AUTH_COOKIE_SECURE=true`、`SECURITY_HEADERS_MODE=https` を明示します。
 
 Turso/libSQL variant では `DATABASE_URL` は `libsql://...` または local fallback の `file:...` を指定してください。remote Turso へ接続する場合は `DATABASE_AUTH_TOKEN` も設定します。container や VM で local fallback を使う場合は、DB file を volume に置き、起動前に `bun run db:migrate` を実行します。`PORT` は platform 側が指定する値に合わせて上書きできます。
+
+### Turso/libSQL concurrency contract
+
+Turso runtime は1プロセスにつき1つの writable client だけを作り、すべての書き込みを共通の `SingleWriterClient` でFIFO実行します。アプリケーションコードは writable Drizzle database を直接保持せず、`dbRuntime.client.write.execute((db) => ...)` を使って書き込みます。読み取りは `dbRuntime.client.read` を使います。
+
+local `file:` databaseではWAL、`busy_timeout`、foreign key enforcementを有効にし、reader connectionへ `query_only` を設定します。`:memory:` databaseとremote Tursoでは同じlibSQL clientをreaderとwriterで共有します。remote接続でもprocess内の書き込み入口は共通writerですが、複数process間の書き込み順序と永続化はTurso primaryが管理します。
 
 ## Docker
 

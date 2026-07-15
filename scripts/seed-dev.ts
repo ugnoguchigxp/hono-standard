@@ -12,9 +12,9 @@ if (env.nodeEnv === "production") {
 	throw new Error("seed:dev cannot run in production.");
 }
 
-const dbRuntime = createDbRuntime(env);
+const dbRuntime = await createDbRuntime(env);
 try {
-	const authService = new AuthService(dbRuntime.db, env);
+	const authService = new AuthService(dbRuntime.client, env);
 	const user = await authService.createAdmin({
 		email,
 		displayName,
@@ -53,5 +53,5 @@ try {
 		throw error;
 	}
 } finally {
-	dbRuntime.close();
+	await dbRuntime.close();
 }

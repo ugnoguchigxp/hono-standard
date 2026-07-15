@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import type { AppDatabase } from "../../db";
+import type { AppDatabase, DatabaseWriter } from "../../db";
 import { SignJWT, jwtVerify } from "jose";
 import { refreshTokens } from "../../db/schema";
 import type { AppEnv } from "../../app/env";
@@ -37,7 +37,7 @@ export async function generateAccessToken(
 
 export async function generateRefreshToken(
 	payload: JwtCorePayload,
-	db: AppDatabase,
+	writer: DatabaseWriter<AppDatabase>,
 	env: AppEnv,
 ): Promise<string> {
 	const token = await new SignJWT({ ...payload, type: "refresh" })
@@ -52,11 +52,13 @@ export async function generateRefreshToken(
 	if (typeof exp !== "number") {
 		throw new HttpError(500, "Failed to parse refresh token expiration.");
 	}
-	await db.insert(refreshTokens).values({
-		token: hashToken(token),
-		userId: payload.userId,
-		expiresAt: new Date(exp * 1000),
-	});
+	await writer.execute((db) =>
+		db.insert(refreshTokens).values({
+			token: hashToken(token),
+			userId: payload.userId,
+			expiresAt: new Date(exp * 1000),
+		}),
+	);
 
 	return token;
 }
@@ -78,17 +80,19 @@ export async function verifyAccessToken(
 
 export async function consumeRefreshToken(
 	token: string,
-	db: AppDatabase,
+	writer: DatabaseWriter<AppDatabase>,
 	env: AppEnv,
 ): Promise<JwtPayload> {
 	const tokenHash = hashToken(token);
-	const [deleted] = await db
-		.delete(refreshTokens)
-		.where(eq(refreshTokens.token, tokenHash))
-		.returning({
-			userId: refreshTokens.userId,
-			expiresAt: refreshTokens.expiresAt,
-		});
+	const [deleted] = await writer.execute((db) =>
+		db
+			.delete(refreshTokens)
+			.where(eq(refreshTokens.token, tokenHash))
+			.returning({
+				userId: refreshTokens.userId,
+				expiresAt: refreshTokens.expiresAt,
+			}),
+	);
 
 	if (!deleted) {
 		throw new HttpError(401, "Invalid refresh token.");
@@ -114,9 +118,9 @@ export async function consumeRefreshToken(
 
 export async function revokeRefreshToken(
 	token: string,
-	db: AppDatabase,
+	writer: DatabaseWriter<AppDatabase>,
 ): Promise<void> {
-	await db
-		.delete(refreshTokens)
-		.where(eq(refreshTokens.token, hashToken(token)));
+	await writer.execute((db) =>
+		db.delete(refreshTokens).where(eq(refreshTokens.token, hashToken(token))),
+	);
 }
