@@ -6,20 +6,20 @@ import { HTTPException } from "hono/http-exception";
 // Mock environment and DB connection before importing app
 vi.mock("../db", () => ({
 	createDbRuntime: vi.fn().mockReturnValue({
-		db: {
-			query: {
-				users: {
-					findFirst: vi.fn(),
+		client: {
+			read: {
+				query: {
+					users: {
+						findFirst: vi.fn(),
+					},
 				},
+			},
+			write: {
+				execute: vi.fn(),
+				close: vi.fn(),
 			},
 		},
 		close: vi.fn(),
-		connection: {
-			client: {
-				close: vi.fn(),
-			},
-			ownsConnection: false,
-		},
 	}),
 }));
 

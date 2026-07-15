@@ -20,7 +20,7 @@ const shutdown = async (signal: string) => {
 	try {
 		const runtime = await getAppRuntime();
 		console.log("Closing database connection...");
-		runtime.dbRuntime.close();
+		await runtime.dbRuntime.close();
 		console.log("Shutdown complete.");
 		process.exit(0);
 	} catch (error) {

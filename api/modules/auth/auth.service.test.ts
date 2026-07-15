@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { AppDatabase } from "../../db";
+import type { AppDatabase, AppDatabaseClient } from "../../db";
+import { createSingleWriterClient } from "../../db/client";
 import type { AppEnv } from "../../app/env";
 import { AuthService } from "./auth.service";
 import { HttpError } from "./errors";
@@ -7,6 +8,7 @@ import { hashPassword } from "./password";
 
 describe("AuthService", () => {
 	let mockDb: any;
+	let mockDatabaseClient: AppDatabaseClient;
 	let mockEnv: AppEnv;
 	let authService: AuthService;
 
@@ -44,7 +46,12 @@ describe("AuthService", () => {
 			delete: vi.fn().mockReturnThis(),
 		};
 
-		authService = new AuthService(mockDb as unknown as AppDatabase, mockEnv);
+		const database = mockDb as unknown as AppDatabase;
+		mockDatabaseClient = {
+			read: database,
+			write: createSingleWriterClient(database),
+		};
+		authService = new AuthService(mockDatabaseClient, mockEnv);
 
 		const passwordHash = await hashPassword("password123");
 		testUserRow.passwordHash = passwordHash;
@@ -160,7 +167,7 @@ describe("AuthService", () => {
 					email: testUserRow.email,
 					role: "member",
 				},
-				mockInsertDb as any,
+				createSingleWriterClient(mockInsertDb as any),
 				mockEnv,
 			);
 
@@ -188,10 +195,10 @@ describe("AuthService", () => {
 					email: testUserRow.email,
 					role: "member",
 				},
-				{
+				createSingleWriterClient({
 					insert: vi.fn().mockReturnThis(),
 					values: vi.fn().mockResolvedValue(undefined),
-				} as any,
+				} as any),
 				mockEnv,
 			);
 
