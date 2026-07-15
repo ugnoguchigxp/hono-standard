@@ -31,7 +31,7 @@ declare global {
 export async function createDefaultAppDeps(): Promise<AppDeps> {
 	const env = readAppEnv();
 	const dbRuntime = createDbRuntime(env);
-	const authService = new AuthService(dbRuntime.db, env);
+	const authService = new AuthService(dbRuntime.client, env);
 	return { env, dbRuntime, authService };
 }
 

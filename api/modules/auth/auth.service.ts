@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { AppEnv } from "../../app/env";
-import type { AppDatabase } from "../../db";
+import type { AppDatabaseClient } from "../../db";
 import { users } from "../../db/schema";
 import { HttpError } from "./errors";
 import { hashPassword, verifyPassword } from "./password";
@@ -56,19 +56,19 @@ const toSessionUser = (user: AuthUser): AuthSessionUser => ({
 
 export class AuthService {
 	constructor(
-		private readonly db: AppDatabase,
+		private readonly database: AppDatabaseClient,
 		private readonly env: AppEnv,
 	) {}
 
 	async findUserById(userId: string): Promise<AuthUser | null> {
-		const row = await this.db.query.users.findFirst({
+		const row = await this.database.read.query.users.findFirst({
 			where: eq(users.id, userId),
 		});
 		return row ? toAuthUser(row) : null;
 	}
 
 	async findUserByEmail(email: string): Promise<AuthUser | null> {
-		const row = await this.db.query.users.findFirst({
+		const row = await this.database.read.query.users.findFirst({
 			where: eq(users.email, email.toLowerCase()),
 		});
 		return row ? toAuthUser(row) : null;
@@ -89,7 +89,7 @@ export class AuthService {
 				email: user.email,
 				role: user.role,
 			},
-			this.db,
+			this.database.write,
 			this.env,
 		);
 		return {
@@ -112,10 +112,12 @@ export class AuthService {
 			throw new HttpError(401, "Invalid email or password.");
 		}
 		const now = new Date();
-		await this.db
-			.update(users)
-			.set({ lastLoginAt: now, updatedAt: now })
-			.where(eq(users.id, user.id));
+		await this.database.write.execute((db) =>
+			db
+				.update(users)
+				.set({ lastLoginAt: now, updatedAt: now })
+				.where(eq(users.id, user.id)),
+		);
 		const refreshed = await this.findUserById(user.id);
 		if (!refreshed) {
 			throw new HttpError(404, "User not found.");
@@ -124,7 +126,11 @@ export class AuthService {
 	}
 
 	async refresh(refreshToken: string): Promise<AuthTokensResult> {
-		const payload = await consumeRefreshToken(refreshToken, this.db, this.env);
+		const payload = await consumeRefreshToken(
+			refreshToken,
+			this.database.write,
+			this.env,
+		);
 		const user = await this.findUserById(payload.userId);
 		if (!user?.isActive) {
 			throw new HttpError(401, "User account is inactive or deleted.");
@@ -134,7 +140,7 @@ export class AuthService {
 
 	async logout(refreshToken?: string): Promise<void> {
 		if (!refreshToken) return;
-		await revokeRefreshToken(refreshToken, this.db);
+		await revokeRefreshToken(refreshToken, this.database.write);
 	}
 
 	async createAdmin(input: Omit<CreateUserInput, "role">): Promise<AuthUser> {
@@ -143,16 +149,18 @@ export class AuthService {
 			throw new HttpError(409, "Email already in use.");
 		}
 		const passwordHash = await hashPassword(input.password);
-		const [created] = await this.db
-			.insert(users)
-			.values({
-				email: input.email.toLowerCase(),
-				passwordHash,
-				displayName: input.displayName,
-				role: "admin",
-				isActive: true,
-			})
-			.returning();
+		const [created] = await this.database.write.execute((db) =>
+			db
+				.insert(users)
+				.values({
+					email: input.email.toLowerCase(),
+					passwordHash,
+					displayName: input.displayName,
+					role: "admin",
+					isActive: true,
+				})
+				.returning(),
+		);
 		return toAuthUser(created);
 	}
 }

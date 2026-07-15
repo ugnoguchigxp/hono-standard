@@ -19,6 +19,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 | `api/config/appDefaults.ts` | 非シークレットの既定値 |
 | `api/db/index.ts` | DB runtime の public entry。variant はここから差し替える |
 | `api/db/sqlite.ts` | SQLite baseline の Drizzle runtime |
+| `api/db/client.ts` | 単一 writer client と read/write DB access contract |
 | `api/db/schema.ts` | Drizzle SQLite schema |
 | `api/db/migrate.ts` | migration runner の public entry |
 | `api/db/migrate-sqlite.ts` | SQLite baseline の migration runner |
@@ -159,6 +160,12 @@ NODE_ENV=production JWT_SECRET='<32+ random chars>' bun run start
 production では `JWT_SECRET` を必ず強いランダム値に変更してください。未設定または dev default のままの場合、アプリは起動時に失敗します。HTTPS で公開する場合は `APP_URL=https://...` とし、必要に応じて `AUTH_COOKIE_SECURE=true`、`SECURITY_HEADERS_MODE=https` を明示します。
 
 SQLite baseline では `DATABASE_URL` は永続化される file path にしてください。container や VM で動かす場合は、DB file を volume に置き、起動前に `bun run db:migrate` を実行します。`PORT` は platform 側が指定する値に合わせて上書きできます。
+
+### SQLite concurrency contract
+
+SQLite runtime は1プロセスにつき1つの writable connection だけを作り、すべての書き込みを共通の `SingleWriterClient` でFIFO実行します。アプリケーションコードは writable Drizzle database を直接保持せず、`dbRuntime.client.write.execute((db) => ...)` を使って書き込みます。読み取りは `dbRuntime.client.read` を使います。
+
+file database では WAL、`busy_timeout`、foreign key enforcement を有効にし、reader は物理的に read-only で開きます。`:memory:` database はDB自体がconnection単位なので、同じconnectionをreaderとwriterで共有します。SQLite fileを複数のapp processや複数hostから同時利用する構成はこのcontractの対象外です。その場合はTursoやPostgreSQLなど、複数processを前提とするvariantを選んでください。
 
 ## Docker
 

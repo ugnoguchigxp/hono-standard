@@ -14,7 +14,7 @@ if (env.nodeEnv === "production") {
 
 const dbRuntime = createDbRuntime(env);
 try {
-	const authService = new AuthService(dbRuntime.db, env);
+	const authService = new AuthService(dbRuntime.client, env);
 	const user = await authService.createAdmin({
 		email,
 		displayName,
@@ -53,5 +53,5 @@ try {
 		throw error;
 	}
 } finally {
-	dbRuntime.close();
+	await dbRuntime.close();
 }

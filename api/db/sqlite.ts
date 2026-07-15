@@ -2,53 +2,79 @@ import { Database } from "bun:sqlite";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import type { AppEnv } from "../app/env";
+import { createSingleWriterClient, type DatabaseClient } from "./client";
 import { ensureDatabaseParentDirectory } from "./path";
 import * as schema from "./schema";
 
 export type AppDatabase = BunSQLiteDatabase<typeof schema>;
-
-export type DbConnection = {
-	client: Database;
-	db: AppDatabase;
-	/** このパッケージが接続を所有しているか（close責任があるか） */
-	ownsConnection: boolean;
-};
+export type AppDatabaseClient = DatabaseClient<AppDatabase>;
 
 export type DbRuntime = {
-	db: AppDatabase;
-	close: () => void;
-	connection: DbConnection;
+	client: AppDatabaseClient;
+	close: () => Promise<void>;
 };
 
-/**
- * databasePath から新しい SQLite database を作成してDrizzleでラップする
- * 接続の所有権はこのパッケージに帰属する
- */
-export function createDbConnection(databasePath: string): DbConnection {
-	ensureDatabaseParentDirectory(databasePath);
-	const client = new Database(databasePath, { create: true });
-	const db = drizzle(client, { schema });
-	return { client, db, ownsConnection: true };
+function configureWriter(client: Database): void {
+	client.run("PRAGMA journal_mode = WAL;");
+	client.run("PRAGMA busy_timeout = 5000;");
+	client.run("PRAGMA foreign_keys = ON;");
+	// read-only connections cannot initialize WAL sidecar files themselves.
+	client.query("SELECT count(*) FROM sqlite_schema").get();
 }
 
-/**
- * 外部の SQLite database をDrizzleでラップする
- * 接続の所有権はホスト側に帰属（closeしない）
- */
-export function wrapExternalClient(client: Database): DbConnection {
+function configureReader(client: Database): void {
+	client.run("PRAGMA busy_timeout = 5000;");
+	client.run("PRAGMA foreign_keys = ON;");
+}
+
+function isInMemoryDatabase(databasePath: string): boolean {
+	return (
+		databasePath === ":memory:" || databasePath.startsWith("file::memory:")
+	);
+}
+
+function createWriterConnection(databasePath: string): {
+	client: Database;
+	db: AppDatabase;
+} {
+	ensureDatabaseParentDirectory(databasePath);
+	const client = new Database(databasePath, { create: true });
+	configureWriter(client);
 	const db = drizzle(client, { schema });
-	return { client, db, ownsConnection: false };
+	return { client, db };
+}
+
+function createReaderConnection(databasePath: string): {
+	client: Database;
+	db: AppDatabase;
+} {
+	const client = new Database(databasePath, { readonly: true });
+	configureReader(client);
+	const db = drizzle(client, { schema });
+	return { client, db };
 }
 
 export function createSqliteDbRuntime(env: AppEnv): DbRuntime {
-	const connection = createDbConnection(env.databaseUrl);
+	const writerConnection = createWriterConnection(env.databaseUrl);
+	const readerConnection = isInMemoryDatabase(env.databaseUrl)
+		? writerConnection
+		: createReaderConnection(env.databaseUrl);
+	const writer = createSingleWriterClient(writerConnection.db);
+	let closed = false;
+
 	return {
-		db: connection.db,
-		connection,
-		close: () => {
-			if (connection.ownsConnection) {
-				connection.client.close();
+		client: {
+			read: readerConnection.db,
+			write: writer,
+		},
+		close: async () => {
+			if (closed) return;
+			closed = true;
+			await writer.close();
+			if (readerConnection !== writerConnection) {
+				readerConnection.client.close();
 			}
+			writerConnection.client.close();
 		},
 	};
 }
