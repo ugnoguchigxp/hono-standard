@@ -1,7 +1,8 @@
 import { rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-const databaseUrl = "data/e2e.sqlite";
+const databasePath = "data/e2e.sqlite";
+const databaseUrl = `file:${databasePath}`;
 const appUrl = "http://127.0.0.1:5174";
 
 process.env.NODE_ENV = "development";
@@ -25,9 +26,9 @@ function run(command: string, args: string[]) {
 	}
 }
 
-rmSync(databaseUrl, { force: true });
-rmSync(`${databaseUrl}-shm`, { force: true });
-rmSync(`${databaseUrl}-wal`, { force: true });
+rmSync(databasePath, { force: true });
+rmSync(`${databasePath}-shm`, { force: true });
+rmSync(`${databasePath}-wal`, { force: true });
 
 run("bun", ["run", "build"]);
 
