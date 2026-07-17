@@ -1,11 +1,4 @@
-import {
-	useMutation,
-	useQuery,
-	useQueryClient,
-	type UseMutationOptions,
-} from "@tanstack/react-query";
 import type { AppType } from "@api/app/hono";
-import { hc } from "hono/client";
 import type {
 	AuthResponse,
 	AuthSessionUser,
@@ -13,6 +6,13 @@ import type {
 	LogoutResponse,
 } from "@shared/schemas/auth.schema";
 import type { ProtectedProfileResponse } from "@shared/schemas/protected.schema";
+import {
+	type UseMutationOptions,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import { hc } from "hono/client";
 
 export type AuthUser = AuthSessionUser;
 export type LoginParams = LoginInput & {
@@ -73,27 +73,71 @@ const parseErrorMessage = async (response: Response): Promise<string> => {
 	return message;
 };
 
-const customFetch = async (
+let refreshPromise: Promise<boolean> | undefined;
+
+const refreshSession = async (): Promise<boolean> => {
+	if (!refreshPromise) {
+		refreshPromise = fetch("/api/auth/refresh", {
+			method: "POST",
+			credentials: "include",
+		})
+			.then((response) => response.ok)
+			.catch(() => false)
+			.finally(() => {
+				refreshPromise = undefined;
+			});
+	}
+	return refreshPromise;
+};
+
+const abortable = async <T>(
+	promise: Promise<T>,
+	signal?: AbortSignal | null,
+): Promise<T> => {
+	if (!signal) return promise;
+	if (signal.aborted)
+		throw new DOMException("The operation was aborted", "AbortError");
+	return new Promise<T>((resolve, reject) => {
+		const onAbort = () =>
+			reject(new DOMException("The operation was aborted", "AbortError"));
+		signal.addEventListener("abort", onAbort, { once: true });
+		promise
+			.then(resolve, reject)
+			.finally(() => signal.removeEventListener("abort", onAbort));
+	});
+};
+
+export const appFetch = async (
 	input: RequestInfo | URL,
 	init?: RequestInit,
 ): Promise<Response> => {
-	const headers = new Headers(init?.headers);
+	const headers = new Headers(
+		input instanceof Request ? input.headers : undefined,
+	);
+	new Headers(init?.headers).forEach((value, key) => {
+		headers.set(key, value);
+	});
 	const requestPath = getRequestPath(input);
+	const signal =
+		init?.signal ?? (input instanceof Request ? input.signal : undefined);
+	const requestInit: RequestInit = {
+		...init,
+		headers,
+		credentials: "include",
+		signal,
+	};
+	const requestTemplate =
+		input instanceof Request ? new Request(input, requestInit) : undefined;
 
 	const execute = () =>
-		fetch(input, {
-			...init,
-			headers,
-			credentials: "include",
-		});
+		requestTemplate
+			? fetch(requestTemplate.clone())
+			: fetch(input, requestInit);
 
 	let response = await execute();
 	if (response.status === 401 && canRetryWithRefresh(requestPath)) {
-		const refreshResponse = await fetch("/api/auth/refresh", {
-			method: "POST",
-			credentials: "include",
-		});
-		if (refreshResponse.ok) response = await execute();
+		const refreshed = await abortable(refreshSession(), signal);
+		if (refreshed && !signal?.aborted) response = await execute();
 	}
 
 	if (response.status === 401 && shouldNotifyUnauthorized(requestPath)) {
@@ -101,6 +145,8 @@ const customFetch = async (
 	}
 	return response;
 };
+
+const customFetch = appFetch;
 
 const client = hc<AppType>("/api", {
 	fetch: customFetch,

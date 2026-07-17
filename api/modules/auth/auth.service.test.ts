@@ -1,10 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppEnv } from "../../app/env";
 import type { AppDatabase, AppDatabaseClient } from "../../db";
 import { createSingleWriterClient } from "../../db/client";
-import type { AppEnv } from "../../app/env";
 import { AuthService } from "./auth.service";
 import { HttpError } from "./errors";
-import { hashPassword } from "./password";
+import { hashPassword, verifyPassword } from "./password";
 
 describe("AuthService", () => {
 	let mockDb: any;
@@ -81,10 +81,10 @@ describe("AuthService", () => {
 	});
 
 	describe("findUserByEmail", () => {
-		it("should query user by lowercase email", async () => {
+		it("should query user by trimmed lowercase email", async () => {
 			mockDb.query.users.findFirst.mockResolvedValue(testUserRow);
 
-			const user = await authService.findUserByEmail("TEST@example.com");
+			const user = await authService.findUserByEmail("  TEST@example.com ");
 			expect(user).toBeDefined();
 			expect(user?.email).toBe(testUserRow.email);
 		});
@@ -263,6 +263,84 @@ describe("AuthService", () => {
 					password: "password123456",
 				}),
 			).rejects.toThrowError(new HttpError(409, "Email already in use."));
+		});
+	});
+
+	describe("seedDevelopmentAdmin", () => {
+		it("creates the configured development admin when missing", async () => {
+			mockDb.query.users.findFirst.mockResolvedValue(null);
+			const createdRow = {
+				...testUserRow,
+				email: "admin@example.com",
+				displayName: "Admin User",
+				role: "admin",
+			};
+			mockDb.returning.mockResolvedValue([createdRow]);
+
+			const result = await authService.seedDevelopmentAdmin({
+				email: " Admin@Example.com ",
+				displayName: "Admin User",
+				password: "password123456",
+			});
+
+			expect(result.action).toBe("created");
+			expect(result.user.email).toBe("admin@example.com");
+			expect(mockDb.insert).toHaveBeenCalled();
+		});
+
+		it("resets an existing development admin to the configured credentials", async () => {
+			const existingRow = {
+				...testUserRow,
+				email: "admin@example.com",
+				displayName: "Old Admin",
+				role: "member",
+				isActive: false,
+			};
+			const updatedRow = {
+				...existingRow,
+				displayName: "Admin User",
+				role: "admin",
+				isActive: true,
+			};
+			mockDb.query.users.findFirst.mockResolvedValue(existingRow);
+			mockDb.returning.mockResolvedValue([updatedRow]);
+
+			const result = await authService.seedDevelopmentAdmin({
+				email: "admin@example.com",
+				displayName: "Admin User",
+				password: "password123456",
+			});
+
+			expect(result.action).toBe("updated");
+			expect(result.user.role).toBe("admin");
+			expect(result.user.isActive).toBe(true);
+			expect(mockDb.update).toHaveBeenCalled();
+			expect(mockDb.delete).toHaveBeenCalled();
+			expect(mockDb.set).toHaveBeenCalledWith(
+				expect.objectContaining({
+					displayName: "Admin User",
+					role: "admin",
+					isActive: true,
+					passwordHash: expect.stringMatching(/^s1\$/),
+				}),
+			);
+			const updateValues = mockDb.set.mock.calls.at(-1)?.[0];
+			expect(
+				await verifyPassword("password123456", updateValues.passwordHash),
+			).toBe(true);
+		});
+
+		it("fails if the existing development admin disappears during update", async () => {
+			mockDb.query.users.findFirst.mockResolvedValue(testUserRow);
+			mockDb.returning.mockResolvedValue([]);
+
+			await expect(
+				authService.seedDevelopmentAdmin({
+					email: testUserRow.email,
+					displayName: "Admin User",
+					password: "password123456",
+				}),
+			).rejects.toThrowError(new HttpError(404, "User not found."));
 		});
 	});
 });

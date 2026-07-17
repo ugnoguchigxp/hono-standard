@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
-import { useAuth } from "../auth-context";
 import { useProtectedProfileQuery } from "../api";
+import { useAuth } from "../auth-context";
 
 export function ProtectedView() {
 	const { authUser, authLoading } = useAuth();

@@ -1,4 +1,6 @@
 import { createRouter } from "@tanstack/react-router";
+import { dashboardRoute } from "./routes/dashboard-route";
+import { dashboardGalleryRoute } from "./routes/dashboard-gallery-route";
 import { homeRoute } from "./routes/home-route";
 import { loginRoute } from "./routes/login-route";
 import { protectedRoute } from "./routes/protected-route";
@@ -10,6 +12,8 @@ const routeTree = rootRoute.addChildren([
 	showcaseRoute,
 	loginRoute,
 	protectedRoute,
+	dashboardRoute,
+	dashboardGalleryRoute,
 ]);
 
 export const router = createRouter({ routeTree });

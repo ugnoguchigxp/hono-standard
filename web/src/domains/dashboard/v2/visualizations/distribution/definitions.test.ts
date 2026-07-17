@@ -1,0 +1,15 @@
+import { boxPlotConfigV1Schema, calendarHeatmapConfigV1Schema, heatmapConfigV1Schema, histogramConfigV1Schema } from "@shared/schemas/dashboard/distribution-visualizations.schema";
+import { describe, expect, it } from "vitest";
+import { coreBoxPlotDefinition } from "../core-box-plot/definition";
+import { coreCalendarHeatmapDefinition } from "../core-calendar-heatmap/definition";
+import { coreHeatmapDefinition } from "../core-heatmap/definition";
+import { coreHistogramDefinition } from "../core-histogram/definition";
+
+const distribution = (values: number[]) => ({ schemaVersion: 2 as const, refId: "A", source: { kind: "query" as const, refId: "A" }, name: "Values", meta: { shapeHint: "distribution" as const }, fields: [{ key: "bin-start", label: "Bin start", type: "number" as const, roles: ["bin-start" as const], labels: {}, values: values.map((_, index) => index) }, { key: "bin-end", label: "Bin end", type: "number" as const, roles: ["bin-end" as const], labels: {}, values: values.map((_, index) => index + 1) }, { key: "count", label: "Count", type: "number" as const, roles: ["count" as const], labels: {}, values }] });
+const matrix = { ...distribution([1, 2]), meta: { shapeHint: "matrix" as const }, fields: [{ key: "x", label: "X", type: "string" as const, roles: ["x" as const], labels: {}, values: ["a", "b"] }, { key: "y", label: "Y", type: "string" as const, roles: ["y" as const], labels: {}, values: ["one", "one"] }, { key: "value", label: "Value", type: "number" as const, roles: ["value" as const], labels: {}, values: [1, 2] }] };
+const calendar = { ...distribution([1]), meta: { shapeHint: "timeseries" as const }, fields: [{ key: "time", label: "Time", type: "time" as const, roles: ["time" as const], labels: {}, values: [Date.UTC(2026, 0, 1)] }, { key: "value", label: "Value", type: "number" as const, roles: ["value" as const], labels: {}, values: [1] }] };
+const rawBox = { ...distribution([1, 2, 3]), meta: { shapeHint: "distribution" as const }, fields: [{ key: "category", label: "Category", type: "string" as const, roles: ["category" as const], labels: {}, values: ["API", "API", "API"] }, { key: "value", label: "Value", type: "number" as const, roles: ["value" as const], labels: {}, values: [1, 2, 3] }] };
+describe("distribution definitions", () => {
+	it("validates successful and incompatible histogram data", () => { expect(coreHistogramDefinition.validateFrames?.([distribution([1, 2])], histogramConfigV1Schema.parse({}), "count")).toBeUndefined(); expect(coreHistogramDefinition.validateFrames?.([], histogramConfigV1Schema.parse({}), "count")).toContain("missing"); });
+	it("validates heatmap, box, and calendar limits", () => { expect(coreHeatmapDefinition.validateFrames?.([matrix], heatmapConfigV1Schema.parse({}), "matrix")).toBeUndefined(); expect(coreBoxPlotDefinition.validateFrames?.([rawBox], boxPlotConfigV1Schema.parse({ inputMode: "raw" }), "box-and-points")).toBeUndefined(); expect(coreCalendarHeatmapDefinition.validateFrames?.([calendar], calendarHeatmapConfigV1Schema.parse({}), "year")).toBeUndefined(); });
+});

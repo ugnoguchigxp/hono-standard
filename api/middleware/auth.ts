@@ -1,10 +1,10 @@
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "../app/env";
-import { ACCESS_TOKEN_COOKIE_NAME } from "../modules/auth/auth-cookies";
-import { verifyAccessToken } from "../modules/auth/token.service";
-import { HttpError } from "../modules/auth/errors";
 import type { AuthService } from "../modules/auth/auth.service";
+import { ACCESS_TOKEN_COOKIE_NAME } from "../modules/auth/auth-cookies";
+import { HttpError } from "../modules/auth/errors";
+import { verifyAccessToken } from "../modules/auth/token.service";
 
 type AuthMiddlewareDeps = {
 	env: AppEnv;

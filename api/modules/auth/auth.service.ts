@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { AppEnv } from "../../app/env";
 import type { AppDatabaseClient } from "../../db";
-import { users } from "../../db/schema";
+import { refreshTokens, users } from "../../db/schema";
 import { HttpError } from "./errors";
 import { hashPassword, verifyPassword } from "./password";
 import {
@@ -11,10 +11,10 @@ import {
 	revokeRefreshToken,
 } from "./token.service";
 import {
-	userRoleSchema,
 	type AuthSessionUser,
 	type AuthUser,
 	type UserRole,
+	userRoleSchema,
 } from "./types";
 
 type AuthTokensResult = {
@@ -29,6 +29,8 @@ type CreateUserInput = {
 	password: string;
 	role?: UserRole;
 };
+
+const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
 const normalizeRole = (role: string): UserRole => {
 	const parsed = userRoleSchema.safeParse(role);
@@ -69,7 +71,7 @@ export class AuthService {
 
 	async findUserByEmail(email: string): Promise<AuthUser | null> {
 		const row = await this.database.read.query.users.findFirst({
-			where: eq(users.email, email.toLowerCase()),
+			where: eq(users.email, normalizeEmail(email)),
 		});
 		return row ? toAuthUser(row) : null;
 	}
@@ -153,7 +155,7 @@ export class AuthService {
 			db
 				.insert(users)
 				.values({
-					email: input.email.toLowerCase(),
+					email: normalizeEmail(input.email),
 					passwordHash,
 					displayName: input.displayName,
 					role: "admin",
@@ -162,5 +164,42 @@ export class AuthService {
 				.returning(),
 		);
 		return toAuthUser(created);
+	}
+
+	async seedDevelopmentAdmin(
+		input: Omit<CreateUserInput, "role">,
+	): Promise<{ user: AuthUser; action: "created" | "updated" }> {
+		const existing = await this.findUserByEmail(input.email);
+		if (!existing) {
+			return {
+				user: await this.createAdmin(input),
+				action: "created",
+			};
+		}
+
+		const now = new Date();
+		const passwordHash = await hashPassword(input.password);
+		const [updated] = await this.database.write.execute(async (db) => {
+			const result = await db
+				.update(users)
+				.set({
+					email: normalizeEmail(input.email),
+					passwordHash,
+					displayName: input.displayName,
+					role: "admin",
+					isActive: true,
+					updatedAt: now,
+				})
+				.where(eq(users.id, existing.id))
+				.returning();
+			await db
+				.delete(refreshTokens)
+				.where(eq(refreshTokens.userId, existing.id));
+			return result;
+		});
+		if (!updated) {
+			throw new HttpError(404, "User not found.");
+		}
+		return { user: toAuthUser(updated), action: "updated" };
 	}
 }

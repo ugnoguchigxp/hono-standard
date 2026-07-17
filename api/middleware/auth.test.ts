@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { requireAuth } from "./auth";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../app/env";
 import type { AuthService } from "../modules/auth/auth.service";
-import { generateAccessToken } from "../modules/auth/token.service";
 import { ACCESS_TOKEN_COOKIE_NAME } from "../modules/auth/auth-cookies";
+import { generateAccessToken } from "../modules/auth/token.service";
+import { requireAuth } from "./auth";
 
 describe("requireAuth middleware", () => {
 	let app: Hono;

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import type { Context } from "hono";
+import { describe, expect, it, vi } from "vitest";
 import { getAuthContextUser } from "./context";
 import { HttpError } from "./errors";
 

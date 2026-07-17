@@ -33,6 +33,9 @@ export default defineConfig(({ mode }) => {
 				"@shared": path.resolve(__dirname, "./shared"),
 			},
 		},
+		define: {
+			"process.env.DRAGGABLE_DEBUG": "false",
+		},
 		server: {
 			host: APP_CONFIG_DEFAULTS.host,
 			port: APP_CONFIG_DEFAULTS.port,
@@ -47,8 +50,9 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		build: {
-			outDir: "../dist-web",
+			outDir: process.env.VITE_OUT_DIR ?? "../dist-web",
 			emptyOutDir: true,
+			manifest: true,
 		},
 	};
 });

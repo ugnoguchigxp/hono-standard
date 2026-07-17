@@ -1,11 +1,19 @@
 import { readAppEnv } from "../api/app/env";
 import { createDbRuntime } from "../api/db";
 import { AuthService } from "../api/modules/auth/auth.service";
-import { HttpError } from "../api/modules/auth/errors";
+import { z } from "zod";
 
-const email = process.env.DEV_ADMIN_EMAIL ?? "admin@example.com";
-const displayName = process.env.DEV_ADMIN_NAME ?? "Admin User";
-const password = process.env.DEV_ADMIN_PASSWORD ?? "password123456";
+const developmentAdminSchema = z.object({
+	email: z.string().trim().email(),
+	displayName: z.string().trim().min(1).max(100),
+	password: z.string().min(8).max(256),
+});
+
+const { email, displayName, password } = developmentAdminSchema.parse({
+	email: process.env.DEV_ADMIN_EMAIL ?? "admin@example.com",
+	displayName: process.env.DEV_ADMIN_NAME ?? "Admin User",
+	password: process.env.DEV_ADMIN_PASSWORD ?? "password123456",
+});
 
 const env = readAppEnv();
 if (env.nodeEnv === "production") {
@@ -15,7 +23,7 @@ if (env.nodeEnv === "production") {
 const dbRuntime = createDbRuntime(env);
 try {
 	const authService = new AuthService(dbRuntime.client, env);
-	const user = await authService.createAdmin({
+	const result = await authService.seedDevelopmentAdmin({
 		email,
 		displayName,
 		password,
@@ -24,34 +32,18 @@ try {
 		JSON.stringify(
 			{
 				ok: true,
+				action: result.action,
 				user: {
-					id: user.id,
-					email: user.email,
-					displayName: user.displayName,
-					role: user.role,
+					id: result.user.id,
+					email: result.user.email,
+					displayName: result.user.displayName,
+					role: result.user.role,
 				},
 			},
 			null,
 			2,
 		),
 	);
-} catch (error) {
-	if (error instanceof HttpError && error.status === 409) {
-		console.log(
-			JSON.stringify(
-				{
-					ok: true,
-					skipped: true,
-					reason: "admin user already exists",
-					email,
-				},
-				null,
-				2,
-			),
-		);
-	} else {
-		throw error;
-	}
 } finally {
 	await dbRuntime.close();
 }

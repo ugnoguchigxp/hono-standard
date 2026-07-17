@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"initial": { "rawBytes": 900000, "gzipBytes": 260000 },
+	"dashboardShell": { "rawBytes": 320000, "gzipBytes": 90000 },
+	"kpiRenderers": {
+		"core-stat": { "rawBytes": 260000, "gzipBytes": 80000 },
+		"core-gauge": { "rawBytes": 260000, "gzipBytes": 80000 },
+		"core-bar-gauge": { "rawBytes": 260000, "gzipBytes": 80000 },
+		"core-bullet": { "rawBytes": 260000, "gzipBytes": 80000 },
+		"core-progress": { "rawBytes": 260000, "gzipBytes": 80000 },
+		"core-traffic-light": { "rawBytes": 260000, "gzipBytes": 80000 }
+	},
+	"stateRenderers": {
+		"core-state-timeline": { "rawBytes": 250000, "gzipBytes": 80000 },
+		"core-status-history": { "rawBytes": 250000, "gzipBytes": 80000 },
+		"core-uptime-grid": { "rawBytes": 255000, "gzipBytes": 80000 }
+	},
+	"nonCartesianRenderers": {
+		"core-pie": { "rawBytes": 650000, "gzipBytes": 200000 },
+		"core-radar": { "rawBytes": 650000, "gzipBytes": 200000 },
+		"core-radial-bar": { "rawBytes": 650000, "gzipBytes": 200000 },
+		"core-scatter": { "rawBytes": 650000, "gzipBytes": 200000 },
+		"core-funnel": { "rawBytes": 650000, "gzipBytes": 200000 },
+		"core-treemap": { "rawBytes": 650000, "gzipBytes": 200000 },
+		"core-sunburst": { "rawBytes": 650000, "gzipBytes": 200000 },
+		"core-sankey": { "rawBytes": 650000, "gzipBytes": 200000 }
+	},
+	"specializedRenderers": {
+		"core-node-graph": { "rawBytes": 275000, "gzipBytes": 85000 },
+		"core-candlestick": { "rawBytes": 275000, "gzipBytes": 85000 },
+		"observability-logs": { "rawBytes": 275000, "gzipBytes": 85000 },
+		"observability-trace-waterfall": { "rawBytes": 275000, "gzipBytes": 85000 },
+		"observability-flame-graph": { "rawBytes": 275000, "gzipBytes": 85000 },
+		"geo-map": { "rawBytes": 425000, "gzipBytes": 145000 }
+	}
+}

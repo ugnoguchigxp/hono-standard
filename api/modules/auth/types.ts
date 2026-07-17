@@ -1,11 +1,11 @@
 import { z } from "zod";
 import {
-	userRoleSchema,
 	type UserRole,
+	userRoleSchema,
 } from "../../../shared/schemas/auth.schema";
 
-export { userRoleSchema };
 export type { UserRole };
+export { userRoleSchema };
 
 export const jwtPayloadSchema = z.object({
 	userId: z.string().uuid(),
@@ -32,3 +32,9 @@ export type AuthSessionUser = Pick<
 	AuthUser,
 	"id" | "email" | "displayName" | "role"
 >;
+
+export type AuthContextUser = {
+	userId: string;
+	email: string;
+	role: UserRole;
+};

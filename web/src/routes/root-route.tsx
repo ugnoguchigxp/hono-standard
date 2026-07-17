@@ -4,9 +4,22 @@ import {
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
-import { Database, Home, LayoutGrid, LogOut, Shield } from "lucide-react";
+import {
+	ChartPie,
+	Database,
+	Home,
+	LayoutGrid,
+	LogOut,
+	Shield,
+} from "lucide-react";
 import { AuthProvider, useAuth } from "../auth-context";
 import { DevErrorPanel } from "../components/dev-error-panel";
+const defaultDashboardSearch = {
+	range: "6h" as const,
+	timezone: "UTC",
+	refresh: 0,
+	filters: {},
+};
 import { defaultShowcaseTableSearch } from "../showcase-table-search";
 import { requiresSessionCheck } from "./route-access";
 
@@ -40,12 +53,32 @@ function AppLayout() {
 							Showcase
 						</Link>
 						<Link
-							to="/login"
+							to="/dashboard"
+							search={defaultDashboardSearch}
 							className="menu-link"
 							activeProps={{ className: "menu-link active" }}
 						>
-							Login
+							<LayoutGrid className="icon" />
+							Dashboard
 						</Link>
+						<Link
+							to="/dashboard/gallery"
+							search={{ filters: {} }}
+							className="menu-link"
+							activeProps={{ className: "menu-link active" }}
+						>
+							<ChartPie className="icon" />
+							Gallery
+						</Link>
+						{authUser ? null : (
+							<Link
+								to="/login"
+								className="menu-link"
+								activeProps={{ className: "menu-link active" }}
+							>
+								Login
+							</Link>
+						)}
 					</nav>
 					{authUser ? (
 						<>

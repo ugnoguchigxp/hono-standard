@@ -30,7 +30,9 @@
 				"dist/**",
 				"node_modules/**",
 				"**/*.test.ts",
-				"**/*.spec.ts"
+				"**/*.test.tsx",
+				"**/*.spec.ts",
+				"web/src/domains/dashboard/v2/visualizations/geo/assets/world-110m.paths.json"
 			],
 			"linter": {
 				"enabled": false

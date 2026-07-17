@@ -1,14 +1,14 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppEnv } from "../../app/env";
 import type { AppDatabase, DatabaseWriter } from "../../db";
 import { createSingleWriterClient } from "../../db/client";
-import type { AppEnv } from "../../app/env";
 import { HttpError } from "./errors";
 import {
+	consumeRefreshToken,
 	generateAccessToken,
 	generateRefreshToken,
-	verifyAccessToken,
-	consumeRefreshToken,
 	revokeRefreshToken,
+	verifyAccessToken,
 } from "./token.service";
 
 describe("token.service", () => {

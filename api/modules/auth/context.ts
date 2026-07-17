@@ -1,12 +1,8 @@
 import type { Context } from "hono";
 import { HttpError } from "./errors";
-import type { UserRole } from "./types";
+import type { AuthContextUser } from "./types";
 
-export type AuthContextUser = {
-	userId: string;
-	email: string;
-	role: UserRole;
-};
+export type { AuthContextUser } from "./types";
 
 export function getAuthContextUser(c: Context): AuthContextUser {
 	const user = c.get("authUser");

@@ -40,6 +40,7 @@
 | --- | --- |
 | `overlay/ssr` | React/Vite の client-only baseline に SSR entry、server render、hydration、SSR build を追加する。 |
 | `overlay/ssg` | prerender、static route manifest、build-time data loading などを追加する。 |
+| `overlay/dashboard` | DB非依存のDashboard registry、集計結果normalizer、認証保護API、lazy Chart/Grid UIを追加する。mainまたは各variantへ適用する。 |
 
 overlay は「単独で clone する完成テンプレート」ではなく、`main` または `variant/*` に適用できる差分として扱う。差分が大きくなり、単独 clone の需要が明確になった場合だけ `variant/ssr` や `variant/ssg` に昇格する。
 
@@ -170,7 +171,7 @@ clone 後に必ず変更する項目:
 
 ## Overlay / patch 利用
 
-SSG や SSR のように、DB variant と直交する差分は最初から `variant/ssr-sqlite`、`variant/ssr-postgres` のように掛け算で branch を増やさない。まず overlay として差分を取得し、必要な利用先に適用する。
+SSG、SSR、Dashboardのように、DB variant と直交する差分は最初から `variant/ssr-sqlite`、`variant/ssr-postgres` のように掛け算で branch を増やさない。まず overlay として差分を取得し、必要な利用先に適用する。
 
 ### 差分を確認する
 
@@ -199,6 +200,34 @@ git apply dist/patches/overlay-ssr-v0.1.0.patch
 bun install
 bun run verify
 ```
+
+Dashboard overlayを適用する場合は、対象branchのDB runtime差分を先に確認したうえで、`overlay/dashboard` の差分をpatchまたはmergeで重ねる。`api/modules/dashboard/` のhandlerはDB schemaを持たないため、実運用では対象variantのread APIへ差し替える。共通normalizer、共有Zod schema、route-level lazy contractは維持する。
+
+Dashboard overlayのrelease evidenceは [`docs/dashboard-overlay/release-evidence.md`](dashboard-overlay/release-evidence.md) に記録する。Galleryはin-memory fixtureであり、対象variantへDB migrationや業務seedを追加しない。SSG/SSRの適用判定はcandidate commitから一時worktreeへpatchを適用して実行し、未commitのworking treeをpass扱いにしない。
+
+```bash
+git diff --binary main...overlay/dashboard > dist/patches/overlay-dashboard-v0.1.0.patch
+git switch <target-variant>
+git switch -c app/<target-variant>-dashboard
+git apply --check dist/patches/overlay-dashboard-v0.1.0.patch
+git apply dist/patches/overlay-dashboard-v0.1.0.patch
+bun install --frozen-lockfile
+bun run verify
+bun run verify:e2e
+bun run verify:dashboard-bundle
+```
+
+適用確認の記録は次のmatrixで残す。branchがmainと異なる場合でも、Dashboard overlayがDB schema/migrationを増やしていないこと、handler差し替え後にA1〜A8の契約と3つの検証gateを満たすことを確認する。
+
+| Target | DB/runtime差分確認 | overlay適用 | verify | e2e | bundle gate | 状態 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `main` | `api/db/*` SQLite baseline | `overlay/dashboard` | pass | pass | pass | 実装branchで確認済み |
+| `variant/sqlite` | SQLite baseline | patch/merge手順を適用 | target branchで実行 | target branchで実行 | target branchで実行 | 適用時に記録 |
+| `variant/postgres` | PostgreSQL adapter/schema | handlerをread APIへ差し替え | target branchで実行 | target branchで実行 | target branchで実行 | 適用時に記録 |
+| `variant/turso` | libSQL/Turso adapter | handlerをread APIへ差し替え | target branchで実行 | target branchで実行 | target branchで実行 | 適用時に記録 |
+| `variant/cloudflare` | Workers/D1 runtime | Hono signal/timeoutをruntime契約に合わせて確認 | target branchで実行 | target branchで実行 | target branchで実行 | 適用時に記録 |
+| `overlay/ssr` | SSR entry/hydration | lazy routeとbrowser-only chartを確認 | target branchで実行 | target branchで実行 | target branchで実行 | 適用時に記録 |
+| `overlay/ssg` | prerender/build-time loading | dashboardをclient-only routeとして確認 | target branchで実行 | target branchで実行 | target branchで実行 | 適用時に記録 |
 
 patch 適用時に conflict する場合は、`main` と対象 variant の差分が overlay の前提からずれている。無理に `git apply --3way` で押し込まず、overlay branch を最新 `main` に追従させてから patch を作り直す。
 

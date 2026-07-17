@@ -27,11 +27,17 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 | `api/routes/health.route.ts` | `/api/health` route |
 | `api/routes/protected.route.ts` | `/api/protected/*` の server-side protected sample |
 | `api/modules/auth/` | password hash、JWT、cookie、auth service |
+| `api/modules/dashboard/` | Dashboard registry、query execution、normalization、demo panels |
+| `api/routes/dashboard.route.ts` | 認証保護された `/api/dashboards/*` API |
 | `api/middleware/auth.ts` | protected API middleware |
 | `web/src/` | React frontend |
+| `web/src/routes/dashboard-route*.tsx` | Dashboard route shell と route-level lazy load |
+| `web/src/domains/dashboard/` | search params、React Query、Grid、Chart/Table、Inspector |
+| `web/src/domains/dashboard/v2/visualizations/` | 126 preset（Cartesian / composition / hierarchy / flow / KPI / distribution / heatmap / statistical / state / specialized observability）、shared model、lazy renderer family |
 | `shared/schemas/` | frontend/backend で共有する Zod schema と API object type |
 | `drizzle/` | SQL migrations |
 | `scripts/verify.ts` | typecheck / lint / format / test / coverage / build の検証 pipeline |
+| `scripts/verify-dashboard-bundle.ts` | Dashboard依存が通常ページの初期bundleへ混入しないことの検証 |
 
 ## 前提
 
@@ -44,11 +50,12 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 
 ```bash
 bun run bootstrap
-bun run auth:create-admin -- --email admin@example.com --name "Admin User"
 bun run dev
 ```
 
-`bootstrap` は `.env` を用意し、dependency が未導入なら `bun install --frozen-lockfile` を実行し、SQLite database に migration を適用します。
+`bootstrap` は `.env` を用意し、dependency が未導入なら `bun install --frozen-lockfile` を実行し、SQLite database に migration とdevelopment用admin seedを適用します。
+
+development用の初期認証情報は `admin@example.com` / `password123456` です。`DEV_ADMIN_EMAIL`、`DEV_ADMIN_NAME`、`DEV_ADMIN_PASSWORD` で変更できます。`bootstrap`または`seed:dev`を再実行すると、対象development adminは指定した表示名・パスワード・admin権限・active状態へ戻ります。
 
 `auth:create-admin` は対話で password を読みます。自動化する場合は次のように標準入力から渡せます。
 
@@ -63,9 +70,10 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 ```bash
 bun run verify
 bun run verify:e2e
+bun run verify:dashboard-release
 ```
 
-認証を使う app では `auth:create-admin` または `seed:dev` で admin を作成してから `/login` を確認します。認証を使わない app では、この README 後半の auth removal checklist に沿って auth route、DB table、login/protected screen、E2E scope をまとめて削ります。
+認証を使う app では `bootstrap` がdevelopment adminまで準備するため、そのまま `/login` を確認できます。追加adminが必要なら `auth:create-admin`、初期adminを設定値へ戻すなら `seed:dev` を使います。認証を使わない app では、この README 後半の auth removal checklist に沿って auth route、DB table、login/protected screen、E2E scope をまとめて削ります。
 
 ## 生成物と管理対象
 
@@ -90,6 +98,9 @@ bun run verify:e2e
 | `HOST` | no | HTTP bind host。container では `0.0.0.0` を指定 | `127.0.0.1` |
 | `PORT` | no | HTTP server port | `5173` |
 | `DATABASE_URL` | no | SQLite database file path | `data/sqlite.db` |
+| `DEV_ADMIN_EMAIL` | no | `bootstrap` / `seed:dev`で作成・更新するdevelopment admin | `admin@example.com` |
+| `DEV_ADMIN_NAME` | no | development adminの表示名 | `Admin User` |
+| `DEV_ADMIN_PASSWORD` | no | development adminのパスワード。productionでは使用しない | `password123456` |
 | `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
 | `APP_URL` | no | public origin。cookie secure 既定値と CORS に使う | `http://localhost:5173` |
 | `CORS_ORIGINS` | no | 追加許可 origin。カンマ区切り | `http://localhost:5173` |
@@ -103,9 +114,9 @@ bun run verify:e2e
 
 | Command | Purpose |
 | --- | --- |
-| `bun run bootstrap` | clone 後の初期化。`.env` を用意し、SQLite database に migration を適用 |
-| `bun run seed:dev` | development 専用の demo admin 作成。production では失敗 |
-| `bun run dev` | Vite + Hono dev server |
+| `bun run bootstrap` | clone 後の初期化。`.env`、依存、migration、development admin seedを適用 |
+| `bun run seed:dev` | development専用adminを設定値どおりに作成または更新。productionでは失敗 |
+| `bun run dev` | migrationとdevelopment admin seedを確認してからVite + Hono dev serverを起動 |
 | `bun run start` | Bun server を直接起動 |
 | `bun run auth:create-admin -- --email <email> --name "<name>"` | admin user 作成 |
 | `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
@@ -119,8 +130,19 @@ bun run verify:e2e
 | `bun run test:coverage` | Vitest coverage。global threshold 80% を検証 |
 | `bun run test:e2e` | Playwright smoke test。login と protected route を検証 |
 | `bun run build` | Vite production build |
+| `bun run verify:dashboard-bundle` | DashboardのRecharts/Gridがlazy chunkだけに入ることを検証 |
+| `bun run verify:dashboard-gallery` | core renderer / presetの決定的Gallery網羅を検証 |
+| `bun run verify:dashboard-variants` | 05 V12 prerequisiteとcanonical variant適用可否を判定 |
+| `bun run verify:dashboard-e2e` | Dashboard functional suite（operations / Gallery） |
+| `bun run verify:dashboard-visual` | Chromium canonical Gallery screenshotとの差分を検証 |
+| `bun run verify:dashboard-a11y` | axe serious/critical、keyboard、reduced-motion、forced-colors、200% zoomを検証 |
+| `bun run verify:dashboard-performance` | Gallery long-task / panel readiness / SVG node budget smoke |
+| `bun run verify:dashboard-security` | production assetのtest markerとunsafe HTMLを検証 |
+| `bun run verify:dashboard-adapter-sqlite` | Drizzle adapterをread-only SQLite接続で検証 |
+| `bun run verify:dashboard-release` | Dashboard release gateをfail-fastで順番に実行 |
+| `bun run verify:dashboard-coverage` | Dashboard backend focused coverage（branch 60%以上を含む） |
 | `bun run verify` | typecheck、lint、format:check、test、coverage、build |
-| `bun run verify:e2e` | Playwright smoke test |
+| `bun run verify:e2e` | Playwright smoke test。Dashboard期間/API連動とChart/Tableも検証 |
 | `bun run verify:all` | `verify` と `verify:e2e` |
 
 ## API
@@ -133,6 +155,9 @@ bun run verify:e2e
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
 | `GET` | `/api/auth/me` | 現在の login user |
 | `GET` | `/api/protected/profile` | `requireAuth` を通る protected API sample |
+| `GET` | `/api/dashboards/:dashboardId/manifest` | Dashboard定義とvariables/panelsの公開契約 |
+| `GET` | `/api/dashboards/:dashboardId/variables/:variableId/options` | static/query variable options |
+| `POST` | `/api/dashboards/:dashboardId/panels/:panelId/query` | panel単位の集計結果。共有Zod envelope |
 
 `/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
 
@@ -148,6 +173,43 @@ API request / response の共有 schema は `shared/schemas/` に置きます。
 | `/showcase` | public | Component showcase |
 | `/login` | public/session-aware | Login。`?redirect=/protected` のような same-origin path redirect を受け付ける |
 | `/protected` | login required | Protected route sample。ログイン後だけ表示し、server protected API も呼び出す |
+| `/dashboard` | login required | Dashboard overlay demo。URL filters、編集可能Grid、Chart/Table |
+| `/dashboard/gallery` | login required | 126 preset + state/integration fixture、empty/partial/stale/truncated/multi-frameの決定的Gallery |
+
+## Dashboard overlay
+
+Grafanaの全機能を取り込まず、server-sideの静的registryとpanel handlerだけを差し替えて使う軽量スターターです。共通層はSQLを生成せず、handlerがDB固有の集計を行い、normalizerがChart/Table共通のPanelDataへ検証・整形します。
+
+State Timeline、Status History、Uptime Gridはstate interval/sample shapeを共有し、annotation frameのpoint/line/region/badgeを時系列オーバーレイとして扱います。詳細な契約、モデル、Gallery、検証手順は`docs/dashboard-overlay/09-state-timeline-status-annotations.md`と`docs/dashboard-overlay/progress.md`を参照してください。
+
+Node Graph、Candlestick、Logs、Trace Waterfall、Flame Graph、Geomapの専門可視化は、厳格な共有契約とlazy rendererを使う30 presetとして追加されています。詳細は`docs/dashboard-overlay/10-specialized-observability-visualizations.md`を参照してください。
+
+`Record[]`、Drizzle select、固定originのHTTP JSONは、server-side Data Source Adapterから同じData Frame契約へ接続できます。列は明示登録制で、SQL生成、browser SQL editor、webhook、保存層は追加しません。導入例は[`data-source-adapters-quickstart.md`](docs/dashboard-overlay/data-source-adapters-quickstart.md)を参照してください。
+
+- 共有契約: [`shared/schemas/dashboard.schema.ts`](shared/schemas/dashboard.schema.ts)
+- Backend: [`api/modules/dashboard/`](api/modules/dashboard/)、[`api/routes/dashboard.route.ts`](api/routes/dashboard.route.ts)
+- Frontend: [`web/src/domains/dashboard/`](web/src/domains/dashboard/)、[`web/src/routes/dashboard-route.lazy.tsx`](web/src/routes/dashboard-route.lazy.tsx)
+- Visualization Platformの目的・境界・長期カタログ: [`docs/dashboard-overlay/00-concept.md`](docs/dashboard-overlay/00-concept.md)
+- Data Source Adapter Quickstart: [`docs/dashboard-overlay/data-source-adapters-quickstart.md`](docs/dashboard-overlay/data-source-adapters-quickstart.md)
+- 初期v1実装計画とA1〜A8の完了条件: [`docs/dashboard-overlay-implementation-plan.md`](docs/dashboard-overlay-implementation-plan.md)
+- 継続実装の台帳: [`docs/dashboard-overlay/progress.md`](docs/dashboard-overlay/progress.md)
+
+KPI / Goal / Status familyは`core.stat` 5、`core.gauge` 3、`core.bar-gauge` 4、`core.bullet` 3、
+`core.progress` 3、`core.traffic-light` 3 presetを提供します。`previous` / `delta` / `goal` role、
+range overflow、semantic state、native SVG primitiveを共有し、KPI rendererからRechartsを参照しません。
+
+Distribution / Heatmap / Statistical familyは`core.histogram`、`core.heatmap`、`core.box-plot`、
+`core.calendar-heatmap`を各5 preset、計20 preset提供します。Histogramはbrowser-onlyの
+`core.histogram` transformationで決定的binningを行い、Heatmap / Box Plot / Calendar Heatmapは
+native SVGとTable / summary / accessibility fallbackを共有します。
+
+別variantへ適用する場合は、まず対象branchの`api/db/*`と`api/app/*`差分を確認し、このbranchのDashboard変更をpatch/cherry-pick相当で取り込みます。DB schemaやmigrationは持ち込まず、`demo-dashboard.ts`のhandlerだけを対象variantのread APIへ置き換えてください。適用後は次を実行します。
+
+```bash
+bun run verify
+bun run verify:e2e
+bun run verify:dashboard-bundle
+```
 
 ## Build / Runtime
 
@@ -236,4 +298,4 @@ development の demo admin は次で作成できます。
 bun run seed:dev
 ```
 
-既定値は `admin@example.com` / `password123456` です。変更する場合は `DEV_ADMIN_EMAIL`、`DEV_ADMIN_NAME`、`DEV_ADMIN_PASSWORD` を使います。この command は `NODE_ENV=production` では失敗します。
+既定値は `admin@example.com` / `password123456` です。変更する場合は `DEV_ADMIN_EMAIL`、`DEV_ADMIN_NAME`、`DEV_ADMIN_PASSWORD` を使います。既存ユーザーがある場合も指定した認証情報・admin権限・active状態へ更新します。この command は `NODE_ENV=production` では失敗します。

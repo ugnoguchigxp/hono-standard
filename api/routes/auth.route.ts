@@ -5,8 +5,8 @@ import { loginSchema } from "../../shared/schemas/auth.schema";
 import type { AppEnv } from "../app/env";
 import type { AuthService } from "../modules/auth/auth.service";
 import {
-	REFRESH_TOKEN_COOKIE_NAME,
 	clearAuthCookies,
+	REFRESH_TOKEN_COOKIE_NAME,
 	setAuthCookies,
 } from "../modules/auth/auth-cookies";
 import { getAuthContextUser } from "../modules/auth/context";

@@ -1,5 +1,5 @@
-import app, { getAppRuntime } from "./hono";
 import { readAppEnv } from "./env";
+import app, { getAppRuntime } from "./hono";
 
 const env = readAppEnv();
 

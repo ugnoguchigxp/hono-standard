@@ -232,12 +232,21 @@ function runMigrations(cwd: string, databaseUrl: string): void {
 	throw new Error("bun run db:migrate failed.");
 }
 
+function seedDevelopmentAdmin(cwd: string, databaseUrl: string): void {
+	if (process.env.NODE_ENV === "production") return;
+	runCommand(cwd, "bun", ["run", "seed:dev"], {
+		...process.env,
+		DATABASE_URL: databaseUrl,
+	});
+}
+
 export function main(cwd = process.cwd()): void {
 	const paths = resolveBootstrapPaths(cwd);
 	const databaseUrl = ensureEnvFile(cwd);
 	ensureDependencies(paths);
 	ensurePostgresService(cwd, databaseUrl);
 	runMigrations(cwd, databaseUrl);
+	seedDevelopmentAdmin(cwd, databaseUrl);
 	console.log("bootstrap complete");
 }
 

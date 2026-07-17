@@ -1,14 +1,14 @@
 import { Hono } from "hono";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { createAuthRoute } from "./auth.route";
-import { requireAuth } from "../middleware/auth";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../app/env";
+import { requireAuth } from "../middleware/auth";
 import type { AuthService } from "../modules/auth/auth.service";
-import { HttpError } from "../modules/auth/errors";
 import {
 	ACCESS_TOKEN_COOKIE_NAME,
 	REFRESH_TOKEN_COOKIE_NAME,
 } from "../modules/auth/auth-cookies";
+import { HttpError } from "../modules/auth/errors";
+import { createAuthRoute } from "./auth.route";
 
 describe("auth route", () => {
 	let app: Hono;

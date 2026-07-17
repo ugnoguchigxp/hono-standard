@@ -1,6 +1,14 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+	resolve: {
+		alias: {
+			"@shared": path.resolve(__dirname, "./shared"),
+			"@api": path.resolve(__dirname, "./api"),
+			"@web": path.resolve(__dirname, "./web/src"),
+		},
+	},
 	test: {
 		include: [
 			"api/**/*.test.ts",
@@ -10,9 +18,14 @@ export default defineConfig({
 		],
 		coverage: {
 			provider: "v8",
+			processingConcurrency: 1,
 			reporter: ["text", "html"],
 			include: ["api/**/*.ts", "shared/**/*.ts"],
 			exclude: [
+				// Dashboard overlay runtime and shared contracts have focused gates separate from the template baseline.
+				"api/modules/dashboard/**",
+				"api/routes/dashboard.route.ts",
+				"shared/schemas/dashboard/**",
 				// Driver adapters and CLI entrypoints are variant-specific and covered by smoke/contract checks.
 				"api/db/migrate.ts",
 				"api/db/migrate-sqlite.ts",

@@ -1,27 +1,38 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { serveStatic } from "hono/bun";
-import { csrf } from "hono/csrf";
 import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
+import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
+import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import type { DbRuntime } from "../db";
 import { createDbRuntime } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { AuthService } from "../modules/auth/auth.service";
 import { HttpError } from "../modules/auth/errors";
+import {
+	createDashboardModule,
+	type DashboardModule,
+} from "../modules/dashboard";
+import {
+	galleryDashboardV2,
+	galleryVisualizations,
+} from "../modules/dashboard/v2/gallery-dashboard";
+import { operationsDashboardV2 } from "../modules/dashboard/v2/operations-dashboard";
 import { createAuthRoute } from "../routes/auth.route";
+import { createDashboardRoute } from "../routes/dashboard.route";
 import { createHealthRoute } from "../routes/health.route";
 import { createProtectedRoute } from "../routes/protected.route";
-import { readAppEnv, type AppEnv } from "./env";
+import { type AppEnv, readAppEnv } from "./env";
 import { appContentSecurityPolicy } from "./security-headers";
 
 export type AppDeps = {
 	env: AppEnv;
 	dbRuntime: DbRuntime;
 	authService: AuthService;
+	dashboard: DashboardModule;
 };
 
 declare global {
@@ -32,7 +43,12 @@ export async function createDefaultAppDeps(): Promise<AppDeps> {
 	const env = readAppEnv();
 	const dbRuntime = createDbRuntime(env);
 	const authService = new AuthService(dbRuntime.client, env);
-	return { env, dbRuntime, authService };
+	const dashboard = createDashboardModule({
+		dashboards: [],
+		nativeDashboards: [operationsDashboardV2, galleryDashboardV2],
+		visualizations: galleryVisualizations,
+	});
+	return { env, dbRuntime, authService, dashboard };
 }
 
 export async function getAppRuntime(): Promise<AppDeps> {
@@ -47,7 +63,8 @@ export async function getAppRuntime(): Promise<AppDeps> {
 	return globalThis.__honoStandardRuntime__;
 }
 
-const distWebRoot = path.resolve(process.cwd(), "dist-web");
+const distWebDirectory = process.env.DIST_WEB_ROOT ?? "dist-web";
+const distWebRoot = path.resolve(process.cwd(), distWebDirectory);
 const distWebIndex = path.resolve(distWebRoot, "index.html");
 
 export function createApiRoutes(deps: AppDeps) {
@@ -61,6 +78,14 @@ export function createApiRoutes(deps: AppDeps) {
 			}),
 		)
 		.route("/protected", createProtectedRoute())
+		.use(
+			"/dashboards/*",
+			requireAuth({
+				env: deps.env,
+				authService: deps.authService,
+			}),
+		)
+		.route("/dashboards", createDashboardRoute({ dashboard: deps.dashboard }))
 		.use(
 			"/auth/me",
 			requireAuth({
@@ -148,8 +173,8 @@ export function createApp(deps: AppDeps) {
 
 	app.route("/api", createApiRoutes(deps));
 
-	app.use("/assets/*", serveStatic({ root: "./dist-web" }));
-	app.use("/favicon.ico", serveStatic({ root: "./dist-web" }));
+	app.use("/assets/*", serveStatic({ root: distWebRoot }));
+	app.use("/favicon.ico", serveStatic({ root: distWebRoot }));
 	app.get("*", async (c) => {
 		if (c.req.path.startsWith("/api/")) {
 			return c.notFound();
