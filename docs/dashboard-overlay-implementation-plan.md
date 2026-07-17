@@ -16,10 +16,10 @@ S0〜S13、[09: State Timeline・Status History・Uptime Grid・Annotations](./d
 T0〜T13、[10: Specialized Observability Visualization](./dashboard-overlay/10-specialized-observability-visualizations.md)
 O0〜O18、04 D11の初回variant matrixは完了済みである。
 
-2026-07-18の優先判断により、次は
-[Data Source Adapters](./dashboard-overlay/data-source-adapters.md)のP0 AD0〜AD6を直ちに実装し、
-その後P1 AD7〜AD10を対象とする。Visualization roadmap P8のPanel editorは後続へ維持する。
-adapter candidate完了後に04 D11を再検証する。
+2026-07-18の優先判断で実施した
+[Data Source Adapters](./dashboard-overlay/data-source-adapters.md)のP0 AD0〜AD6とP1 AD7〜AD10は完了済みである。
+P0だけを適用・再検証する場合は[P0実装計画](./dashboard-overlay/data-source-adapters-p0.md)を使用する。
+次はadapter candidateに対する04 D11再検証であり、Visualization roadmap P8のPanel editorは後続へ維持する。
 
 履歴上、Visualization拡張は
 [09: State Timeline・Status History・Uptime Grid・Annotations](./dashboard-overlay/09-state-timeline-status-annotations.md)
@@ -44,6 +44,7 @@ O0〜O18でNode Graph、Candlestick、Logs、Trace、Flame Graph、Geomapの30 p
 | 9 | [State Timeline・Status History・Uptime Grid・Annotations](./dashboard-overlay/09-state-timeline-status-annotations.md) | 状態系18 presetと共有annotation layer |
 | 10 | [Specialized Observability Visualization](./dashboard-overlay/10-specialized-observability-visualizations.md) | Node Graph、Candlestick、Logs、Trace、Flame Graph、Geomapの30 preset |
 | 採用 | [Data Source Adapters](./dashboard-overlay/data-source-adapters.md) | Record[]、SQL / Drizzle、HTTP / JSON・pipelineを既存Data Frameへ接続するserver-side adapter |
+| 採用P0 | [Data Source Adapters P0](./dashboard-overlay/data-source-adapters-p0.md) | Record[]、query helper、read-only Drizzle、SQLite integrationの実行順と受入条件 |
 | 常時 | [進捗台帳](./dashboard-overlay/progress.md) | 現在の work package、検証結果、次の作業、blocker |
 
 文書間で記述が競合した場合は、プロダクトの目的と長期的な境界についてはコンセプト文書を優先する。共有契約は01、Backend v2 runtimeは02、Frontend v2 runtimeは03、検証・Gallery・release判定は04、Visualization family固有仕様は05〜10の該当文書を優先する。初期v1のテスト記録は[進捗台帳](./dashboard-overlay/progress.md)の履歴として参照する。後続拡張でv1の非目標を変更する場合は、既存計画を暗黙に読み替えず、新しい計画書に対象、migration、互換性を明記する。

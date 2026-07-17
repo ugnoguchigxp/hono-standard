@@ -14,12 +14,12 @@
 ```text
 Concept status: complete
 Current plan: data-source-adapters
-Plan status: ready
-Implementation status: pending
-Current work package: AD0
+Plan status: complete
+Implementation status: complete
+Current work package: AD10
 Baseline: completed 01 C0-C9, 02 B0-B12, 03 F0-F12, 05 V0-V12, 06 R0-R13, 07 K0-K12, 08 S0-S13, 09 T0-T13, 10 O0-O18, 04 D0-D11 initial matrix
-Last successful command: E2E_PORT=5183 bun run verify:dashboard-visual
-Next command: execute the adapter AD0 baseline commands
+Last successful command: DASHBOARD_FRONTEND_COVERAGE_DIR=coverage/dashboard-frontend-codex-doc-review E2E_PORT=5281 bun run verify:dashboard-release
+Next command: rerun 04 D11 compatibility matrix for the adapter candidate
 Blocker: none
 ```
 
@@ -150,12 +150,12 @@ E2Eを含む最終ゲートを通過した。
 ```text
 Delivery plan: 04-testing-and-delivery
 Plan status: ready
-Implementation status: paused_for_09_and_10
+Implementation status: ready_for_adapter_candidate_revalidation
 Current work package: D12
 Start condition: 01 C0-C9, 02 B0-B12, 03 F0-F12 complete
 Last successful command: E2E_PORT=5175 bun run verify:dashboard-release
-Next command: after adapter AD10, rerun D11 compatibility matrix for the adapter candidate
-Blocker: adapter AD0-AD10 are not complete
+Next command: rerun D11 compatibility matrix for the adapter candidate
+Blocker: none
 ```
 
 | WP | 内容 | Status | 完了証拠 |
@@ -383,7 +383,7 @@ Implementation status: complete
 Current work package: O18
 Start condition: 09 T0-T13 complete
 Target: 6 new renderer types / 30 presets / cumulative 126 presets
-Last successful command: `E2E_PORT=5183 bun run verify:dashboard-visual`
+Last successful command: `E2E_PORT=5191 bun run verify:dashboard-performance`
 Next command: Data Source Adapters AD0
 Blocker: none
 ```
@@ -420,40 +420,46 @@ new shape IDは0、additive roleは9。shared 2,000-row / 8,192-character limit�
 Sankey multi-frame patternをbaseline化し、OHLC pixel aggregation、fixed-height log windowing、trace partial/skew、
 map asset provenance、Gallery URL/searchを計画へ追加した。実装statusは`complete`。新規shape IDは0、
 additive roleは9、Galleryは132 cases (126 success preset + state/integration fixture)である。
-frontend coverageは57 files / 162 tests、E2E 3/3、visual 5/5、a11y 3/3、performance 1/1、
-security 76 assets、bundle gate passを確認した。
+2026-07-18の再レビューでは、型検査・lint、focused specialized test 36件、E2E 3/3、visual 5/5、
+a11y 3/3、performance 1/1、security 76 assets、bundle gate、`git diff --check`を再実行した。
+Logs/Traceは固定高virtual windowへ移行し、mounted row上限の回帰testを追加した。bundle graphはinitial
+`838084 / 239993`、Dashboard shell `252479 / 74601` raw/gzip bytesでgateを通過した。variant matrixは
+共有worktreeが未コミットのため`blocked_by_uncommitted_candidate`であり、D11再検証のhandoffとして維持する。
 
 ## Data Source Adapters
 
 ```text
 Adapter plan: data-source-adapters
-Plan status: ready
-Implementation status: pending
-Current work package: AD0
+Plan status: complete
+Implementation status: complete
+Current work package: AD10
 Start condition: 10 O0-O18 complete
 P0 target: Record[] adapter + SQL / Drizzle helper
 P1 target: HTTP / JSON + pipeline recipe
-Last successful command: none for adapters
-Next command: execute AD0 baseline commands
+Last successful command: DASHBOARD_FRONTEND_COVERAGE_DIR=coverage/dashboard-frontend-codex-doc-review E2E_PORT=5281 bun run verify:dashboard-release
+Next command: rerun 04 D11 compatibility matrix for the adapter candidate
 Blocker: none
 ```
 
 | WP | 優先度 | 内容 | Status | 完了証拠 |
 | --- | --- | --- | --- | --- |
-| AD0 | P0 | baseline、builder characterization、API型spike | pending | focused tests、typecheck |
-| AD1 | P0 | Record column contract、value conversion | pending | pure unit tests |
-| AD2 | P0 | `recordsToDataFrameV2`、empty/limit/shape | pending | schema + shape tests |
-| AD3 | P0 | `defineRecordQueryV2`、context/refId/state | pending | query coordinator tests |
-| AD4 | P0 | `defineDrizzleRecordQueryV2`、read-only composition | pending | helper + abort/limit tests |
-| AD5 | P0 | SQLite integration fixture、Quickstart、public export | pending | integration/doc tests |
-| AD6 | P0 | P0 full gate、handoff | pending | coverage、verify、release gate |
-| AD7 | P1 | HTTP request/response security primitives | blocked_by_P0 | security unit tests |
-| AD8 | P1 | HTTP JSON query、Zod、error mapping | blocked_by_P0 | mocked fetch integration |
-| AD9 | P1 | pipeline recipe、deterministic fixture | blocked_by_P0 | adapter tests |
-| AD10 | P1 | P1 full gate、docs、release handoff | blocked_by_P0 | verify、release gate |
+| AD0 | P0 | baseline、builder characterization、API型spike | complete | focused tests、typecheck |
+| AD1 | P0 | Record column contract、value conversion | complete | `record-adapter.test.ts` |
+| AD2 | P0 | `recordsToDataFrameV2`、empty/limit/shape | complete | adapter schema + shape tests |
+| AD3 | P0 | `defineRecordQueryV2`、context/refId/state | complete | `record-query.test.ts` |
+| AD4 | P0 | `defineDrizzleRecordQueryV2`、read-only composition | complete | helper + abort/limit tests |
+| AD5 | P0 | SQLite integration fixture、Quickstart、public export | complete | SQLite gate、doc link gate |
+| AD6 | P0 | P0 full gate、handoff | complete | coverage、verify、release gate |
+| AD7 | P1 | HTTP request/response security primitives | complete | HTTP security unit tests |
+| AD8 | P1 | HTTP JSON query、Zod、error mapping | complete | mocked fetch integration tests |
+| AD9 | P1 | pipeline recipe、deterministic fixture | complete | `pipeline-example.test.ts` |
+| AD10 | P1 | P1 full gate、docs、release handoff | complete | full Dashboard release gate |
 
-[Data Source Adapters実装計画](./data-source-adapters.md)を正本とする。P0はAD0〜AD6を順番に実行し、
-AD6成功前にP1へ進まない。adapter実装中も同時に`in_progress`にするWPは1つだけとする。
+[Data Source Adapters全体計画](./data-source-adapters.md)を契約、
+[P0実装計画](./data-source-adapters-p0.md)をP0の実行順と受入条件の正本とする。AD0〜AD10は完了した。
+2026-07-18のreview後はadapter focused testsが5 files / 44 tests、backend coverageが125 files / 424 tests、
+adapter coverageがstatements 88.07%、branches 84.89%、functions 100%、lines 90.00%で成功した。
+frontend coverage 67 files / 199 tests、SQLite read-only integration、full release gateの証跡も維持する。
 Visualization roadmap P8は本計画の後続候補として維持する。
 
 ## 初期Dashboard v1 実装履歴

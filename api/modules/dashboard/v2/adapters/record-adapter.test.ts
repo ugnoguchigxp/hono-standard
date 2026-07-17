@@ -128,6 +128,16 @@ describe("recordsToDataFrameV2", () => {
 
 		expect(() =>
 			recordsToDataFrameV2({
+				records: [] as Array<{ value: number }>,
+				refId: "A",
+				name: "Empty mismatch",
+				outputShape: "timeseries",
+				columns: [{ source: "value", type: "number", roles: ["value"] }],
+			}),
+		).toThrow(DashboardRecordAdapterError);
+
+		expect(() =>
+			recordsToDataFrameV2({
 				records: [{ value: 1 }],
 				refId: "A",
 				name: "Mismatch",

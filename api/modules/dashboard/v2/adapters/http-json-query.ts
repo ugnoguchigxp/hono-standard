@@ -104,6 +104,7 @@ export function defineHttpJsonRecordQueryV2<TResponse, TRow extends object>(
 					throw requestCancelled(context.signal, error);
 				throw queryFailure(true, error);
 			}
+			if (context.signal.aborted) throw requestCancelled(context.signal);
 			if (!response.ok)
 				throw queryFailure(
 					response.status === 408 ||
@@ -242,7 +243,7 @@ async function readResponseBytes(
 			if (result.done) break;
 			size += result.value.byteLength;
 			if (size > limit) {
-				await reader.cancel();
+				await reader.cancel().catch(() => undefined);
 				throw queryFailure(false);
 			}
 			chunks.push(result.value);

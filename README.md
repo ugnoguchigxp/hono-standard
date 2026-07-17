@@ -191,6 +191,7 @@ Node Graph、Candlestick、Logs、Trace Waterfall、Flame Graph、Geomapの専�
 - Frontend: [`web/src/domains/dashboard/`](web/src/domains/dashboard/)、[`web/src/routes/dashboard-route.lazy.tsx`](web/src/routes/dashboard-route.lazy.tsx)
 - Visualization Platformの目的・境界・長期カタログ: [`docs/dashboard-overlay/00-concept.md`](docs/dashboard-overlay/00-concept.md)
 - Data Source Adapter Quickstart: [`docs/dashboard-overlay/data-source-adapters-quickstart.md`](docs/dashboard-overlay/data-source-adapters-quickstart.md)
+- Data Source Adapter P0実装計画: [`docs/dashboard-overlay/data-source-adapters-p0.md`](docs/dashboard-overlay/data-source-adapters-p0.md)
 - 初期v1実装計画とA1〜A8の完了条件: [`docs/dashboard-overlay-implementation-plan.md`](docs/dashboard-overlay-implementation-plan.md)
 - 継続実装の台帳: [`docs/dashboard-overlay/progress.md`](docs/dashboard-overlay/progress.md)
 

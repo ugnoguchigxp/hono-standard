@@ -178,6 +178,43 @@ describe("defineHttpJsonRecordQueryV2", () => {
 		).rejects.toMatchObject({ code: "QUERY_FAILED", retryable: false });
 	});
 
+	it("keeps byte-limit failures non-retryable when stream cancellation fails", async () => {
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(new TextEncoder().encode('{"items":[]}'));
+			},
+			cancel() {
+				throw new Error("cancel failed");
+			},
+		});
+		const query = createQuery({
+			fetch: vi.fn<DashboardFetch>(async () =>
+				new Response(body, {
+					headers: { "content-type": "application/json" },
+				}),
+			),
+			maxResponseBytes: 4,
+		});
+		await expect(
+			query.handler(dashboardRecordQueryTestContext()),
+		).rejects.toMatchObject({ code: "QUERY_FAILED", retryable: false });
+	});
+
+	it("prefers cancellation when fetch resolves after the signal aborts", async () => {
+		const controller = new AbortController();
+		const query = createQuery({
+			fetch: vi.fn<DashboardFetch>(async () => {
+				controller.abort("cancelled");
+				return new Response("busy", { status: 503 });
+			}),
+		});
+		await expect(
+			query.handler(
+				dashboardRecordQueryTestContext({ signal: controller.signal }),
+			),
+		).rejects.toMatchObject({ code: "REQUEST_CANCELLED", retryable: false });
+	});
+
 	it("forwards abort and rejects an invalid configured byte budget", async () => {
 		const controller = new AbortController();
 		controller.abort("cancelled");

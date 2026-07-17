@@ -112,10 +112,10 @@ export function recordsToDataFrameV2<TRow extends object>(input: {
 		if (truncated && (input.overflow ?? "error") === "error")
 			throw new RangeError("records exceed the dashboard row limit");
 		const records = input.records.slice(0, effectiveMaxRows);
+		for (const row of records) assertPlainRecord(row);
 
 		const fields = resolvedColumns.map((column) => {
 			const values = records.map((row, index) => {
-				assertPlainRecord(row);
 				let raw: unknown;
 				if (column.accessor) raw = column.accessor(row, index);
 				else {
@@ -150,7 +150,9 @@ export function recordsToDataFrameV2<TRow extends object>(input: {
 			schemaVersion: 2,
 			source: { kind: "query", refId: input.refId },
 		});
-		const shape = validateDashboardDataFrameShape(parsedFrame);
+		const shape = validateDashboardDataFrameShape(
+			records.length === 0 ? createShapeProbeFrame(parsedFrame) : parsedFrame,
+		);
 		if (!shape.valid)
 			throw new TypeError("record columns do not satisfy output shape");
 
@@ -175,6 +177,33 @@ export function recordsToDataFrameV2<TRow extends object>(input: {
 	} catch (error) {
 		if (error instanceof DashboardRecordAdapterError) throw error;
 		throw new DashboardRecordAdapterError(error);
+	}
+}
+
+function createShapeProbeFrame(
+	frame: ReturnType<typeof dashboardDataFrameV2Schema.parse>,
+): ReturnType<typeof dashboardDataFrameV2Schema.parse> {
+	return dashboardDataFrameV2Schema.parse({
+		...frame,
+		fields: frame.fields.map((field) => ({
+			...field,
+			values: [shapeProbeValue(field)],
+		})),
+	});
+}
+
+function shapeProbeValue(
+	field: ReturnType<typeof dashboardFieldV2Schema.parse>,
+): number | string | boolean {
+	switch (field.type) {
+		case "time":
+			return field.roles.includes("end-time") ? 1 : 0;
+		case "number":
+			return 0;
+		case "string":
+			return "value";
+		case "boolean":
+			return false;
 	}
 }
 

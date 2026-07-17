@@ -36,6 +36,19 @@ describe("defineRecordQueryV2", () => {
 		});
 	});
 
+	it("rejects an invalid output shape when the query is registered", () => {
+		expect(() =>
+			defineRecordQueryV2({
+				id: "invalid-timeseries",
+				filterKeys: [],
+				frameName: "Invalid timeseries",
+				outputShape: "timeseries",
+				columns: [{ source: "value", type: "number", roles: ["value"] }],
+				load: () => [] as Array<{ value: number }>,
+			}),
+		).toThrow("Invalid dashboard record query definition");
+	});
+
 	it("maps adapter failures to non-retryable invalid results", async () => {
 		const query = defineRecordQueryV2({
 			id: "records",

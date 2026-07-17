@@ -93,7 +93,7 @@
 - Do not track local DBs, coverage, Playwright reports, test results, build output, or `.env` secrets.
 - Do not reintroduce RAG, pgvector, wiki, provider, or agentic-search docs unless the implementation is restored in code.
 - Dashboard handlerだけがDB固有集計を担当し、共通層からSQLを生成しない。API/UIの入出力は共有Zod schemaを通す。
-- Dashboard Data Source Adapterは`api/modules/dashboard/v2/adapters/`にあり、Record[]を共通入口としてDrizzle read queryと固定origin HTTP JSONを接続する。列・型・roleを明示し、SQL生成、dialect import、response保存を共通層へ入れない。
+- Dashboard Data Source Adapterは`api/modules/dashboard/v2/adapters/`にあり、Record[]を共通入口としてDrizzle read queryと固定origin HTTP JSONを接続する。列・型・roleを明示し、SQL生成、dialect import、response保存を共通層へ入れない。P0の適用順と受入条件は`docs/dashboard-overlay/data-source-adapters-p0.md`を参照する。
 - `/dashboard` は必要時だけlazy routeを読み込み、Recharts/react-grid-layoutを通常ページのinitial bundleへ入れない。
 - `/dashboard/gallery` は認証保護された126 preset + state/integration fixtureの決定的Galleryで、全core presetとPanel stateを確認する。新renderer追加時はcatalog、Gallery、component/a11y/visual/bundle gateを同時に更新する。
 - Cartesian catalogは`core.timeseries` 8 preset、`core.bar` 9 preset、`core.composed/dual-axis` 1 presetの計18種類。shared strict contractは`shared/schemas/dashboard/cartesian-visualizations.schema.ts`にある。

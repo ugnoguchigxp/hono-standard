@@ -61,8 +61,20 @@ Visual readiness now waits for settled panel loading, fonts, two animation frame
 - Contracts/models: `specialized-visualizations.schema.ts`, graph/OHLC/log/trace/profile/geo models, 9 additive roles, and 7 reserved shapes; no runtime dependency added.
 - Unit/integration: `bun run typecheck`, `bun run lint`, `bun run format:check`, focused Dashboard Vitest (72 files / 197 tests), and frontend coverage (57 files / 162 tests; statements 84.38%, branches 70.04%, functions 84.94%, lines 86.83%) pass.
 - Browser: E2E 3/3, visual 5/5, accessibility 3/3, performance 1/1, and security 76 production assets pass.
-- Gallery and bundle: `bun run verify:dashboard-gallery` (132 cases) and `bun run verify:dashboard-bundle` pass. Bundle gate measured initial `838073 / 239993` and shell `244543 / 71654` raw/gzip bytes.
-- Remaining handoff: implement [Data Source Adapters](./data-source-adapters.md) AD0〜AD10, then run 04 D11 against the adapter candidate. Visualization roadmap P8 remains a later plan. No commit, tag, push, or release side effect was performed.
+- Gallery and bundle: `bun run verify:dashboard-gallery` (132 cases) and `bun run verify:dashboard-bundle` pass. 2026-07-18 review measured initial `838084 / 239993` and shell `252479 / 74601` raw/gzip bytes. The specialized graphs include their shared catalog dependency; native specialized renderer chunk remains gzip 6.45 KiB and the map asset chunk gzip 59.73 KiB.
+- Review hardening: Log and Trace renderers use fixed-height virtual windows, with regression tests keeping mounted rows below their 80/100 hard limits. Flame sub-pixel children aggregate into `Other`; graph lanes, edge labels, service colors, and context-row semantics are explicit preset behaviors.
+- 2026-07-18 gates: typecheck, lint, specialized focused tests (36), Dashboard E2E 3/3, visual 5/5, accessibility 3/3, performance 1/1, security scan (76 assets), bundle, Gallery, documentation links, and `git diff --check` pass. `verify:dashboard-variants` remains intentionally blocked while this shared candidate worktree is uncommitted.
+- Remaining handoff: rerun 04 D11 against the adapter candidate. Visualization roadmap P8 remains a later plan. No commit, tag, push, or release side effect was performed for this specialized review.
+
+## Data Source Adapters (2026-07-18)
+
+- P0: explicit `Record[]` → Data Frame conversion、`defineRecordQueryV2`、typed read-only Drizzle composition、SQLite integration、Quickstart、public exportsを追加した。
+- P1: fixed-origin HTTP/JSON、GET/POST、same-origin relative path、redirect拒否、2 MiB default / 8 MiB hard response limit、Zod validation、pipeline recipeを追加した。
+- Adapter focused tests: 2026-07-18 review後は5 files / 44 tests pass。SQLite read-only integration gateもpass。
+- Backend coverage: review後は125 files / 424 tests。Adapterはstatements 88.07%、branches 84.89%、functions 100%、lines 90.00%。
+- Review hardening: empty resultでもcolumn roleからshapeをfail-fast検証し、HTTP response size超過時のstream cancel失敗をnon-retryableのまま保持し、fetch完了直後のabortを`REQUEST_CANCELLED`として優先する回帰testを追加した。
+- Frontend coverage: 67 files / 199 tests。statements 83.57%、branches 70.92%、functions 84.00%、lines 85.77%。並行ツールとのreport directory競合を避けるため、configの既定値を維持したまま環境変数で出力先を分離した。
+- Full release gate: current review snapshotで`DASHBOARD_FRONTEND_COVERAGE_DIR=coverage/dashboard-frontend-codex-doc-review E2E_PORT=5281 bun run verify:dashboard-release` pass。contract 48 tests、Backend 424 tests、Frontend 199 tests、E2E 3/3、visual 5/5、a11y 3/3、performance 1/1、security 76 assets、doc links、diff checkを含む。
 
 ## Release orchestrator
 
@@ -72,7 +84,9 @@ Visual readiness now waits for settled panel loading, fonts, two animation frame
 - `E2E_PORT=5234 bun run verify:dashboard-release`: pass (documentation-link gate included)
 - `E2E_PORT=5235 bun run verify:dashboard-release`: pass (same working-tree snapshot, second run)
 - `E2E_PORT=5175 bun run verify:dashboard-release`: pass after Cartesian review hardening and visual baseline review
-- Both runs used the same uncommitted working-tree snapshot; no source or baseline changed between runs.
+- `DASHBOARD_FRONTEND_COVERAGE_DIR=coverage/dashboard-frontend-codex-adapters E2E_PORT=5279 bun run verify:dashboard-release`: pass for the completed P0/P1 adapter candidate
+- `DASHBOARD_FRONTEND_COVERAGE_DIR=coverage/dashboard-frontend-codex-doc-review E2E_PORT=5281 bun run verify:dashboard-release`: pass after adapter hardening and documentation review
+- Each entry records an uncommitted working-tree snapshot; no commit、tag、push、release side effect was performed by these local gates.
 
 ## Compatibility and migration
 

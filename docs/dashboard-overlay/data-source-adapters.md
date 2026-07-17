@@ -1,5 +1,10 @@
 # Dashboard Data Source Adapters 実装計画
 
+P0だけを実行する場合は、範囲とgateを絞った[P0実装計画](./data-source-adapters-p0.md)を使用する。
+
+Lifecycle: P0 AD0〜AD6、P1 AD7〜AD10ともに2026-07-18完了。現在の検証結果は
+[進捗台帳](./progress.md)と[リリース証跡](./release-evidence.md)を正本とする。
+
 ## 1. 文書の位置づけ
 
 この文書は、既存の Dashboard Visualization Platform v2 へ、アプリケーションがすでに持つ
@@ -9,9 +14,9 @@
 
 | 採用優先度 | 対象 | 実装段階 |
 | --- | --- | --- |
-| P0 | `Record[]` → Data Frame adapter | 直ちに実装する |
-| P0 | SQL / Drizzle query helper | Record adapterの直後に実装する |
-| P1 | HTTP / JSON・pipeline adapter | P0完了後に実装する |
+| P0 | `Record[]` → Data Frame adapter | 実装済み |
+| P0 | SQL / Drizzle query helper | 実装済み |
+| P1 | HTTP / JSON・pipeline adapter | 実装済み |
 
 この表のP0/P1は本計画内の採用優先度であり、
 [00-concept.md](./00-concept.md)のVisualization roadmap P0〜P11とは別の記号である。
@@ -59,7 +64,7 @@ P0の採用容易性は次で判定する。
 - DB schema / migration / seedを追加せずにread-only queryを接続できる。
 - 0 rows、null、Date、boolean、string、finite numberを決定的に処理できる。
 - 無指定時は`table` shapeとし、Visualizationの自動推測は行わない。
-- 既存v1/v2 transport、Frontend bundle、Panel runtimeへ変更を加えない。
+- adapter差分から既存v1/v2 transport、Frontend runtime、Panel runtimeへ変更を加えない。
 
 P1の採用容易性は次で判定する。
 
@@ -127,13 +132,11 @@ P1の採用容易性は次で判定する。
 27. HTTP redirectは`error`とし、response schemaのZod検証を必須とする。
 28. P0で新runtime dependencyを追加しない。P1もplatform `fetch`と既存Zodだけを使う。
 
-## 6. Public API案
+## 6. Public API
 
 ### 6.1 Record column contract
 
 ```ts
-export type DashboardRecord = Readonly<Record<string, unknown>>;
-
 type SourceRecordColumn<TRow extends object> = {
   source: Extract<keyof TRow, string>;
   accessor?: never;
@@ -148,11 +151,11 @@ type AccessorRecordColumn<TRow extends object> = {
 
 export type DashboardRecordColumn<TRow extends object> =
   (SourceRecordColumn<TRow> | AccessorRecordColumn<TRow>) & {
-  label?: string;
-  type: DashboardFieldType;
-  roles?: readonly DashboardFieldRole[];
-  labels?: Readonly<Record<string, string>>;
-  config?: StandardFieldConfigPatchV2;
+    label?: string;
+    type: DashboardFieldType;
+    roles?: readonly DashboardFieldRole[];
+    labels?: Readonly<Record<string, string>>;
+    config?: StandardFieldConfigPatchV2;
   };
 ```
 
@@ -192,7 +195,8 @@ export function recordsToDataFrameV2<TRow extends object>(input: {
 4. 各columnを配列順、各recordを入力順に読み取る。
 5. 値を指定物理型へ厳格変換する。
 6. 既存`dataFrame()`または同じschema pathを通してFrameを構築する。
-7. `validateDashboardDataFrameShape`でshape / role compatibilityを検証する。
+7. empty時はtype別のprobe valueを持つ一時Frame、non-empty時は実データFrameを使い、
+   `validateDashboardDataFrameShape`でshape / role compatibilityを検証する。
 8. explicit truncate時だけstate noticeを返す。
 
 ### 6.3 値変換表
@@ -265,11 +269,12 @@ SQLを生成せず、Drizzle query objectも受け取らない。
 
 ```ts
 const ordersQuery = defineDrizzleRecordQueryV2({
-  id: "daily-orders",
-  filterKeys: ["status"],
+  id: "orders-over-time",
+  filterKeys: [],
   database: dbRuntime.client.read,
   outputShape: "timeseries",
-  frameName: "Daily orders",
+  frameName: "Orders over time",
+  overflow: "truncate",
   columns: [
     { source: "bucket", type: "time", roles: ["time"] },
     { source: "status", type: "string", roles: ["series"] },
@@ -283,7 +288,6 @@ const ordersQuery = defineDrizzleRecordQueryV2({
         orders: count(),
       })
       .from(orders)
-      .where(/* context.resolvedRange / context.filters */)
       .groupBy(orders.createdAt, orders.status)
       .limit(context.maxRows + 1),
 });
@@ -295,6 +299,7 @@ Guidance:
 - raw driverやDrizzle以外のSQL clientは、query結果を`defineRecordQueryV2`へ返して同じ変換境界を利用する。
 - partial selectのaliasをData Frame keyとして利用する。
 - range / filtersのSQL化はapplication queryの責務とする。
+- filterを実装した場合だけ、そのkeyを`filterKeys`へ登録する。
 - limitを自動注入できないため、標準例では`maxRows + 1`を取得しoverflowを検出する。
 - Drizzleの型引数はruntime castではないため、adapterは全cellをruntimeで再検証する。
 - raw SQLを使う場合もcode-defined handler内だけに置き、manifest/Inspectorへ出さない。
@@ -304,7 +309,7 @@ Drizzleのpartial selectと型推論は
 
 ## 7. P1 HTTP / JSON・pipeline adapter
 
-### 7.1 Public API案
+### 7.1 Public API
 
 ```ts
 export function defineHttpJsonRecordQueryV2<
@@ -317,6 +322,7 @@ export function defineHttpJsonRecordQueryV2<
   outputShape?: DashboardDataShape;
   frameName: string;
   columns: readonly DashboardRecordColumn<TRow>[];
+  overflow?: DashboardRecordOverflowPolicy;
   responseSchema: z.ZodType<TResponse>;
   request: (context: DashboardQueryHandlerContextV2) => {
     path: string;
@@ -340,6 +346,7 @@ export function defineHttpJsonRecordQueryV2<
 
 - `baseUrl`はregistration時にparseする。
 - protocolは`http:` / `https:`だけを許可する。
+- credentialを送るproduction endpointでは`https:`を必須とする。`http:`はlocal development用途に限定する。
 - username、password、search、hashを含むbase URLを拒否し、pathnameは`/`だけを許可する。
 - `request.path`は`/`始まりのrelative pathだけを許可し、`//`始まりを拒否する。
 - URL解決後にprotocol / originをbase URLと再比較する。
@@ -349,7 +356,7 @@ export function defineHttpJsonRecordQueryV2<
 - POST bodyはJSON value budgetを検証してからserializeする。
 - `Host`、`Cookie`、`Content-Length`、hop-by-hop headerを拒否し、`Accept`と`Content-Type`はadapterが設定する。
 - `redirect: "error"`、`signal: context.signal`を固定する。
-- headers、body、full URL、response bodyをlogger / notice / error detailsへ含めない。
+- headers、body、full URL、response bodyをFrame / notice / public error detailsへ含めない。
 - `Content-Type`はresponse headerを正規化し、JSON media type以外を拒否する。
 - streaming readでbyte limitを超えた時点でcancelする。
 - default byte limitは2 MiB、hard maxは8 MiBとし、定数とtestを置く。
@@ -381,12 +388,8 @@ type PipelineRunRow = {
 };
 ```
 
-これはwire標準にはしない。sample内で外部responseをこのrowへmapし、次を示す。
-
-- status history
-- duration timeseries / bar
-- success ratio stat
-- same-origin detail linkへ変換する場合のallowlist
+これはwire標準にはしない。sample内で外部responseをこのrowへmapし、status、開始時刻、durationを
+明示columnへ変換することと、外部detail URLをFrameから除外することを示す。
 
 外部URLをfield linkとしてそのまま公開しない。必要ならapplication側のsame-origin detail routeを経由する。
 
@@ -403,7 +406,7 @@ type PipelineRunRow = {
 - duplicate output key
 - shape / role不一致
 - Record adapter上限違反
-- HTTP JSON / Zod / row mapping不正
+- `selectRecords`が返したRecordのcolumn / shape不正
 
 ### 8.2 Operational error
 
@@ -413,6 +416,7 @@ type PipelineRunRow = {
 - network failure
 - timeout / abort
 - remote 408 / 429 / 5xx
+- HTTP request構築、content type、JSON / Zod parse、`selectRecords` exception
 
 SQL、query parameters、header、token、response body、record value、stackをpublic error detailsへ入れない。
 
@@ -424,9 +428,9 @@ SQL、query parameters、header、token、response body、record value、stack�
 - HTTP freshnessはremote responseから自動推測しない。
 - dataThrough / staleAfterMsが必要なsourceは低レベルhandlerまたは将来optionで明示する。
 
-## 9. 予定ファイル
+## 9. 実装ファイル
 
-### 9.1 P0追加
+### 9.1 P0
 
 ```text
 api/modules/dashboard/v2/adapters/record-adapter.ts
@@ -440,7 +444,7 @@ scripts/verify-dashboard-adapter-sqlite.ts
 docs/dashboard-overlay/data-source-adapters-quickstart.md
 ```
 
-### 9.2 P0変更候補
+### 9.2 P0で更新した主要file
 
 ```text
 api/modules/dashboard/index.ts
@@ -452,10 +456,10 @@ docs/dashboard-overlay/progress.md
 docs/dashboard-overlay/release-evidence.md
 ```
 
-`api/db/index.ts`は必要な場合だけread database utility typeをpublic exportする。Dashboard adapterから
+`api/db/index.ts`はread database utility typeをpublic exportする。Dashboard adapterから
 SQLite driverやapplication schemaをimportしない。
 
-### 9.3 P1追加
+### 9.3 P1
 
 ```text
 api/modules/dashboard/v2/adapters/http-json-query.ts
@@ -489,7 +493,7 @@ P0はAD0〜AD6、P1はAD7〜AD10である。P0 gate成功前にAD7を開始し�
 
 1. branch、working tree、progressを記録する。
 2. 既存`frame-builders`、`frame-normalizer`、`query-coordinator`のfocused testを実行する。
-3. public API案をcompile-only fixtureで確認する。
+3. public APIをcompile-only fixtureで確認する。
 4. Drizzle SQLite / PostgreSQL / Turso型をadapterへ直接importしないことを確認する。
 
 Commands:
@@ -535,7 +539,7 @@ Tests:
 
 Tests:
 
-- table/timeseries/category/stat相当の代表shape
+- table/timeseriesとrole要件を持つ代表shape
 - empty timeseries with required role fields
 - shape mismatch
 - error vs truncate
@@ -579,7 +583,7 @@ Tests:
 
 ### AD5: SQLite integration and Quickstart
 
-- test-only SQLite fixtureをwriter側で準備し、read connectionからaggregate selectする。
+- test-only SQLite fixtureをwriter側で準備し、別のread-only connectionからselectする。
 - production schema / migration / seedは変更しない。
 - Quickstartはconceptual `orders` tableを使用し、認証userのPIIを例に使わない。
 - low-level APIへのescape hatchを示す。
@@ -589,13 +593,17 @@ Tests:
 
 ```bash
 bunx vitest run api/modules/dashboard/v2/adapters
+bun run verify:dashboard-adapter-sqlite
 bun run typecheck
 bun run verify:dashboard-coverage
 bun run verify:dashboard-doc-links
 bun run verify
-E2E_PORT=<free-port> bun run verify:dashboard-release
+DASHBOARD_FRONTEND_COVERAGE_DIR=coverage/dashboard-frontend-<task> \
+  E2E_PORT=<free-port> bun run verify:dashboard-release
 git diff --check
 ```
+
+`<task>`と`<free-port>`はtask固有名と未使用portへ置き換える。
 
 Frontend fileを変更していなくても、Dashboard release gateでbundle / E2E / visual / a11yの回帰を確認する。
 
@@ -618,14 +626,14 @@ Frontend fileを変更していなくても、Dashboard release gateでbundle / 
 - HTTP status mapping
 - JSON parse / Zod parse
 - `selectRecords` / Record query delegation
-- response object immutability
+- response bodyとparse errorのpublic output非公開
 
 ### AD9: Pipeline recipe
 
 - deterministic pipeline response fixture
 - Zod transformation from ISO datetime toDate
 - status/duration Records
-- state history / duration / statに必要なcolumn定義例
+- status、開始時刻、durationのcolumn定義例
 - secret、external link、raw response非公開test
 
 ### AD10: P1 gate
@@ -637,9 +645,12 @@ bun run verify:dashboard-coverage
 bun run verify:dashboard-security
 bun run verify:dashboard-doc-links
 bun run verify
-E2E_PORT=<free-port> bun run verify:dashboard-release
+DASHBOARD_FRONTEND_COVERAGE_DIR=coverage/dashboard-frontend-<task> \
+  E2E_PORT=<free-port> bun run verify:dashboard-release
 git diff --check
 ```
+
+`<task>`と`<free-port>`はtask固有名と未使用portへ置き換える。
 
 ## 13. Compatibility and migration
 
@@ -678,27 +689,27 @@ git diff --check
 
 ### 15.1 P0
 
-- [ ] AD0〜AD6 complete。
-- [ ] Record columnsは明示順、明示field、strict physical typeで変換される。
-- [ ] empty resultでもvalid Frameを作れる。
-- [ ] missing / undefined / invalid / excess dataがsilent repairされない。
-- [ ] explicit truncateだけがnotice付きで動く。
-- [ ] query context、auth、AbortSignal、limitsが維持される。
-- [ ] Drizzle read databaseとtyped select callbackを接続できる。
-- [ ] dialect固有runtime import 0、DB migration 0、dependency 0。
-- [ ] SQLite integration testと30行以内のQuickstartがある。
-- [ ] adapter focused tests、coverage、full release gateが成功する。
+- [x] AD0〜AD6 complete。
+- [x] Record columnsは明示順、明示field、strict physical typeで変換される。
+- [x] required roleを満たすcolumn定義ならempty resultでもvalid Frameを作れる。
+- [x] missing / undefined / invalid / excess dataがsilent repairされない。
+- [x] explicit truncateだけがnotice付きで動く。
+- [x] query context、auth、AbortSignal、limitsが維持される。
+- [x] Drizzle read databaseとtyped select callbackを接続できる。
+- [x] dialect固有runtime import 0、DB migration 0、dependency 0。
+- [x] SQLite integration testと30行以内のQuickstartがある。
+- [x] adapter focused tests、coverage、full release gateが成功する。
 
 ### 15.2 P1
 
-- [ ] AD7〜AD10 complete。
-- [ ] 固定base URL / same-origin path / no redirectが強制される。
-- [ ] JSON responseがbyte limitとZod schemaを通る。
-- [ ] pipeline responseが同じRecord adapterを通る。
-- [ ] abort、HTTP status、invalid JSON、schema error、size超過がtestされる。
-- [ ] secret / headers / body / external URLがpublic outputへ出ない。
-- [ ] webhook / storage / scheduler / OAuthを追加していない。
-- [ ] P1 full release gateが成功する。
+- [x] AD7〜AD10 complete。
+- [x] 固定base URL / same-origin path / no redirectが強制される。
+- [x] JSON responseがbyte limitとZod schemaを通る。
+- [x] pipeline responseが同じRecord adapterを通る。
+- [x] abort、HTTP status、invalid JSON、schema error、size超過がtestされる。
+- [x] secret / headers / body / external URLがpublic outputへ出ない。
+- [x] webhook / storage / scheduler / OAuthを追加していない。
+- [x] P1 full release gateが成功する。
 
 ## 16. 次計画へのhandoff
 
