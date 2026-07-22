@@ -11,7 +11,7 @@
 - Frontend entryは `web/src/main.tsx`、providerは `web/src/App.tsx`、route compositionは `web/src/router.tsx`。
 - PostgreSQL/Drizzle runtimeのpublic entryは `api/db/index.ts`、schemaは `api/db/schema.ts`、SQL migration runnerは `api/db/migrate.ts`、migrationは `drizzle/`。
 - API契約は `shared/schemas/` のZod schemaと、`api/app/hono.ts`がexportする `AppType` を共有する。
-- package manager/runtimeはBun。品質ゲートは `bun run verify`、E2Eは `bun run verify:e2e`。
+- package manager/runtimeはBun。通常の品質ゲートは `bun run verify`。
 
 ## Implementation Map
 
@@ -26,7 +26,7 @@
 | `web/src/routes/` | URL、search parameter、route guard |
 | `web/src/styles.css` | Tailwind v4、global token、既存component class |
 | `scripts/verify.ts` | `bun run verify` の実行内容 |
-| `tests/e2e/` | browser smoke test |
+| `tests/e2e/` | タスクと実行環境が適合するときだけ使うbrowser smoke test |
 
 生成物、coverage、report、local DBは実装対象ではない。通常は探索も編集もしない。
 
@@ -111,11 +111,15 @@ web/src/modules/<domain>/
 
 | Change | Minimum |
 | --- | --- |
-| backend logic/API | `bun run typecheck` + 対象Vitest |
-| frontend/domain UI | `bun run typecheck && bun run build` + 対象Vitest |
-| shared contract | `bun run typecheck` + API/frontend双方の対象Vitest |
-| DB runtime/schema/migration | `bun run verify && bun run verify:e2e` |
+| backend logic/API | `bun run typecheck` + 対象Vitest（必須） |
+| frontend/domain UI | `bun run typecheck && bun run build` + 対象Vitest（必須） |
+| shared contract | `bun run typecheck` + API/frontend双方の対象Vitest（必須） |
+| DB runtime/schema/migration | `bun run verify` + 対象repository/migrationのVitest |
 | build/config/security | `bun run verify` |
-| broad template change | `bun run verify:all` |
+| broad template change | `bun run verify` |
 
-失敗した検証を省略して完了扱いにしない。無関係な既存失敗がある場合は、実行コマンドと対象外である根拠を報告する。
+変更対象に対応するUnitテストは必須。既存テストがなければ、業務ロジック、変換、validation、repositoryの振る舞いを検証するテストを追加する。
+
+E2Eは通常の完了条件にしない。ユーザーが求めた場合、または変更がbrowser/API/DBを横断し、必要な実行環境も利用できる場合だけ `bun run verify:e2e` を行う。実行できない場合は未実施理由とUnit/typecheck/buildの結果を報告し、E2E未実施だけをblockerにしない。`bun run verify:all` はE2Eを行うと判断した場合だけ使う。
+
+選択した検証が失敗した場合は省略して完了扱いにしない。無関係な既存失敗がある場合は、実行コマンドと対象外である根拠を報告する。
