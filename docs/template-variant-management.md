@@ -290,6 +290,7 @@ bun run build
 - `shared/schemas/` の API request / response shape。
 - auth cookie / token の外部 behavior。
 - `bun run verify` と `bun run verify:e2e` のコマンド名。
+- `docs/delivery-quality-gates.md` の Delivery 判定基準。
 - `docs/template-variant-management.md` の branch / tag / snapshot 方針。
 
 variant は `main` に全 driver を詰め込んで runtime switch する形にしない。`main` は SQLite で動く最小 baseline を保ち、Turso / PostgreSQL / pgvector は branch ごとに driver、schema、migration、docs を差し替える。
@@ -482,6 +483,7 @@ release tag を打つ前に確認する。
 - DB migration と seed が fresh DB で通る。
 - `bun run verify` が通る。
 - `bun run build` が通る。
+- `docs/delivery-quality-gates.md` の Template Snapshot profile を満たしている。
 - `node_modules`、`.env`、DB ファイル、test artifacts が snapshot に含まれない。
 - tag 名が `<variant>-v<major>.<minor>.<patch>` に従っている。
 - tag message に主な stack / DB / breaking changes が書かれている。
