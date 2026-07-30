@@ -192,6 +192,8 @@ bun run verify:e2e
 
 `verify` は `typecheck`、Biome `lint`、`format:check`、Vitest、coverage threshold、production build を含みます。`verify:e2e` は Playwright smoke で public screens、login、protected route、logout を確認します。
 
+Delivery の必須 Gate、リスクに応じて追加する mutation / performance / vulnWorkbench security diagnostics、結果と証拠の扱いは [`docs/delivery-quality-gates.md`](docs/delivery-quality-gates.md) を参照してください。
+
 ## Template Notes
 
 - この branch は SSG overlay です。RAG / pgvector / agentic search template ではありません。
