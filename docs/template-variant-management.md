@@ -442,6 +442,7 @@ release tag を打つ前に確認する。
 - DB migration と seed が fresh DB で通る。
 - `bun run verify` が通る。
 - `bun run build` が通る。
+- `docs/delivery-quality-gates.md` の Template Snapshot profile を満たしている。
 - `node_modules`、`.env`、DB ファイル、test artifacts が snapshot に含まれない。
 - tag 名が `<variant>-v<major>.<minor>.<patch>` に従っている。
 - tag message に主な stack / DB / breaking changes が書かれている。

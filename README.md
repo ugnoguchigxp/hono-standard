@@ -130,6 +130,17 @@ NODE_ENV=production bun run start
 
 production では `JWT_SECRET` を必ず強いランダム値に変更してください。未設定または dev default のままの場合、アプリは起動時に失敗します。HTTPS で公開する場合は `APP_URL=https://...` とし、必要に応じて `AUTH_COOKIE_SECURE=true`、`SECURITY_HEADERS_MODE=https` を明示します。
 
+## 品質ゲート
+
+通常の closeout は次を通します。
+
+```bash
+bun run verify
+bun run verify:e2e
+```
+
+Delivery の必須 Gate、リスクに応じて追加する mutation / performance / vulnWorkbench security diagnostics、結果と証拠の扱いは [`docs/delivery-quality-gates.md`](docs/delivery-quality-gates.md) を参照してください。
+
 ## RAG Notes
 
 - この branch は `variant/rag` です。RAG の基本機能は `api/` に配置し、frontend/backend 共通 request schema は `shared/schemas/rag.schema.ts` にあります。
