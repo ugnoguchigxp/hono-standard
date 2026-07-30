@@ -1,7 +1,11 @@
-import { rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-const databaseUrl = "data/e2e.sqlite";
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+	throw new Error(
+		"DATABASE_URL is required. Run `bun run bootstrap` before E2E tests.",
+	);
+}
 const appUrl = "http://127.0.0.1:5174";
 
 process.env.NODE_ENV = "development";
@@ -25,10 +29,6 @@ function run(command: string, args: string[]) {
 	}
 }
 
-rmSync(databaseUrl, { force: true });
-rmSync(`${databaseUrl}-shm`, { force: true });
-rmSync(`${databaseUrl}-wal`, { force: true });
-
 run("bun", ["run", "build"]);
 
 const { readAppEnv } = await import("../api/app/env");
@@ -42,11 +42,14 @@ await runMigrations(env);
 const dbRuntime = createDbRuntime(env);
 try {
 	const authService = new AuthService(dbRuntime.db, env);
-	await authService.createAdmin({
-		email: "admin@example.com",
-		displayName: "Admin User",
-		password: "password123456",
-	});
+	const existingAdmin = await authService.findUserByEmail("admin@example.com");
+	if (!existingAdmin) {
+		await authService.createAdmin({
+			email: "admin@example.com",
+			displayName: "Admin User",
+			password: "password123456",
+		});
+	}
 } finally {
 	dbRuntime.close();
 }
