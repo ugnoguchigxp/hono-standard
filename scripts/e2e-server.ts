@@ -1,4 +1,10 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const appUrl = "http://127.0.0.1:5174";
@@ -61,6 +67,7 @@ try {
 		rmSync(composeProjectFile, { force: true });
 	}
 	rmSync(contentRoot, { force: true, recursive: true });
+	mkdirSync("data", { recursive: true });
 	run("docker", [...composeArgs, "up", "-d", "--wait"]);
 	composeStarted = true;
 	writeFileSync(composeProjectFile, composeProject);

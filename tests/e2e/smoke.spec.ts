@@ -19,7 +19,13 @@ test("RAG login unlocks the authenticated workspace", async ({ page }) => {
 	await expect(page.getByRole("heading", { name: "System Context" })).toBeVisible();
 	await page.getByLabel("Instruction language").selectOption("en-US");
 	await page.getByLabel("Agentic Search Prompt").fill("Prefer strict citations.");
+	const saveResponse = page.waitForResponse(
+		(response) =>
+			response.request().method() === "PUT" &&
+			new URL(response.url()).pathname === "/api/settings/system-context",
+	);
 	await page.getByRole("button", { name: "Save" }).click();
+	expect((await saveResponse).ok()).toBe(true);
 	await page.reload();
 	await expect(page.getByLabel("Instruction language")).toHaveValue("en-US");
 	await expect(page.getByLabel("Agentic Search Prompt")).toHaveValue(
