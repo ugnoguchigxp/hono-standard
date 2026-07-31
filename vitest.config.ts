@@ -11,7 +11,9 @@ export default defineConfig({
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "html"],
-			include: ["api/**/*.ts", "shared/**/*.ts"],
+			// Unit coverage measures server/shared code and testable Web logic.
+			// React composition and presentation components are covered by browser E2E.
+			include: ["api/**/*.ts", "shared/**/*.ts", "web/**/*.ts"],
 			exclude: [
 				// Driver adapters and CLI entrypoints are variant-specific and covered by smoke/contract checks.
 				"api/db/migrate.ts",
