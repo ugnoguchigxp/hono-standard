@@ -60,6 +60,9 @@ export function App({ view }: AppProps) {
 		"tech",
 	]);
 	const [systemContextText, setSystemContextText] = useState("");
+	const [instructionLocale, setInstructionLocale] = useState<"ja-JP" | "en-US">(
+		"ja-JP",
+	);
 	const [systemContextUpdatedAt, setSystemContextUpdatedAt] = useState<
 		string | null
 	>(null);
@@ -83,6 +86,7 @@ export function App({ view }: AppProps) {
 	const loadSystemContext = async () => {
 		const settings = await fetchSystemContext();
 		setSystemContextText(settings.systemContext);
+		setInstructionLocale(settings.instructionLocale);
 		setSystemContextUpdatedAt(settings.updatedAt);
 	};
 
@@ -120,6 +124,7 @@ export function App({ view }: AppProps) {
 		const onUnauthorized = () => {
 			setAuthUser(null);
 			setSystemContextText("");
+			setInstructionLocale("ja-JP");
 			setSystemContextUpdatedAt(null);
 			setErrorText("Session expired. Please login again.");
 		};
@@ -170,6 +175,7 @@ export function App({ view }: AppProps) {
 			await logout();
 			setAuthUser(null);
 			setSystemContextText("");
+			setInstructionLocale("ja-JP");
 			setSystemContextUpdatedAt(null);
 			await navigate({ to: "/chat" });
 		});
@@ -179,8 +185,12 @@ export function App({ view }: AppProps) {
 		setSystemContextSaving(true);
 		setErrorText(null);
 		try {
-			const updated = await updateSystemContext(systemContextText);
+			const updated = await updateSystemContext(
+				systemContextText,
+				instructionLocale,
+			);
 			setSystemContextText(updated.systemContext);
+			setInstructionLocale(updated.instructionLocale);
 			setSystemContextUpdatedAt(updated.updatedAt);
 		} catch (error) {
 			setErrorText(
@@ -274,6 +284,21 @@ export function App({ view }: AppProps) {
 									<label htmlFor="system-context-input">
 										Agentic Search Prompt
 									</label>
+									<label htmlFor="instruction-locale">
+										Instruction language
+									</label>
+									<select
+										id="instruction-locale"
+										value={instructionLocale}
+										onChange={(event) =>
+											setInstructionLocale(
+												event.target.value === "en-US" ? "en-US" : "ja-JP",
+											)
+										}
+									>
+										<option value="ja-JP">日本語</option>
+										<option value="en-US">English</option>
+									</select>
 									<TextArea
 										id="system-context-input"
 										value={systemContextText}

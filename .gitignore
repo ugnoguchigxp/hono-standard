@@ -36,6 +36,8 @@ Thumbs.db
 
 # coverage
 /coverage
+/playwright-report
+/test-results
 
 # wiki content
 /wiki-knowledge

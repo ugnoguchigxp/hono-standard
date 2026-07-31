@@ -8,10 +8,12 @@ import type {
 	AgenticToolRuntimeContext,
 } from "./types";
 import { wikiReadTool } from "./wiki-read.tool";
+import { webSearchTool } from "./web-search.tool";
 
 const ALL_TOOLS: AgenticToolDefinition[] = [
 	searchEvidenceTool,
 	wikiReadTool,
+	webSearchTool,
 	fetchTool,
 ];
 

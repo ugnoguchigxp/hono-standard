@@ -67,6 +67,7 @@ export class AgenticSearchService {
 			userSystemContext: settings.systemContext,
 			category: input.category,
 			topK: input.topK,
+			instructionLocale: settings.instructionLocale,
 		});
 		this.log("debug", "request.system_context", {
 			defaultContextLength: systemContext.length,

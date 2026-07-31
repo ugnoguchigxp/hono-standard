@@ -15,6 +15,7 @@ import {
 import { getAuthContextUser } from "../modules/auth/context";
 import { ChatService } from "../modules/chat/chat.service";
 import type { SearchEvidenceCollector } from "../modules/rag/search-evidence";
+import type { SettingsRepository } from "../modules/settings/settings.repository";
 import type { LlmProvider } from "../providers/types";
 import type { ChatMessage } from "../types/llm";
 
@@ -34,14 +35,19 @@ type ChatRouteDeps = {
 	db: NodePgDatabase<typeof schema>;
 	llmProvider: LlmProvider;
 	evidenceCollector: SearchEvidenceCollector;
+	settingsRepository?: SettingsRepository;
+	chatService?: Pick<ChatService, "run">;
 };
 
 export function createChatRoute(deps: ChatRouteDeps) {
-	const service = new ChatService({
-		db: deps.db,
-		llmProvider: deps.llmProvider,
-		evidenceCollector: deps.evidenceCollector,
-	});
+	const service =
+		deps.chatService ??
+		new ChatService({
+			db: deps.db,
+			llmProvider: deps.llmProvider,
+			evidenceCollector: deps.evidenceCollector,
+			settingsRepository: deps.settingsRepository,
+		});
 
 	return new Hono()
 		.get(

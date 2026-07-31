@@ -348,13 +348,13 @@ app.use(
 );
 app.use("/api/*", csrf());
 app.onError(async (error, c) => {
-	console.error(error);
 	const dbError = error as { code?: string; message?: string };
 	if (
 		dbError.code === "42703" &&
 		typeof dbError.message === "string" &&
 		dbError.message.includes("category")
 	) {
+		console.error(error);
 		return c.json(
 			{
 				message:
@@ -390,6 +390,7 @@ app.onError(async (error, c) => {
 	if (error instanceof Error && error.message === "Forbidden") {
 		return c.json({ message: "Forbidden" }, 403);
 	}
+	console.error(error);
 	const message =
 		runtime.env.nodeEnv === "production"
 			? "Internal server error"
@@ -545,6 +546,7 @@ app.route(
 		db: runtime.dbConnection.db,
 		llmProvider: runtime.llmProvider,
 		evidenceCollector: runtime.evidenceCollector,
+		settingsRepository: runtime.settingsRepository,
 	}),
 );
 app.route(

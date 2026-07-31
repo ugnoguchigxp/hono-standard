@@ -25,6 +25,13 @@ const optionalBoolean = z.preprocess((value) => {
 	return value;
 }, z.boolean().optional());
 
+const optionalPort = z.preprocess((value) => {
+	if (typeof value === "number") return value;
+	if (typeof value !== "string") return value;
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? Number(trimmed) : undefined;
+}, z.number().int().min(1).max(65535).optional());
+
 const optionalCookieSameSite = z.preprocess((value) => {
 	if (typeof value !== "string") return value;
 	const normalized = value.trim().toLowerCase();
@@ -50,6 +57,8 @@ const EnvSchema = z.object({
 	NODE_ENV: z
 		.enum(["development", "test", "production"])
 		.default(APP_CONFIG_DEFAULTS.nodeEnv),
+	HOST: optionalTrimmedString,
+	PORT: optionalPort,
 	DATABASE_URL: optionalTrimmedString,
 	CONTENT_ROOT: optionalTrimmedString,
 	WIKI_STORAGE_BACKEND: optionalWikiStorageBackend,
@@ -228,8 +237,8 @@ export function readAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
 
 	return {
 		nodeEnv: parsed.NODE_ENV,
-		host: APP_CONFIG_DEFAULTS.host,
-		port: APP_CONFIG_DEFAULTS.port,
+		host: parsed.HOST ?? APP_CONFIG_DEFAULTS.host,
+		port: parsed.PORT ?? APP_CONFIG_DEFAULTS.port,
 		databaseUrl: parsed.DATABASE_URL ?? APP_CONFIG_DEFAULTS.databaseUrl,
 		contentRoot: path.resolve(
 			process.cwd(),

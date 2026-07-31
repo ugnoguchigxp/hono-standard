@@ -351,29 +351,24 @@ export function createSourcesRoute(deps: SourcesRouteDeps) {
 				);
 			}
 		})
-		.get("/pages/*/raw", async (c) => {
-			await ensureSourceRuntime();
-			const slug = rawPageSlugFromRequestPath(c.req.url);
-			if (isInvalidSlug(slug)) {
-				return c.json(invalidSlugResponse(slug), 400);
-			}
-			const page = await readPage(deps.contentRoot, slug);
-			if (!page) {
-				return c.json({ message: "Page not found", slug }, 404);
-			}
-			return c.body(page.body, 200, {
-				"Content-Type": "text/markdown; charset=utf-8",
-			});
-		})
 		.get("/pages/*", async (c) => {
 			await ensureSourceRuntime();
-			const slug = slugFromRequestPath(c.req.url, "/api/sources/pages/");
+			const rawSlug = rawPageSlugFromRequestPath(c.req.url);
+			const isRawRequest = rawSlug !== "\0";
+			const slug = isRawRequest
+				? rawSlug
+				: slugFromRequestPath(c.req.url, "/api/sources/pages/");
 			if (isInvalidSlug(slug)) {
 				return c.json(invalidSlugResponse(slug), 400);
 			}
 			const page = await readPage(deps.contentRoot, slug);
 			if (!page) {
 				return c.json({ message: "Page not found", slug }, 404);
+			}
+			if (isRawRequest) {
+				return c.body(page.body, 200, {
+					"Content-Type": "text/markdown; charset=utf-8",
+				});
 			}
 			return c.json(page);
 		})

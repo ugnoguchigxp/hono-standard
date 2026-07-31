@@ -238,6 +238,7 @@ export const retrievalLogs = pgTable(
 export const userSettings = pgTable("user_settings", {
 	userId: text("user_id").primaryKey(),
 	systemContext: text("system_context").default("").notNull(),
+	instructionLocale: text("instruction_locale").default("ja-JP").notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),

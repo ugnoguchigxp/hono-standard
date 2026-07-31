@@ -1,0 +1,29 @@
+source_dir = "prompts/contexts"
+out_dir = "prompts/generated"
+
+[authoring]
+source_locale = "ja-JP"
+
+[governance]
+require_owner = true
+
+[keyspaces.chat]
+owner = "rag-platform"
+
+[keyspaces.agentic]
+owner = "rag-platform"
+
+[release_profiles.development]
+required_locales = ["$source", "en-US"]
+
+[release_profiles.production]
+required_locales = ["$source", "en-US"]
+
+[variable_profiles."untrusted.text"]
+type = "string"
+trust = "untrusted"
+placement = "delimited-context"
+encoding = "delimited-text"
+
+[generation]
+typescript_indent = 2

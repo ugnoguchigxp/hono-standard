@@ -16,7 +16,6 @@ RUN groupadd --gid 10001 appuser \
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=5173
-ENV DATABASE_URL=/data/sqlite.db
 
 EXPOSE 5173
 

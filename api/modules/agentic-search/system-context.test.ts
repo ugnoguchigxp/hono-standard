@@ -9,11 +9,11 @@ describe("buildAgenticSystemContext", () => {
 			topK: 8,
 		});
 		expect(context).toContain("search_evidence");
-		expect(context).toContain("full-text search");
-		expect(context).toContain("vector search");
-		expect(context).toContain("web search");
+		expect(context).toContain("全文検索");
+		expect(context).toContain("ベクトル検索");
+		expect(context).toContain("Web 検索");
 		expect(context).toContain("Answer with strict citations.");
-		expect(context).toContain("Category scope is tech.");
+		expect(context).toContain("category=tech");
 	});
 
 	it("works without user context", () => {
@@ -21,7 +21,17 @@ describe("buildAgenticSystemContext", () => {
 			userSystemContext: "   ",
 			topK: 4,
 		});
-		expect(context).not.toContain("[User SystemContext]");
-		expect(context).toContain("Default retrieval topK is 4.");
+		expect(context).toContain("topK=4");
+		expect(context).toContain("category=all");
+	});
+
+	it("renders the English catalog translation explicitly", () => {
+		const context = buildAgenticSystemContext({
+			userSystemContext: "Use strict citations.",
+			topK: 6,
+			instructionLocale: "en-US",
+		});
+		expect(context).toContain("full-text");
+		expect(context).toContain("Answer concisely and accurately in English");
 	});
 });

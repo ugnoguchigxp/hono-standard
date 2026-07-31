@@ -1,6 +1,94 @@
+import { readdir, readFile } from "node:fs/promises";
+import path from "node:path";
+import { Client } from "pg";
 import type { AppEnv } from "../app/env";
-import { runSqliteMigrations } from "./migrate-sqlite";
 
-export async function runMigrations(env: AppEnv) {
-	return runSqliteMigrations(env);
+type MigrationRecord = {
+	filename: string;
+	applied_at: Date;
+};
+
+export type MigrationResult = {
+	ok: true;
+	total: number;
+	applied: number;
+	skipped: number;
+};
+
+const MIGRATIONS_TABLE = "hono_standard_schema_migrations";
+
+async function listSqlMigrations(dir: string): Promise<string[]> {
+	const entries = await readdir(dir, { withFileTypes: true });
+	return entries
+		.filter((entry) => entry.isFile() && entry.name.endsWith(".sql"))
+		.map((entry) => entry.name)
+		.sort((a, b) => a.localeCompare(b));
+}
+
+async function ensureMigrationsTable(client: Client): Promise<void> {
+	await client.query(`
+		CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
+			filename text PRIMARY KEY,
+			applied_at timestamptz NOT NULL DEFAULT now()
+		)
+	`);
+}
+
+async function appliedMigrations(client: Client): Promise<Set<string>> {
+	const result = await client.query<MigrationRecord>(
+		`SELECT filename, applied_at FROM ${MIGRATIONS_TABLE}`,
+	);
+	return new Set(result.rows.map((row) => row.filename));
+}
+
+async function applyMigrationFile(
+	client: Client,
+	migrationsDir: string,
+	filename: string,
+): Promise<void> {
+	const fullPath = path.resolve(migrationsDir, filename);
+	const sqlText = await readFile(fullPath, "utf8");
+	await client.query("BEGIN");
+	try {
+		await client.query(sqlText);
+		await client.query(
+			`INSERT INTO ${MIGRATIONS_TABLE} (filename) VALUES ($1)`,
+			[filename],
+		);
+		await client.query("COMMIT");
+	} catch (error) {
+		await client.query("ROLLBACK");
+		throw error;
+	}
+}
+
+export async function runMigrations(
+	env: Pick<AppEnv, "databaseUrl">,
+	options: { migrationsDir?: string; log?: (message: string) => void } = {},
+): Promise<MigrationResult> {
+	const client = new Client({ connectionString: env.databaseUrl });
+	const migrationsDir =
+		options.migrationsDir ?? path.resolve(process.cwd(), "drizzle");
+
+	await client.connect();
+	try {
+		await ensureMigrationsTable(client);
+		const allMigrations = await listSqlMigrations(migrationsDir);
+		const applied = await appliedMigrations(client);
+		const pending = allMigrations.filter((filename) => !applied.has(filename));
+
+		for (const filename of pending) {
+			await applyMigrationFile(client, migrationsDir, filename);
+			options.log?.(`applied: ${filename}`);
+		}
+
+		return {
+			ok: true,
+			total: allMigrations.length,
+			applied: pending.length,
+			skipped: allMigrations.length - pending.length,
+		};
+	} finally {
+		await client.end();
+	}
 }

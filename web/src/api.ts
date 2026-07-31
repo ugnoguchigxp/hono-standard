@@ -36,6 +36,7 @@ export type SourceHealth = {
 
 export type SystemContextResponse = {
 	systemContext: string;
+	instructionLocale: "ja-JP" | "en-US";
 	updatedAt: string;
 };
 
@@ -349,10 +350,11 @@ export async function fetchSystemContext(): Promise<SystemContextResponse> {
 
 export async function updateSystemContext(
 	systemContext: string,
+	instructionLocale: "ja-JP" | "en-US",
 ): Promise<SystemContextResponse> {
 	return requestJson("/api/settings/system-context", {
 		method: "PUT",
-		body: { systemContext },
+		body: { systemContext, instructionLocale },
 	});
 }
 

@@ -126,4 +126,86 @@ describe("agentic local search tools", () => {
 			"web_search_result",
 		]);
 	});
+
+	it("normalizes optional evidence fields and fallback citation titles", async () => {
+		const optionalRow = {
+			...searchRow,
+			heading: null,
+			wikiSlug: undefined,
+			sourceHitCount: undefined,
+		};
+		const deps: AgenticToolDeps = {
+			sourceRepository: {} as SourceRepository,
+			createEmbedding: async () => [],
+			readWikiPage: async () => null,
+			evidenceCollector: {
+				collect: async (input: CollectSearchEvidenceInput) => ({
+					query: input.query,
+					category: undefined,
+					topK: input.topK,
+					evaluation: {
+						strategy: "merged" as const,
+						vectorResults: [
+							{
+								...optionalRow,
+								vectorScore: 0.8,
+								combinedScore: 0.8,
+							},
+						],
+						textResults: [
+							{
+								...optionalRow,
+								textScore: 0.7,
+								combinedScore: 0.7,
+							},
+						],
+						mergedResults: [],
+						selectedResults: [],
+					},
+					retrieved: [
+						{
+							...optionalRow,
+							combinedScore: 0.9,
+						},
+					],
+					citations: [],
+					webResults: [
+						{
+							title: "",
+							url: "https://example.com/result",
+							snippet: "snippet",
+							position: 1,
+							content: "expanded content",
+						},
+					],
+					localContext: "local",
+					webContext: "web",
+				}),
+			} as never,
+			maxContextChars: 4000,
+		};
+
+		const result = await searchEvidenceTool.execute(
+			{ query: "optional" },
+			deps,
+			runtime,
+		);
+
+		expect(result.output).toMatchObject({
+			topK: 8,
+			category: null,
+			local: {
+				selected: [{ heading: null, wikiSlug: null }],
+				fullTextResults: [{ wikiSlug: null }],
+				vectorResults: [{ wikiSlug: null }],
+			},
+			web: {
+				results: [{ content: "expanded content" }],
+			},
+		});
+		expect(result.citations).toEqual([
+			expect.objectContaining({ title: "tech/biome.md", wikiSlug: null }),
+			expect.objectContaining({ title: "https://example.com/result" }),
+		]);
+	});
 });

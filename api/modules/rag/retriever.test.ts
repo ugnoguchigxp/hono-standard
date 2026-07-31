@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { SourceRetriever } from "./retriever";
+import { evaluateRetrieverCompat, SourceRetriever } from "./retriever";
 
 const sampleResult = (overrides: Partial<Record<string, unknown>> = {}) => ({
 	id: "frag-1",
@@ -138,5 +138,124 @@ describe("SourceRetriever", () => {
 		]);
 		expect(breakdown.vectorResults[0].sourceHitCount).toBe(2);
 		expect(breakdown.vectorResults[1].sourceHitCount).toBe(1);
+	});
+
+	it("merges matching vector and text fragments and normalizes options", async () => {
+		const shared = sampleResult({
+			id: "shared",
+			sourceMetadata: null,
+			sourceUri: "https://example.com/source",
+			sourceCategory: "",
+		});
+		const sourceRepository = {
+			searchSourceContent: vi.fn().mockResolvedValue([
+				{ ...shared, score: 0.8 },
+				sampleResult({
+					id: "text-only",
+					sourceId: "",
+					sourceUri: "plain-source",
+					sourceMetadata: {},
+					score: 0.7,
+				}),
+			]),
+			vectorSearchSourceContent: vi
+				.fn()
+				.mockResolvedValue([{ ...shared, score: 0.9 }]),
+		};
+		const retriever = new SourceRetriever(sourceRepository as never, {
+			createEmbedding: vi.fn().mockResolvedValue([0.1]),
+		} as never);
+
+		const result = await retriever.retrieve("  query  ", {
+			topK: 0,
+			category: " ",
+		});
+
+		expect(sourceRepository.searchSourceContent).toHaveBeenCalledWith(
+			"query",
+			5,
+			["wiki"],
+			undefined,
+		);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			id: "shared",
+			vectorScore: 0.9,
+			textScore: 0.8,
+			wikiSlug: null,
+		});
+		expect(result[0]?.combinedScore).toBeGreaterThan(1 / 61);
+	});
+
+	it("supports evaluate, breakdown and legacy retriever compatibility", async () => {
+		const merged = sampleResult({
+			combinedScore: 0.9,
+			textScore: 0.7,
+			wikiSlug: null,
+		});
+		const evaluated = {
+			vectorResults: [],
+			textResults: [],
+			mergedResults: [merged],
+			selectedResults: [merged],
+			strategy: "merged" as const,
+		};
+		const evaluate = vi.fn().mockResolvedValue(evaluated);
+		expect(
+			await evaluateRetrieverCompat({ evaluate } as never, "q", { topK: 2 }),
+		).toBe(evaluated);
+
+		const retrieveBreakdown = vi
+			.fn()
+			.mockResolvedValueOnce({
+				vectorResults: [],
+				textResults: [],
+				mergedResults: [merged],
+			})
+			.mockResolvedValueOnce({
+				vectorResults: [],
+				textResults: [merged],
+				mergedResults: [],
+			});
+		const compatible = { evaluate: undefined, retrieveBreakdown };
+		const mergedResult = await evaluateRetrieverCompat(
+			compatible as never,
+			"q",
+			{ topK: 2, enableTrigramFallback: false },
+		);
+		expect(mergedResult).toMatchObject({
+			strategy: "merged",
+			selectedResults: [merged],
+		});
+		const fallback = await evaluateRetrieverCompat(
+			compatible as never,
+			"q",
+			{ topK: 1, enableTrigramFallback: true },
+		);
+		expect(fallback).toMatchObject({
+			strategy: "text_fallback",
+			selectedResults: [
+				expect.objectContaining({
+					trigramScore: 0.7,
+					combinedScore: 1 / 61,
+				}),
+			],
+		});
+
+		const retrieve = vi.fn().mockResolvedValue([merged]);
+		const legacy = await evaluateRetrieverCompat(
+			{
+				evaluate: undefined,
+				retrieveBreakdown: undefined,
+				retrieve,
+			} as never,
+			"q",
+			{ topK: 1 },
+		);
+		expect(legacy).toMatchObject({
+			strategy: "legacy_retrieve",
+			selectedResults: [merged],
+		});
+		expect(retrieve).toHaveBeenCalled();
 	});
 });

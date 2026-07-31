@@ -6,6 +6,7 @@ import type { SettingsRepository } from "../modules/settings/settings.repository
 
 const UpdateSystemContextSchema = z.object({
 	systemContext: z.string(),
+	instructionLocale: z.enum(["ja-JP", "en-US"]).optional(),
 });
 
 type SettingsRouteDeps = {
@@ -24,6 +25,7 @@ export function createSettingsRoute(deps: SettingsRouteDeps) {
 			const record = await repo.getSystemContextForUser(authUser.userId);
 			return c.json({
 				systemContext: record.systemContext,
+				instructionLocale: record.instructionLocale,
 				updatedAt: record.updatedAt.toISOString(),
 			});
 		})
@@ -36,9 +38,11 @@ export function createSettingsRoute(deps: SettingsRouteDeps) {
 				const record = await repo.updateSystemContext(
 					body.systemContext,
 					authUser.userId,
+					body.instructionLocale,
 				);
 				return c.json({
 					systemContext: record.systemContext,
+					instructionLocale: record.instructionLocale,
 					updatedAt: record.updatedAt.toISOString(),
 				});
 			},

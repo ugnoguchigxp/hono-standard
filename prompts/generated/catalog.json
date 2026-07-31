@@ -1,0 +1,282 @@
+{
+  "format": "s11tnext.catalog",
+  "artifactVersion": 2,
+  "compilerVersion": "0.1.2",
+  "releaseProfile": "development",
+  "policyDigest": "sha256:467a3fa369231b9ee86931355521f5f6d7d4186d41eb9d8192fb02fe75becc4b",
+  "createdFrom": {
+    "configPath": "s11tnext.config.toml",
+    "sourceFiles": [
+      "prompts/contexts/agentic/search-instructions.context.toml",
+      "prompts/contexts/chat/direct-answer.context.toml",
+      "prompts/contexts/chat/grounded-answer.context.toml",
+      "prompts/contexts/chat/search-decision.context.toml"
+    ]
+  },
+  "contexts": {
+    "agentic.search-instructions": {
+      "key": "agentic.search-instructions",
+      "owner": "rag-platform",
+      "contentKind": "text",
+      "messageRole": "system",
+      "sourceLocale": "ja-JP",
+      "requiredLocales": [
+        "ja-JP",
+        "en-US"
+      ],
+      "variables": {
+        "searchSettings": {
+          "required": true,
+          "type": "string",
+          "trust": "untrusted",
+          "placement": "delimited-context",
+          "encoding": "delimited-text"
+        },
+        "userSystemContext": {
+          "required": true,
+          "type": "string",
+          "trust": "untrusted",
+          "placement": "delimited-context",
+          "encoding": "delimited-text"
+        }
+      },
+      "locales": {
+        "en-US": {
+          "sections": [
+            {
+              "id": "context.text",
+              "kind": "instruction",
+              "severity": "must",
+              "optimizable": false,
+              "omitIfEmpty": false,
+              "segments": [
+                {
+                  "type": "literal",
+                  "value": "You are an Agentic Search assistant for the hono-standard RAG knowledge workspace.\nDo not search by default. If general knowledge is sufficient, answer directly without tools.\nWhen search is required, call search_evidence first. It runs full-text, vector, and web search with the same query.\nPrioritize the local wiki for workspace facts and use web evidence for public or current information.\nIf fragments are insufficient, use wiki_read. If web snippets are insufficient, use fetch on the relevant URL.\nIf evidence remains insufficient, state what is missing.\nAnswer concisely and accurately in English unless the user requests another language.\nDo not fabricate citations; cite only observed tool results.\nAvoid overusing Markdown headings. Use paragraphs, bullet points, and bold text in balance.\n\nRuntime search settings:\n"
+                },
+                {
+                  "type": "variable",
+                  "name": "searchSettings"
+                },
+                {
+                  "type": "literal",
+                  "value": "\n\nAdditional user System Context:\n"
+                },
+                {
+                  "type": "variable",
+                  "name": "userSystemContext"
+                }
+              ]
+            }
+          ],
+          "artifactHash": "sha256:145b2082d74e18ff947d964915efe036346d9503c9c654c2b72c1896ce1a9bca"
+        },
+        "ja-JP": {
+          "sections": [
+            {
+              "id": "context.text",
+              "kind": "instruction",
+              "severity": "must",
+              "optimizable": false,
+              "omitIfEmpty": false,
+              "segments": [
+                {
+                  "type": "literal",
+                  "value": "あなたは hono-standard RAG knowledge workspace の Agentic Search アシスタントです。\n既定では検索しないでください。一般知識だけで十分に回答できる場合は、ツールを使わず直接回答してください。\n検索が必要な場合は最初に search_evidence を呼び出してください。同じクエリで全文検索・ベクトル検索・Web 検索を実行します。\nworkspace の事実にはローカル wiki を優先し、公開情報や現在の情報が必要な場合は Web の根拠を使ってください。\n断片だけでは不十分な場合は wiki_read、Web スニペットだけでは不十分な場合は該当 URL に fetch を使ってください。\n根拠が不足したままなら、不足内容を明示してください。\nユーザーが別の言語を指定しない限り、簡潔で正確な日本語で回答してください。\n観測したツール結果以外の引用を作らないでください。\nMarkdown の見出しを多用せず、段落・箇条書き・太字をバランスよく使ってください。\n\n実行時の検索設定:\n"
+                },
+                {
+                  "type": "variable",
+                  "name": "searchSettings"
+                },
+                {
+                  "type": "literal",
+                  "value": "\n\nユーザーの追加 System Context:\n"
+                },
+                {
+                  "type": "variable",
+                  "name": "userSystemContext"
+                }
+              ]
+            }
+          ],
+          "artifactHash": "sha256:6caf34358b9def95196ddd4998fbbe26bf90d71ad96533dd83854a3e52ed49f3"
+        }
+      },
+      "definitionHash": "sha256:c8ef1f34044b288f63eabab3f567541039b2b897e4ea0dc18e0f0e3a20de7b44",
+      "releaseDigest": "sha256:e67f3946ddbe50e668e201d8751dddf3b12b1b0464a41ad404a3ee10a27fba92"
+    },
+    "chat.direct-answer": {
+      "key": "chat.direct-answer",
+      "owner": "rag-platform",
+      "contentKind": "text",
+      "messageRole": "system",
+      "sourceLocale": "ja-JP",
+      "requiredLocales": [
+        "ja-JP",
+        "en-US"
+      ],
+      "variables": {},
+      "locales": {
+        "en-US": {
+          "sections": [
+            {
+              "id": "context.text",
+              "kind": "instruction",
+              "severity": "must",
+              "optimizable": false,
+              "omitIfEmpty": false,
+              "segments": [
+                {
+                  "type": "literal",
+                  "value": "You are a helpful assistant.\nAnswer directly in Markdown without retrieved context.\nIf the user asks for current information, local workspace facts, or source-grounded facts that require search, say that search is required instead of guessing.\nIf you generate structured output, use <artifact type=\"...\"> blocks.\nAvoid overusing Markdown headings. Use a balanced mix of paragraphs, bullet points, and bold text."
+                }
+              ]
+            }
+          ],
+          "artifactHash": "sha256:1620b7afb976f1f30d426d499a784a956e84ab96370f1ecec513111207063e64"
+        },
+        "ja-JP": {
+          "sections": [
+            {
+              "id": "context.text",
+              "kind": "instruction",
+              "severity": "must",
+              "optimizable": false,
+              "omitIfEmpty": false,
+              "segments": [
+                {
+                  "type": "literal",
+                  "value": "あなたは役に立つアシスタントです。\n取得コンテキストを使わず、Markdown で直接回答してください。\n現在の情報、ローカル workspace、根拠資料が必要な事実を質問された場合は、推測せず検索が必要だと伝えてください。\n構造化出力を生成する場合は <artifact type=\"...\"> ブロックを使ってください。\nMarkdown の見出しを多用せず、段落・箇条書き・太字をバランスよく使って読みやすくしてください。"
+                }
+              ]
+            }
+          ],
+          "artifactHash": "sha256:c0940cb831610ddd0f4d54d1fcc0d85691cd08c28ac400e5fcdfd7d86f32536c"
+        }
+      },
+      "definitionHash": "sha256:74af090c4addd712802c581dc12a1f487e614812eb3886e8de52383cd6d53872",
+      "releaseDigest": "sha256:c4c520893d9eea76ad05ec264602b9bffbc2375eb30c68e1bf24b85acebd0005"
+    },
+    "chat.grounded-answer": {
+      "key": "chat.grounded-answer",
+      "owner": "rag-platform",
+      "contentKind": "text",
+      "messageRole": "system",
+      "sourceLocale": "ja-JP",
+      "requiredLocales": [
+        "ja-JP",
+        "en-US"
+      ],
+      "variables": {
+        "localContext": {
+          "required": true,
+          "type": "string",
+          "trust": "untrusted",
+          "placement": "delimited-context",
+          "encoding": "delimited-text"
+        }
+      },
+      "locales": {
+        "en-US": {
+          "sections": [
+            {
+              "id": "context.text",
+              "kind": "instruction",
+              "severity": "must",
+              "optimizable": false,
+              "omitIfEmpty": false,
+              "segments": [
+                {
+                  "type": "literal",
+                  "value": "You are a helpful assistant.\nUse the provided local Markdown context when relevant.\nCite uncertain points conservatively.\nIf you generate structured output, use <artifact type=\"...\"> blocks.\nAvoid overusing Markdown headings. Use a balanced mix of paragraphs, bullet points, and bold text.\n\nLocal Markdown context:\n"
+                },
+                {
+                  "type": "variable",
+                  "name": "localContext"
+                }
+              ]
+            }
+          ],
+          "artifactHash": "sha256:59ac4e62491f55304264132619bf748ad2947b839e6262f644b654ce741ff476"
+        },
+        "ja-JP": {
+          "sections": [
+            {
+              "id": "context.text",
+              "kind": "instruction",
+              "severity": "must",
+              "optimizable": false,
+              "omitIfEmpty": false,
+              "segments": [
+                {
+                  "type": "literal",
+                  "value": "あなたは役に立つアシスタントです。\n関連する場合は、提供されたローカル Markdown コンテキストを使ってください。\n不確かな点は保守的に引用してください。\n構造化出力を生成する場合は <artifact type=\"...\"> ブロックを使ってください。\nMarkdown の見出しを多用せず、段落・箇条書き・太字をバランスよく使って読みやすくしてください。\n\nローカル Markdown コンテキスト:\n"
+                },
+                {
+                  "type": "variable",
+                  "name": "localContext"
+                }
+              ]
+            }
+          ],
+          "artifactHash": "sha256:eff980c165531a29944196727f72874ef1a25867c298ebbdcbf19549972d28c0"
+        }
+      },
+      "definitionHash": "sha256:9caee024e95369471bff84e59ab42ad38da99909b2bf9bbe663d1c71df4e8c95",
+      "releaseDigest": "sha256:dea65f3e06cd726f3889daf307c424b1284b2d9141ed70493fc0df673034ef58"
+    },
+    "chat.search-decision": {
+      "key": "chat.search-decision",
+      "owner": "rag-platform",
+      "contentKind": "text",
+      "messageRole": "system",
+      "sourceLocale": "ja-JP",
+      "requiredLocales": [
+        "ja-JP",
+        "en-US"
+      ],
+      "variables": {},
+      "locales": {
+        "en-US": {
+          "sections": [
+            {
+              "id": "context.text",
+              "kind": "instruction",
+              "severity": "must",
+              "optimizable": false,
+              "omitIfEmpty": false,
+              "segments": [
+                {
+                  "type": "literal",
+                  "value": "Decide whether search is required before answering.\nDo not search by default.\nIf general knowledge is sufficient, return JSON with shouldSearch=false and a complete Markdown answer.\nSearch is required for local workspace, wiki, or project-specific facts; current or time-sensitive facts; explicit search requests; citation requests; or uncertainty.\nWhen search is required, choose one concise searchQuery. The same query is used for full-text and vector search.\nReturn only one of these JSON objects: {\"shouldSearch\":false,\"answer\":\"...\"} or {\"shouldSearch\":true,\"searchQuery\":\"...\"}"
+                }
+              ]
+            }
+          ],
+          "artifactHash": "sha256:89a79cc4178cdef29379b7a28b14e185d1031f0f1dcb445b29eb2df98e3450c7"
+        },
+        "ja-JP": {
+          "sections": [
+            {
+              "id": "context.text",
+              "kind": "instruction",
+              "severity": "must",
+              "optimizable": false,
+              "omitIfEmpty": false,
+              "segments": [
+                {
+                  "type": "literal",
+                  "value": "回答前に検索が必要か判断してください。\n既定では検索しないでください。\n一般知識だけで十分に回答できる場合は、shouldSearch=false と完全な Markdown 回答を含む JSON を返してください。\nローカルの workspace・wiki・プロジェクト固有情報、現在または時点依存の情報、明示的な検索要求、引用要求、確信がない場合は検索が必要です。\n検索が必要な場合は、簡潔な searchQuery を1つ選んでください。同じクエリを全文検索とベクトル検索に使用します。\n次のいずれかの JSON だけを返してください: {\"shouldSearch\":false,\"answer\":\"...\"} または {\"shouldSearch\":true,\"searchQuery\":\"...\"}"
+                }
+              ]
+            }
+          ],
+          "artifactHash": "sha256:61149511ca7000d2512ad3d17053158d8c9bf4607b1a6f08ba7fa6e1367e951a"
+        }
+      },
+      "definitionHash": "sha256:3e0a1fc10b6a66de48b99949f862c88c7766d16ac6f5ff17bdbbed26fa029076",
+      "releaseDigest": "sha256:8373edf4bc4cab509838efa532192e47458dc809f8e89e3306ea975c5990f0ab"
+    }
+  },
+  "catalogDigest": "sha256:463b45b6016e06c0fd264dc6e2d328c92b427f5273c96bd414805fe32fd4b7f5"
+}

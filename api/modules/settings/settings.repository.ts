@@ -9,6 +9,7 @@ const LEGACY_KEYS = ["local", "global", "system"];
 export type SystemContextRecord = {
 	userId: string;
 	systemContext: string;
+	instructionLocale: string;
 	createdAt: Date;
 	updatedAt: Date;
 };
@@ -35,6 +36,7 @@ export class SettingsRepository {
 				.values({
 					userId: GLOBAL_SYSTEM_CONTEXT_KEY,
 					systemContext: legacy.systemContext,
+					instructionLocale: legacy.instructionLocale,
 					createdAt: now,
 					updatedAt: now,
 				})
@@ -55,6 +57,7 @@ export class SettingsRepository {
 			.values({
 				userId: GLOBAL_SYSTEM_CONTEXT_KEY,
 				systemContext: "",
+				instructionLocale: "ja-JP",
 				createdAt: now,
 				updatedAt: now,
 			})
@@ -86,6 +89,7 @@ export class SettingsRepository {
 	async updateSystemContext(
 		systemContext: string,
 		userId?: string,
+		instructionLocale?: string,
 	): Promise<SystemContextRecord> {
 		const normalizedUserId = userId?.trim();
 		const targetUserId =
@@ -101,12 +105,14 @@ export class SettingsRepository {
 			.values({
 				userId: targetUserId,
 				systemContext,
+				instructionLocale: instructionLocale ?? "ja-JP",
 				updatedAt: now,
 			})
 			.onConflictDoUpdate({
 				target: userSettings.userId,
 				set: {
 					systemContext,
+					...(instructionLocale ? { instructionLocale } : {}),
 					updatedAt: now,
 				},
 			})

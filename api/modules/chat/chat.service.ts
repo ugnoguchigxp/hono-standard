@@ -18,6 +18,12 @@ import type {
 	SearchEvidenceCollector,
 } from "../rag/search-evidence";
 import type { Citation, RetrievedFragment } from "../rag/types";
+import type { SettingsRepository } from "../settings/settings.repository";
+import {
+	normalizeInstructionLocale,
+	renderPrompt,
+	type InstructionLocale,
+} from "../../prompts/catalog";
 
 export type ChatResult = {
 	id: string;
@@ -37,6 +43,7 @@ type ChatServiceDeps = {
 	db: NodePgDatabase<typeof schema>;
 	llmProvider: LlmProvider;
 	evidenceCollector: SearchEvidenceCollector;
+	settingsRepository?: Pick<SettingsRepository, "getSystemContextForUser">;
 };
 
 type ChatRequest = {
@@ -47,15 +54,13 @@ type ChatRequest = {
 	category?: string;
 };
 
-function buildSystemPrompt(localContext: string): string {
-	return [
-		"You are a helpful assistant.",
-		"Use the provided local markdown context when it is relevant.",
-		"Cite uncertain points conservatively.",
-		'If you generate structured output, use <artifact type="..."> blocks.',
-		"Avoid overusing Markdown headings (like #, ##, ###). Instead, use a balanced mix of paragraphs, bullet points, and bold text to make the answer clear and readable.",
-		`Local markdown context:\n${localContext}`,
-	].join("\n\n");
+function buildSystemPrompt(
+	localContext: string,
+	instructionLocale: InstructionLocale,
+): string {
+	return renderPrompt(instructionLocale, "chat.grounded-answer", {
+		localContext,
+	}).content.text;
 }
 
 type ChatSearchDecision = {
@@ -89,25 +94,15 @@ function parseSearchDecision(input: string): ChatSearchDecision | null {
 	}
 }
 
-function buildSearchDecisionPrompt(): string {
-	return [
-		"You decide whether search is required before answering.",
-		"Do not search by default.",
-		"If you can answer sufficiently from your own general knowledge, return JSON with shouldSearch=false and a complete Markdown answer.",
-		"Search is required for local workspace/wiki/project-specific facts, current or time-sensitive facts, explicit search requests, citations, or when you are uncertain.",
-		"If search is required, choose one concise searchQuery. The same query will be used for full-text search and vector search.",
-		'Return only JSON: {"shouldSearch":false,"answer":"..."} or {"shouldSearch":true,"searchQuery":"..."}',
-	].join("\n");
+function buildSearchDecisionPrompt(
+	instructionLocale: InstructionLocale,
+): string {
+	return renderPrompt(instructionLocale, "chat.search-decision", {}).content
+		.text;
 }
 
-function buildDirectAnswerPrompt(): string {
-	return [
-		"You are a helpful assistant.",
-		"Answer directly in Markdown without using retrieved context.",
-		"If the user asks for current, local workspace, or source-grounded facts that require search, say that search is required instead of guessing.",
-		'If you generate structured output, use <artifact type="..."> blocks.',
-		"Avoid overusing Markdown headings (like #, ##, ###). Instead, use a balanced mix of paragraphs, bullet points, and bold text to make the answer clear and readable.",
-	].join("\n");
+function buildDirectAnswerPrompt(instructionLocale: InstructionLocale): string {
+	return renderPrompt(instructionLocale, "chat.direct-answer", {}).content.text;
 }
 
 function conversationTitleFromQuery(query: string): string {
@@ -152,9 +147,16 @@ export class ChatService {
 
 	private async decideSearch(
 		messages: ChatMessage[],
+		instructionLocale: InstructionLocale,
 	): Promise<ChatSearchDecision> {
 		const response = await this.deps.llmProvider.chatCompletion(
-			[{ role: "system", content: buildSearchDecisionPrompt() }, ...messages],
+			[
+				{
+					role: "system",
+					content: buildSearchDecisionPrompt(instructionLocale),
+				},
+				...messages,
+			],
 			{ temperature: 0 },
 		);
 		const decision = parseSearchDecision(response.content);
@@ -165,9 +167,12 @@ export class ChatService {
 		};
 	}
 
-	private async directAnswer(messages: ChatMessage[]) {
+	private async directAnswer(
+		messages: ChatMessage[],
+		instructionLocale: InstructionLocale,
+	) {
 		return await this.deps.llmProvider.chatCompletion([
-			{ role: "system", content: buildDirectAnswerPrompt() },
+			{ role: "system", content: buildDirectAnswerPrompt(instructionLocale) },
 			...messages,
 		]);
 	}
@@ -187,7 +192,17 @@ export class ChatService {
 		}
 		const topK = request.topK ?? 8;
 		const category = request.category?.trim() || undefined;
-		const decision = await this.decideSearch(request.messages);
+		const settings =
+			await this.deps.settingsRepository?.getSystemContextForUser(
+				request.userId,
+			);
+		const instructionLocale = normalizeInstructionLocale(
+			settings?.instructionLocale,
+		);
+		const decision = await this.decideSearch(
+			request.messages,
+			instructionLocale,
+		);
 		let evidence: SearchEvidence | undefined;
 		let llmResponse: Awaited<ReturnType<LlmProvider["chatCompletion"]>>;
 		if (decision.shouldSearch) {
@@ -197,7 +212,10 @@ export class ChatService {
 				topK,
 				category,
 			});
-			const systemPrompt = buildSystemPrompt(evidence.localContext);
+			const systemPrompt = buildSystemPrompt(
+				evidence.localContext,
+				instructionLocale,
+			);
 			llmResponse = await this.deps.llmProvider.chatCompletion([
 				{ role: "system", content: systemPrompt },
 				...request.messages,
@@ -208,7 +226,10 @@ export class ChatService {
 				content: decision.answer,
 			};
 		} else {
-			llmResponse = await this.directAnswer(request.messages);
+			llmResponse = await this.directAnswer(
+				request.messages,
+				instructionLocale,
+			);
 		}
 		const extracted = extractArtifactsFromText(llmResponse.content);
 		const retrieved = evidence?.retrieved ?? [];
