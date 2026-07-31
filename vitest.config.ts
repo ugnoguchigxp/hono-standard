@@ -11,7 +11,9 @@ export default defineConfig({
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "html"],
-			include: ["api/**/*.ts", "shared/**/*.ts"],
+			// Unit coverage measures server/shared code and testable Web logic.
+			// React composition and presentation components are covered by browser E2E.
+			include: ["api/**/*.ts", "shared/**/*.ts", "web/**/*.ts"],
 			exclude: [
 				// Process entrypoints and generated/ambient declarations have no unit-test surface.
 				"api/app/server.ts",
