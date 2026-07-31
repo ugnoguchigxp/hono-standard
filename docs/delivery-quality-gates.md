@@ -124,6 +124,8 @@ bun run verify
 - coverage 対象範囲が README または test config と一致する。
 - entrypoint、generated code、薄い adapter などを除外する場合は、除外理由を test config に残す。
 
+テンプレートの unit coverage は `api/**/*.ts`、`shared/**/*.ts`、`web/**/*.ts` のテスト可能なロジックを対象とします。React の composition、view、presentation を担う `.tsx` は browser smoke / E2E で検証します。プロダクトで `.tsx` に状態遷移や業務判断を追加した場合は、ロジックをテスト可能な module へ分離するか、対象を拡張して component test を追加します。
+
 coverage は未実行コードを発見するための下限であり、仕様の正しさや assertion の有効性を単独では保証しません。
 
 ### `DQ-SMOKE-001`: API / browser smoke
