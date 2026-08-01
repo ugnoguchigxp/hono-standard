@@ -34,4 +34,9 @@ describe("database path initialization", () => {
 			),
 		).toThrow(/SQLite database file path/);
 	});
+
+	it("does not create directories for memory or current-directory databases", () => {
+		expect(() => ensureDatabaseParentDirectory(":memory:")).not.toThrow();
+		expect(() => ensureDatabaseParentDirectory("sqlite.db")).not.toThrow();
+	});
 });

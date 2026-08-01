@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { AppDatabase, DatabaseWriter } from "../../db";
 import { createSingleWriterClient } from "../../db/client";
 import type { AppEnv } from "../../app/env";
+import { SignJWT } from "jose";
 import { HttpError } from "./errors";
 import {
 	generateAccessToken,
@@ -65,6 +66,17 @@ describe("token.service", () => {
 				mockEnv,
 			);
 			await expect(verifyAccessToken(refreshToken, mockEnv)).rejects.toThrow(
+				"Invalid token.",
+			);
+		});
+
+		it("rejects an access token with an invalid payload", async () => {
+			const token = await new SignJWT({ type: "access" })
+				.setProtectedHeader({ alg: "HS256" })
+				.setExpirationTime("15m")
+				.sign(new TextEncoder().encode(mockEnv.jwtSecret));
+
+			await expect(verifyAccessToken(token, mockEnv)).rejects.toThrow(
 				"Invalid token.",
 			);
 		});
@@ -172,6 +184,32 @@ describe("token.service", () => {
 					mockEnv,
 				),
 			).rejects.toThrowError(new HttpError(401, "Invalid refresh token."));
+		});
+
+		it("rejects non-refresh and malformed refresh payloads", async () => {
+			const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+			const secret = new TextEncoder().encode(mockEnv.jwtSecret);
+			const accessToken = await new SignJWT({ ...testPayload, type: "access" })
+				.setProtectedHeader({ alg: "HS256" })
+				.setExpirationTime("15m")
+				.sign(secret);
+			mockDb.returning.mockResolvedValue([
+				{ userId: testPayload.userId, expiresAt },
+			]);
+			await expect(
+				consumeRefreshToken(accessToken, mockWriter, mockEnv),
+			).rejects.toThrow("Invalid refresh token.");
+
+			const malformedToken = await new SignJWT({ type: "refresh" })
+				.setProtectedHeader({ alg: "HS256" })
+				.setExpirationTime("15m")
+				.sign(secret);
+			mockDb.returning.mockResolvedValue([
+				{ userId: testPayload.userId, expiresAt },
+			]);
+			await expect(
+				consumeRefreshToken(malformedToken, mockWriter, mockEnv),
+			).rejects.toThrow("Invalid refresh token.");
 		});
 
 		it("should revoke refresh token by deleting it from database", async () => {

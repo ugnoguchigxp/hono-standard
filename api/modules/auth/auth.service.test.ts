@@ -78,6 +78,17 @@ describe("AuthService", () => {
 			const user = await authService.findUserById("non-existent");
 			expect(user).toBeNull();
 		});
+
+		it("normalizes unknown stored roles", async () => {
+			mockDb.query.users.findFirst.mockResolvedValue({
+				...testUserRow,
+				role: "legacy-role",
+			});
+
+			await expect(authService.findUserById(testUserRow.id)).resolves.toMatchObject({
+				role: "member",
+			});
+		});
 	});
 
 	describe("findUserByEmail", () => {
