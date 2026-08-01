@@ -97,6 +97,29 @@ describe("web API client", () => {
 		await expect(logout()).rejects.toThrow("Request failed: 503");
 	});
 
+	it("falls back to the HTTP status when JSON has no message", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => Response.json({}, { status: 418 })),
+		);
+
+		await expect(logout()).rejects.toThrow("Request failed: 418");
+	});
+
+	it("does not dispatch unauthorized events outside a browser", async () => {
+		vi.stubGlobal("window", undefined);
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL) =>
+				getRequestPath(input) === "/api/auth/refresh"
+					? new Response(null, { status: 401 })
+					: Response.json({ message: "Unauthorized" }, { status: 401 }),
+			),
+		);
+
+		await expect(fetchProtectedProfile()).rejects.toThrow("Unauthorized");
+	});
+
 	it("refreshes once and retries a protected request", async () => {
 		const profile = { email: user.email, role: user.role };
 		let protectedRequests = 0;

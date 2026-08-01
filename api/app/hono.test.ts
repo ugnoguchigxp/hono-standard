@@ -49,7 +49,7 @@ vi.mock("./env", () => ({
 };
 
 // Dynamically import app so globalThis.Bun is defined first
-const { default: app } = await import("./hono");
+const { default: app, createApp, getAppRuntime } = await import("./hono");
 
 // Add test routes before any request is processed (Hono routers lock after first request)
 app.post("/api/test-http-error", () => {
@@ -87,6 +87,27 @@ describe("hono app entry", () => {
 		);
 		expect(res.headers.get("X-Frame-Options")).toBe("SAMEORIGIN");
 		expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+	});
+
+	it("reuses the initialized runtime", async () => {
+		const first = await getAppRuntime();
+		const second = await getAppRuntime();
+		expect(second).toBe(first);
+	});
+
+	it("uses the HTTPS security header profile when configured", async () => {
+		const runtime = await getAppRuntime();
+		const httpsApp = createApp({
+			...runtime,
+			env: {
+				...runtime.env,
+				securityHeadersMode: "https",
+				secureCookie: true,
+			},
+		});
+
+		const res = await httpsApp.request("/api/health");
+		expect(res.headers.get("Strict-Transport-Security")).toContain("max-age");
 	});
 
 	it("should protect sample protected API routes", async () => {
