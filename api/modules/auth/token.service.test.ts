@@ -192,7 +192,11 @@ describe("token.service", () => {
 				{ userId: testPayload.userId, expiresAt },
 			]);
 			await expect(
-				consumeRefreshToken(accessToken, mockWriter, mockEnv),
+				consumeRefreshToken(
+					accessToken,
+					mockDb as unknown as AppDatabase,
+					mockEnv,
+				),
 			).rejects.toThrow("Invalid refresh token.");
 
 			const malformedToken = await new SignJWT({ type: "refresh" })
@@ -203,7 +207,11 @@ describe("token.service", () => {
 				{ userId: testPayload.userId, expiresAt },
 			]);
 			await expect(
-				consumeRefreshToken(malformedToken, mockWriter, mockEnv),
+				consumeRefreshToken(
+					malformedToken,
+					mockDb as unknown as AppDatabase,
+					mockEnv,
+				),
 			).rejects.toThrow("Invalid refresh token.");
 		});
 
