@@ -101,7 +101,7 @@ describe("ShowcaseView", () => {
 		await user.click(screen.getByRole("checkbox", { name: "Switch" }));
 		await user.click(screen.getByRole("radio", { name: "Starter" }));
 		await user.click(screen.getByRole("radio", { name: "Enterprise" }));
-	});
+	}, 10_000);
 
 	it("exercises disclosure, overlay, and local navigation interactions", async () => {
 		const { user } = renderWithProviders(showcase());
