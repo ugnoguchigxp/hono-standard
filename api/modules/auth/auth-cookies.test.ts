@@ -120,6 +120,18 @@ describe("auth-cookies", () => {
 				path: "/api/auth",
 			},
 		);
+
+		vi.clearAllMocks();
+		mockEnv.jwtAccessExpiresIn = "0s";
+		mockEnv.jwtRefreshExpiresIn = "0m";
+		setAuthCookies(mockContext, mockEnv, tokens);
+		expect(setCookie).toHaveBeenNthCalledWith(
+			1,
+			mockContext,
+			ACCESS_TOKEN_COOKIE_NAME,
+			tokens.accessToken,
+			expect.not.objectContaining({ maxAge: expect.anything() }),
+		);
 	});
 
 	it("should clear auth cookies", () => {

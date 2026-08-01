@@ -116,7 +116,7 @@ bun run verify
 
 ### `DQ-COV-001`: Coverage threshold
 
-このテンプレートの既定 threshold は、測定対象の lines、branches、functions、statements すべて `80%` です。
+このテンプレートの既定 threshold は、測定対象の lines、branches、functions、statements すべて `95%` です。
 
 合格基準:
 
@@ -124,7 +124,7 @@ bun run verify
 - coverage 対象範囲が README または test config と一致する。
 - entrypoint、generated code、薄い adapter などを除外する場合は、除外理由を test config に残す。
 
-テンプレートの unit coverage は `api/**/*.ts`、`shared/**/*.ts`、`web/**/*.ts` のテスト可能なロジックを対象とします。React の composition、view、presentation を担う `.tsx` は browser smoke / E2E で検証します。プロダクトで `.tsx` に状態遷移や業務判断を追加した場合は、ロジックをテスト可能な module へ分離するか、対象を拡張して component test を追加します。
+テンプレートの unit coverage は `api/**/*.ts`、`shared/**/*.ts`、`web/src/**/*.{ts,tsx}` のテスト可能なロジックを対象とします。React component / hook は jsdom と Testing Library で利用者操作および状態遷移を検証します。browser entrypoint、provider/route composition、variant 固有のdriverやCLIなど、薄い配線を除外する場合は `vitest.config.ts` に理由を残し、主要導線は Playwright smoke testで補完します。
 
 coverage は未実行コードを発見するための下限であり、仕様の正しさや assertion の有効性を単独では保証しません。
 
