@@ -1,6 +1,6 @@
 # Project Context: Hono Standard
 
-この文書は、`hono-standard` の構造、主要entrypoint、責務の所在、アーキテクチャ上の境界を要約する参照資料である。タスクの進め方、エージェントの探索手順、実装順序、検証条件、完了条件は扱わない。
+この文書は、`hono-standard` の構造、主要entrypoint、責務の所在、アーキテクチャ上の境界を要約する参照資料である。タスク固有の進め方、探索手順、実装順序、検証計画、完了条件は扱わない。ただし、Projectが恒常的に提供する正本品質ゲートと、その構成scriptの関係はProject contractとして記載する。
 
 ## Repository Profile
 
@@ -99,6 +99,12 @@ route filesはURL/search/guardとviewの対応を表す。共通transportはcred
 - `web/src/api.ts` は共通transportとfeature固有API/hooksの両方を含む。
 
 これらは現在の実装配置を示すもので、`api/modules/<domain>/` と `web/src/modules/<domain>/` がドメイン単位のアーキテクチャ境界として定義されている。
+
+## Verification Contract
+
+- 正本品質ゲートは`bun run verify`であり、typecheck、Biome lint/format check、Vitest unit/contract/integration test、coverage threshold、production buildを内包する。
+- 内包scriptを事前検証として重ねず、失敗工程の診断・修正に限って個別commandを使う。source変更後は`bun run verify`全体を再実行し、その成功だけを完了の証跡とする。
+- `bun run format`は修正操作であり検証証跡ではない。E2Eは通常の`verify`に含めず、要求された場合だけ`bun run verify:e2e`または`bun run verify:all`を使う。
 
 ## Variant Boundary
 
