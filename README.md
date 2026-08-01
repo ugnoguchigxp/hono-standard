@@ -114,8 +114,8 @@ bun run verify:e2e
 | `bun run lint` | Biome lint |
 | `bun run format` | Biome format write |
 | `bun run format:check` | Biome format check |
-| `bun run test` | Vitest |
-| `bun run test:coverage` | Vitest coverage。global threshold 80% を検証 |
+| `bun run test` | Vitest。Node backend test と jsdom React component/hook test を一括実行 |
+| `bun run test:coverage` | Vitest coverage。React TSX を含む global threshold 95% を検証 |
 | `bun run test:e2e` | Playwright smoke test。login と protected route を検証 |
 | `bun run build` | Vite production build |
 | `bun run verify` | typecheck、lint、format:check、test、coverage、build |
