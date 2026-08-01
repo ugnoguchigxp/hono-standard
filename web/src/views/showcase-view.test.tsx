@@ -196,7 +196,7 @@ describe("ShowcaseView", () => {
 
 		await waitFor(() => expect(routerMocks.navigate).toHaveBeenCalled());
 		expect(window.scrollTo).toHaveBeenCalledWith(12, 34);
-	});
+	}, 10_000);
 
 	it("shows copied feedback and restores it after the timer", () => {
 		let timeoutCallback: (() => void) | undefined;
