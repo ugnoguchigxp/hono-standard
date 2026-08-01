@@ -237,5 +237,26 @@ describe("auth route", () => {
 
 			expect(res.status).toBe(401);
 		});
+
+		it("should throw 401 when the token user no longer exists", async () => {
+			const { generateAccessToken } = await import(
+				"../modules/auth/token.service"
+			);
+			const token = await generateAccessToken(
+				{
+					userId: testUser.id,
+					email: testUser.email,
+					role: testUser.role,
+				},
+				mockEnv,
+			);
+			mockAuthService.findUserById.mockResolvedValue(null);
+
+			const res = await app.request("/auth/me", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(401);
+		});
 	});
 });
