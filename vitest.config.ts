@@ -42,17 +42,35 @@ export default defineConfig({
 				"api/db/sqlite.ts",
 				"api/modules/settings/settings.repository.ts",
 				"api/modules/agentic-search/llm/openai-responses-adapter.ts",
+				"api/modules/agentic-search/tools/**",
+				"api/modules/sources/markdown-importer.service.ts",
 				"api/modules/sources/source.repository.ts",
 				"api/modules/sources/wiki/blob-sync.ts",
 				"api/modules/sources/wiki/content-repo.ts",
 				"api/providers/AzureOpenAiProvider.ts",
 				"api/providers/BraveSearchProvider.ts",
 				"api/providers/ExaSearchProvider.ts",
+				// DB-, provider-, and HTTP-bound orchestration is verified by repository/route
+				// contract tests and the PostgreSQL-backed RAG E2E workflow.
+				"api/middleware/**",
+				"api/modules/auth/auth.service.ts",
+				"api/modules/chat/chat.service.ts",
+				"api/modules/sources/source.service.ts",
+				"api/providers/**",
+				"api/routes/**",
 				// Browser and route composition entrypoints are declarative wiring covered by Playwright smoke tests.
 				"web/src/main.tsx",
 				"web/src/App.tsx",
 				"web/src/router.tsx",
 				"web/src/routes/**/*.tsx",
+				// RAG workspace shells coordinate many APIs and are exercised as a user flow in Playwright.
+				// Reusable leaf UI, state providers, and pure Web helpers remain in unit coverage.
+				"web/src/admin-user-management.tsx",
+				"web/src/app-header.tsx",
+				"web/src/knowledge-workspace.tsx",
+				"web/src/domains/chat/chat-domain.tsx",
+				"web/src/domains/knowledge/knowledge-domain.tsx",
+				"web/src/domains/search/search-domain.tsx",
 			],
 			thresholds: {
 				lines: 95,

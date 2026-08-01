@@ -372,6 +372,24 @@ describe("RAG web API", () => {
 		);
 		vi.stubGlobal("fetch", fetchMock);
 		await expect(logout()).rejects.toThrow("Request failed: 503");
+
+		fetchMock = jsonFetch({}, 418);
+		vi.stubGlobal("fetch", fetchMock);
+		await expect(logout()).rejects.toThrow("Request failed: 418");
+	});
+
+	it("does not dispatch unauthorized events outside a browser", async () => {
+		vi.stubGlobal("window", undefined);
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL) =>
+				getRequestPath(input) === "/api/auth/refresh"
+					? new Response(null, { status: 401 })
+					: Response.json({ message: "Unauthorized" }, { status: 401 }),
+			),
+		);
+
+		await expect(fetchMe()).rejects.toThrow("Unauthorized");
 	});
 
 	it("notifies the browser once when session refresh fails", async () => {

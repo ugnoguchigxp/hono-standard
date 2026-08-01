@@ -81,4 +81,43 @@ describe("resolveWikiLinkRef", () => {
 			}),
 		).toBeNull();
 	});
+
+	it("handles empty, absolute, URI, and malformed metadata candidates", () => {
+		expect(resolveWikiLinkRef({ sourceUri: "" })).toBeNull();
+		expect(resolveWikiLinkRef({ sourceUri: "/tmp/no-pages/guide.md" })).toBeNull();
+		expect(resolveWikiLinkRef({ sourceUri: "wiki://guide.md" })).toBeNull();
+		expect(
+			resolveWikiLinkRef({ sourceUri: "guide", sourceMetadata: [] }),
+		).toBeNull();
+		expect(
+			resolveWikiLinkRef({ sourceUri: "guide", sourceMetadata: { relativePath: "" } }),
+		).toBeNull();
+	});
+
+	it("uses metadata fallback page paths for single and nested slugs", () => {
+		expect(
+			resolveWikiLinkRef({
+				sourceUri: "wiki://one",
+				sourceMetadata: { wikiSlug: "guide", relativePath: "" },
+			}),
+		).toMatchObject({ pagePath: "guide/index.md", wikiSlug: "guide" });
+		expect(
+			resolveWikiLinkRef({
+				sourceUri: "wiki://two",
+				sourceMetadata: { wikiSlug: "tech/guide" },
+			}),
+		).toMatchObject({ pagePath: "tech/guide.md", wikiSlug: "tech/guide" });
+	});
+
+	it("rejects invalid fallback categories, filenames, and composed slugs", () => {
+		expect(
+			resolveWikiLinkRef({ sourceUri: "guide.md", sourceCategory: "." }),
+		).toBeNull();
+		expect(
+			resolveWikiLinkRef({ sourceUri: "..md", sourceCategory: "tech" }),
+		).toBeNull();
+		expect(
+			resolveWikiLinkRef({ sourceUri: "guide.md", sourceCategory: "bad/.." }),
+		).toBeNull();
+	});
 });

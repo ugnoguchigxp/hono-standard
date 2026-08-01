@@ -15,11 +15,7 @@ describe("LoginDomainSection", () => {
 	it("submits trimmed credentials and clears the password after success", async () => {
 		const onLogin = vi.fn().mockResolvedValue(true);
 		const { user } = renderWithProviders(
-			<LoginDomainSection
-				active
-				busy={false}
-				onLogin={onLogin}
-			/>,
+			<LoginDomainSection active busy={false} onLogin={onLogin} />,
 		);
 
 		await user.type(screen.getByLabelText("Email"), "  user@example.com  ");
