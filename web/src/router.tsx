@@ -1,4 +1,5 @@
 import { createRouter } from "@tanstack/react-router";
+import { gameRoute } from "./routes/game-route";
 import { homeRoute } from "./routes/home-route";
 import { loginRoute } from "./routes/login-route";
 import { protectedRoute } from "./routes/protected-route";
@@ -7,6 +8,7 @@ import { showcaseRoute } from "./routes/showcase-route";
 
 const routeTree = rootRoute.addChildren([
 	homeRoute,
+	gameRoute,
 	showcaseRoute,
 	loginRoute,
 	protectedRoute,

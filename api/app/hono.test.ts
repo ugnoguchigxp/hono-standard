@@ -31,7 +31,7 @@ vi.mock("./env", () => ({
 		databaseUrl: "mock.db",
 		jwtSecret: "x".repeat(32),
 		jwtAccessExpiresIn: "15m",
-		jwtRefreshExpiresIn: "7d",
+		jwtRefreshExpiresIn: "3d",
 		appUrl: "http://localhost:5173",
 		corsOrigins: ["http://localhost:5173"],
 		trustProxy: true,

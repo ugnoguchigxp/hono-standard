@@ -26,7 +26,7 @@ describe("token.service", () => {
 		mockEnv = {
 			jwtSecret: "x".repeat(32), // Min 256 bit key for HS256
 			jwtAccessExpiresIn: "15m",
-			jwtRefreshExpiresIn: "7d",
+			jwtRefreshExpiresIn: "3d",
 		} as unknown as AppEnv;
 
 		mockDb = {
@@ -84,11 +84,13 @@ describe("token.service", () => {
 
 	describe("RefreshToken", () => {
 		it("should generate refresh token and insert hash to database", async () => {
+			const beforeGeneration = Date.now();
 			const token = await generateRefreshToken(
 				testPayload,
 				mockWriter,
 				mockEnv,
 			);
+			const afterGeneration = Date.now();
 			expect(token).toBeDefined();
 			expect(mockDb.insert).toHaveBeenCalled();
 			expect(mockDb.values).toHaveBeenCalledWith(
@@ -97,6 +99,16 @@ describe("token.service", () => {
 					token: expect.any(String),
 					expiresAt: expect.any(Date),
 				}),
+			);
+			const inserted = mockDb.values.mock.calls[0]?.[0] as {
+				expiresAt: Date;
+			};
+			const threeDaysInMilliseconds = 3 * 24 * 60 * 60 * 1000;
+			expect(inserted.expiresAt.getTime()).toBeGreaterThanOrEqual(
+				beforeGeneration + threeDaysInMilliseconds - 1000,
+			);
+			expect(inserted.expiresAt.getTime()).toBeLessThanOrEqual(
+				afterGeneration + threeDaysInMilliseconds,
 			);
 		});
 

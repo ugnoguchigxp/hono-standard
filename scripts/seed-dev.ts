@@ -5,7 +5,7 @@ import { HttpError } from "../api/modules/auth/errors";
 
 const email = process.env.DEV_ADMIN_EMAIL ?? "admin@example.com";
 const displayName = process.env.DEV_ADMIN_NAME ?? "Admin User";
-const password = process.env.DEV_ADMIN_PASSWORD ?? "password123456";
+const password = process.env.DEV_ADMIN_PASSWORD ?? "HonoStandard#2026!Dev";
 
 const env = readAppEnv();
 if (env.nodeEnv === "production") {

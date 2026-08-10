@@ -29,6 +29,8 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 | `api/modules/auth/` | password hash、JWT、cookie、auth service |
 | `api/middleware/auth.ts` | protected API middleware |
 | `web/src/` | React frontend |
+| `web/src/game/` | Phaser scenes、入力adapter、React/Phaser lifecycle境界 |
+| `shared/game/` | 描画runtimeに依存しないGame State、field rule、battle rule |
 | `shared/schemas/` | frontend/backend で共有する Zod schema と API object type |
 | `drizzle/` | SQL migrations |
 | `scripts/verify.ts` | typecheck / lint / format / test / coverage / build の検証 pipeline |
@@ -134,7 +136,7 @@ bun run verify:e2e
 | `GET` | `/api/auth/me` | 現在の login user |
 | `GET` | `/api/protected/profile` | `requireAuth` を通る protected API sample |
 
-`/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
+access token の有効期間は 15 分、refresh token は 3 日です。`/api/auth/me` を含む認証済み request で frontend client が 401 を受けると、`/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。同時に複数の request が 401 になった場合は、同じ refresh request を共有します。
 
 `/api/protected/*` は server-side で `requireAuth` を適用しています。画面だけで保護しているわけではないことを確認するサンプルとして、`/protected` から `/api/protected/profile` を呼び出します。
 
@@ -148,6 +150,28 @@ API request / response の共有 schema は `shared/schemas/` に置きます。
 | `/showcase` | public | Component showcase |
 | `/login` | public/session-aware | Login。`?redirect=/protected` のような same-origin path redirect を受け付ける |
 | `/protected` | login required | Protected route sample。ログイン後だけ表示し、server protected API も呼び出す |
+| `/game` | login required | Phaserによるfield、event、side-view battleの縦切り |
+
+## Game Foundation
+
+ログイン後に `/game` を開くと、オリジナルの16-bit群像劇JRPGを想定した最初の縦切りを確認できます。
+
+最初にNew Gameを選ぶと初期checkpointがbrowserへ保存されます。Signal Ruinsの戦闘を終えると到達地点が自動保存され、同じログインuserで再度開いたときはContinueから再開できます。saveは現時点ではbrowser localStorage内でuserごとに分離され、破損または非対応versionは開始画面で明示されます。
+
+```text
+FieldScene
+→ signal tile
+→ EventScene
+→ time-gauge side-view BattleScene
+→ victory
+→ FieldScene
+```
+
+フィールドは矢印キーまたはWASDで移動し、Z、Space、Enterで決定します。戦闘では3人のparty memberが時間経過で行動可能になり、Attack、固有Ability、Defendを選択できます。現在はwait型で、party memberのcommand選択中はlogical battle timeが進みません。
+
+移動、壁判定、party追従、時間ゲージ、damage、defend、勝敗は `shared/game/` のpure TypeScriptです。一つの`GameSession`がField、Event、Battleを通して正規stateを所有し、SceneはCommandを送って描画用snapshotを受け取ります。Phaserは描画、入力、scene transitionだけを担当し、React StrictModeで再mountされた場合も古いPhaser instanceとsubscriptionを破棄します。
+
+描画は320×192の内部解像度を基準に、画面幅に応じて2倍・3倍の整数倍率で拡大します。`web/public/assets/game/backgrounds/` のオリジナルpixel-art背景と、`web/src/game/art/` が生成するpalette統一済みspriteを組み合わせ、field、event、side-view battleで同じSignal Ruinsの画調を維持しています。
 
 ## Build / Runtime
 
@@ -238,4 +262,11 @@ development の demo admin は次で作成できます。
 bun run seed:dev
 ```
 
-既定値は `admin@example.com` / `password123456` です。変更する場合は `DEV_ADMIN_EMAIL`、`DEV_ADMIN_NAME`、`DEV_ADMIN_PASSWORD` を使います。この command は `NODE_ENV=production` では失敗します。
+初期ログイン情報は次のとおりです。
+
+| 項目 | 初期値 |
+| --- | --- |
+| ログイン ID（email） | `admin@example.com` |
+| Password | `HonoStandard#2026!Dev` |
+
+変更する場合は `DEV_ADMIN_EMAIL`、`DEV_ADMIN_NAME`、`DEV_ADMIN_PASSWORD` を使います。この command は `NODE_ENV=production` では失敗します。

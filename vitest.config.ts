@@ -1,9 +1,20 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+	resolve: {
+		alias: {
+			"@shared": path.resolve(__dirname, "./shared"),
+		},
+	},
 	test: {
 		projects: [
 			{
+				resolve: {
+					alias: {
+						"@shared": path.resolve(__dirname, "./shared"),
+					},
+				},
 				test: {
 					name: "node",
 					environment: "node",
@@ -16,6 +27,11 @@ export default defineConfig({
 				},
 			},
 			{
+				resolve: {
+					alias: {
+						"@shared": path.resolve(__dirname, "./shared"),
+					},
+				},
 				test: {
 					name: "web",
 					environment: "jsdom",
@@ -43,6 +59,14 @@ export default defineConfig({
 				"web/src/App.tsx",
 				"web/src/router.tsx",
 				"web/src/routes/**/*.tsx",
+				// Phaser runtime adapters require a real canvas and are covered by Playwright smoke tests.
+				// Field and battle rules remain in shared/game and stay inside unit coverage.
+				"web/src/game/PhaserGame.ts",
+				"web/src/game/PhaserGameLoader.ts",
+				"web/src/game/config.ts",
+				"web/src/game/art/**/*.ts",
+				"web/src/game/input/**/*.ts",
+				"web/src/game/scenes/**/*.ts",
 			],
 			thresholds: {
 				lines: 95,

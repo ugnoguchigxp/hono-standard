@@ -5,7 +5,7 @@ export const APP_CONFIG_DEFAULTS = {
 	databaseUrl: "data/sqlite.db",
 	jwtSecret: "hono-standard-dev-jwt-secret-change-this-for-production",
 	jwtAccessExpiresIn: "15m",
-	jwtRefreshExpiresIn: "7d",
+	jwtRefreshExpiresIn: "3d",
 	appUrl: "http://localhost:5173",
 	corsOrigins: ["http://localhost:5173"],
 	trustProxy: true,

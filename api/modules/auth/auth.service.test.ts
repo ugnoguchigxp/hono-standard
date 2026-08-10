@@ -28,7 +28,7 @@ describe("AuthService", () => {
 		mockEnv = {
 			jwtSecret: "x".repeat(32),
 			jwtAccessExpiresIn: "15m",
-			jwtRefreshExpiresIn: "7d",
+			jwtRefreshExpiresIn: "3d",
 		} as unknown as AppEnv;
 
 		mockDb = {

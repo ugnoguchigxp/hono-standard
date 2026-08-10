@@ -26,7 +26,7 @@ describe("auth-cookies", () => {
 			secureCookie: true,
 			cookieSameSite: "lax",
 			jwtAccessExpiresIn: "15m",
-			jwtRefreshExpiresIn: "7d",
+			jwtRefreshExpiresIn: "3d",
 		} as unknown as AppEnv;
 	});
 
@@ -62,7 +62,7 @@ describe("auth-cookies", () => {
 				secure: true,
 				sameSite: "lax",
 				path: "/api/auth",
-				maxAge: 7 * 24 * 60 * 60, // 7d in seconds
+				maxAge: 3 * 24 * 60 * 60, // 3d in seconds
 			},
 		);
 	});

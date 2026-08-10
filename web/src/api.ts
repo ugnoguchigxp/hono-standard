@@ -35,6 +35,7 @@ type LogoutMutationOptions = Omit<
 >;
 
 let lastUnauthorizedEventAt = 0;
+let refreshRequest: Promise<boolean> | null = null;
 
 const notifyUnauthorized = () => {
 	if (typeof window === "undefined") return;
@@ -58,9 +59,25 @@ const getRequestPath = (input: RequestInfo | URL): string => {
 
 const isAuthPath = (path: string): boolean => path.startsWith("/api/auth/");
 
-const canRetryWithRefresh = (path: string): boolean => !isAuthPath(path);
+const canRetryWithRefresh = (path: string): boolean =>
+	path === "/api/auth/me" || !isAuthPath(path);
 
 const shouldNotifyUnauthorized = (path: string): boolean => !isAuthPath(path);
+
+const refreshAccessToken = (): Promise<boolean> => {
+	if (!refreshRequest) {
+		refreshRequest = fetch("/api/auth/refresh", {
+			method: "POST",
+			credentials: "include",
+		})
+			.then((response) => response.ok)
+			.catch(() => false)
+			.finally(() => {
+				refreshRequest = null;
+			});
+	}
+	return refreshRequest;
+};
 
 const parseErrorMessage = async (response: Response): Promise<string> => {
 	let message = `Request failed: ${response.status}`;
@@ -89,11 +106,7 @@ const customFetch = async (
 
 	let response = await execute();
 	if (response.status === 401 && canRetryWithRefresh(requestPath)) {
-		const refreshResponse = await fetch("/api/auth/refresh", {
-			method: "POST",
-			credentials: "include",
-		});
-		if (refreshResponse.ok) response = await execute();
+		if (await refreshAccessToken()) response = await execute();
 	}
 
 	if (response.status === 401 && shouldNotifyUnauthorized(requestPath)) {

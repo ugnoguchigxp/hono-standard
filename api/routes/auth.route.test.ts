@@ -27,7 +27,7 @@ describe("auth route", () => {
 		mockEnv = {
 			jwtSecret: "x".repeat(32),
 			jwtAccessExpiresIn: "15m",
-			jwtRefreshExpiresIn: "7d",
+			jwtRefreshExpiresIn: "3d",
 			secureCookie: true,
 			cookieSameSite: "lax",
 		} as unknown as AppEnv;

@@ -9,6 +9,8 @@ describe("readAppEnv", () => {
 		expect(env.host).toBe(APP_CONFIG_DEFAULTS.host);
 		expect(env.port).toBe(APP_CONFIG_DEFAULTS.port);
 		expect(env.databaseUrl).toBe(APP_CONFIG_DEFAULTS.databaseUrl);
+		expect(env.jwtAccessExpiresIn).toBe("15m");
+		expect(env.jwtRefreshExpiresIn).toBe("3d");
 		expect(env.appUrl).toBe(APP_CONFIG_DEFAULTS.appUrl);
 		expect(env.corsOrigins).toEqual(APP_CONFIG_DEFAULTS.corsOrigins);
 		expect(env.cookieSameSite).toBe(APP_CONFIG_DEFAULTS.cookieSameSite);
