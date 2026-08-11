@@ -13,9 +13,11 @@ import {
 	GameContentLoader,
 } from "./content/GameContentLoader";
 import {
-	LocalGameSaveRepository,
-	type LocalGameSaveLoadResult,
-} from "./save/LocalGameSaveRepository";
+	ServerGameSaveRepository,
+	type GameSaveLoadResult,
+	type GameSaveRepository,
+	type GameSaveWriteResult,
+} from "./save/ServerGameSaveRepository";
 
 const saveCompatibilityMessage = (
 	state: GameState,
@@ -40,15 +42,21 @@ const createRuntimeSession = (
 		sessionId: `browser-${crypto.randomUUID()}`,
 		initialState: state,
 		registry,
-		encounterProvider: createDemoEncounterProvider(),
+		encounterProvider: createDemoEncounterProvider(registry),
 	});
 
-const saveSummary = (result: LocalGameSaveLoadResult): string => {
+const saveSummary = (result: GameSaveLoadResult): string => {
 	switch (result.status) {
 		case "empty":
 			return "No checkpoint found.";
 		case "ready":
-			return `Autosave · ${new Date(result.save.savedAt).toLocaleString()}`;
+			return [
+				`Autosave · ${new Date(result.save.savedAt).toLocaleString()}`,
+				result.source === "server" ? "Cloud save" : "Browser backup",
+				result.syncMessage,
+			]
+				.filter(Boolean)
+				.join(" · ");
 		case "corrupt":
 		case "unsupported":
 		case "error":
@@ -61,16 +69,22 @@ type ContentState =
 	| { status: "ready"; registry: GameContentRegistry }
 	| { status: "failed"; error: ContentLoadError };
 
+type SaveLoadState = { status: "loading" } | GameSaveLoadResult;
+
 export function GameLauncher({
 	playerId,
 	contentLoader: providedContentLoader,
+	saveRepository: providedSaveRepository,
 }: {
 	playerId: string;
 	contentLoader?: GameContentLoader;
+	saveRepository?: GameSaveRepository;
 }) {
 	const repository = useMemo(
-		() => new LocalGameSaveRepository(window.localStorage, playerId),
-		[playerId],
+		() =>
+			providedSaveRepository ??
+			new ServerGameSaveRepository(window.localStorage, playerId),
+		[playerId, providedSaveRepository],
 	);
 	const contentLoader = useMemo(
 		() => providedContentLoader ?? new GameContentLoader(),
@@ -80,9 +94,9 @@ export function GameLauncher({
 	const [contentState, setContentState] = useState<ContentState>({
 		status: "loading",
 	});
-	const [loadResult, setLoadResult] = useState<LocalGameSaveLoadResult>(() =>
-		repository.load(),
-	);
+	const [loadResult, setLoadResult] = useState<SaveLoadState>({
+		status: "loading",
+	});
 	const [session, setSession] = useState<GameSession | null>(null);
 	const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
@@ -90,43 +104,103 @@ export function GameLauncher({
 		const controller = new AbortController();
 		if (contentAttempt > 0) contentLoader.reset();
 		setContentState({ status: "loading" });
-		void contentLoader.load(controller.signal).then(
-			(registry) => {
-				if (!controller.signal.aborted) {
-					setContentState({ status: "ready", registry });
-				}
-			},
-			(error: unknown) => {
-				if (controller.signal.aborted) return;
-				setContentState({
-					status: "failed",
-					error:
-						error instanceof ContentLoadError
-							? error
-							: new ContentLoadError(
-									"network",
-									"The world could not be reached.",
-								),
-				});
-			},
-		);
+		setLoadResult({ status: "loading" });
+		const savePromise = Promise.resolve(
+			repository.load(controller.signal),
+		).catch((error: unknown): GameSaveLoadResult => {
+			if (controller.signal.aborted) throw error;
+			return {
+				status: "error",
+				message: "Cloud saves could not be loaded.",
+				source: "server",
+			};
+		});
+		void Promise.all([savePromise, contentLoader.load(controller.signal)])
+			.then(async ([saveResult, registry]) => {
+				const mapId =
+					saveResult.status === "ready"
+						? saveResult.save.state.location.mapId
+						: null;
+				return mapId &&
+					!registry.mapsById[mapId] &&
+					contentLoader.hasDeclaredMap(mapId) === true
+					? ([
+							saveResult,
+							await contentLoader.loadMap(mapId, controller.signal),
+						] as const)
+					: ([saveResult, registry] as const);
+			})
+			.then(
+				([saveResult, registry]) => {
+					if (!controller.signal.aborted) {
+						setLoadResult(saveResult);
+						setContentState({ status: "ready", registry });
+					}
+				},
+				(error: unknown) => {
+					if (controller.signal.aborted) return;
+					setContentState({
+						status: "failed",
+						error:
+							error instanceof ContentLoadError
+								? error
+								: new ContentLoadError(
+										"network",
+										"The world could not be reached.",
+									),
+					});
+				},
+			);
 		return () => controller.abort();
-	}, [contentAttempt, contentLoader]);
+	}, [contentAttempt, contentLoader, repository]);
 
 	const retryContent = useCallback(() => {
 		setContentAttempt((attempt) => attempt + 1);
 	}, []);
 
+	const applySaveResult = useCallback(
+		(result: GameSaveWriteResult, successMessage: string) => {
+			setSaveStatus(result.ok ? successMessage : result.message);
+			if (result.save) {
+				setLoadResult({
+					status: "ready",
+					save: result.save,
+					migrated: false,
+					source: result.ok ? "server" : "local",
+					syncMessage: result.ok ? undefined : result.message,
+				});
+			}
+		},
+		[],
+	);
+
+	const persistSave = useCallback(
+		(
+			write: Promise<GameSaveWriteResult> | GameSaveWriteResult,
+			successMessage: string,
+		) => {
+			if (!(write instanceof Promise)) {
+				applySaveResult(write, successMessage);
+				return;
+			}
+			setSaveStatus("Saving checkpoint…");
+			void write.then(
+				(result) => applySaveResult(result, successMessage),
+				() =>
+					setSaveStatus(
+						"Checkpoint could not be saved; please keep this page open and retry.",
+					),
+			);
+		},
+		[applySaveResult],
+	);
+
 	const startNewGame = useCallback(() => {
 		if (contentState.status !== "ready") return;
 		const state = createInitialGameState({ registry: contentState.registry });
-		const saved = repository.save(state);
-		setSaveStatus(saved.ok ? "Initial checkpoint saved." : saved.message);
-		if (saved.ok) {
-			setLoadResult({ status: "ready", save: saved.save, migrated: false });
-		}
+		persistSave(repository.save(state), "Initial checkpoint saved.");
 		setSession(createRuntimeSession(state, contentState.registry));
-	}, [contentState, repository]);
+	}, [contentState, persistSave, repository]);
 
 	const continueGame = useCallback(() => {
 		if (
@@ -137,9 +211,9 @@ export function GameLauncher({
 			return;
 		}
 		if (loadResult.migrated) {
-			const upgraded = repository.save(loadResult.save.state);
-			setSaveStatus(
-				upgraded.ok ? "Save upgraded and loaded." : upgraded.message,
+			persistSave(
+				repository.save(loadResult.save.state),
+				"Save upgraded and loaded.",
 			);
 		} else {
 			setSaveStatus("Checkpoint loaded.");
@@ -147,21 +221,13 @@ export function GameLauncher({
 		setSession(
 			createRuntimeSession(loadResult.save.state, contentState.registry),
 		);
-	}, [contentState, loadResult, repository]);
+	}, [contentState, loadResult, persistSave, repository]);
 
 	const autosave = useCallback(
 		(state: GameState) => {
-			const result = repository.save(state);
-			setSaveStatus(result.ok ? "Checkpoint saved." : result.message);
-			if (result.ok) {
-				setLoadResult({
-					status: "ready",
-					save: result.save,
-					migrated: false,
-				});
-			}
+			persistSave(repository.save(state), "Checkpoint saved.");
 		},
-		[repository],
+		[persistSave, repository],
 	);
 
 	if (session) {
@@ -172,21 +238,11 @@ export function GameLauncher({
 				</p>
 				<GameScreen
 					session={session}
-					registry={session.content}
+					contentLoader={contentLoader}
 					onAutosave={autosave}
 					onExit={() => setSession(null)}
 				/>
 			</>
-		);
-	}
-
-	if (contentState.status === "loading") {
-		return (
-			<section className="game-launcher" aria-labelledby="game-loading-title">
-				<p className="game-kicker">Echoes at Dawn</p>
-				<h1 id="game-loading-title">Loading world…</h1>
-				<p role="status">Validating maps, events, and assets.</p>
-			</section>
 		);
 	}
 
@@ -209,6 +265,16 @@ export function GameLauncher({
 		);
 	}
 
+	if (contentState.status === "loading" || loadResult.status === "loading") {
+		return (
+			<section className="game-launcher" aria-labelledby="game-loading-title">
+				<p className="game-kicker">Echoes at Dawn</p>
+				<h1 id="game-loading-title">Loading world…</h1>
+				<p role="status">Validating maps, events, and assets.</p>
+			</section>
+		);
+	}
+
 	const compatibilityMessage =
 		loadResult.status === "ready"
 			? saveCompatibilityMessage(loadResult.save.state, contentState.registry)
@@ -224,7 +290,7 @@ export function GameLauncher({
 			<h1 id="game-launcher-title">The signal is waiting.</h1>
 			<p className="game-launcher-copy">
 				Enter the Signal Ruins with Mira, Sol, and Lune. Progress is stored at
-				checkpoints in this browser.
+				checkpoints in your account and can be continued in another browser.
 			</p>
 			<div className="game-launch-actions">
 				{canContinue ? (

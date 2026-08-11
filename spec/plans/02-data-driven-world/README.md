@@ -14,11 +14,11 @@ Stage 1で永続化したSignal Ruinsを、Sceneとruleへ埋め込まれた固�
 
 | 順序 | Delivery | 状態 | 完了時に証明すること |
 | --- | --- | --- | --- |
-| 1 | [Content Contract and Validation](01-content-contract-and-validation.md) | Planned | contentの形式、ID、参照、asset pathをbuild前に検証できる |
-| 2 | [Data-driven Field Runtime](02-data-driven-field-runtime.md) | Planned | Signal Ruinsのmap ruleと描画がMap Definitionから動く |
-| 3 | [Declarative Event and Dialogue Runtime](03-declarative-event-dialogue-runtime.md) | Planned | 会話、選択、flag、relationship、battle開始が許可済みcommandで進む |
-| 4 | [Content and Asset Loading Experience](04-content-asset-loading-experience.md) | Planned | 読込中、失敗、再試行を含むcontent/asset loadingが成立する |
-| 5 | [Second World Slice and Cutover](05-second-world-slice-and-cutover.md) | Planned | 二つ目のmap/eventを同じ仕組みで追加し、旧hard-codeを削除できる |
+| 1 | [Content Contract and Validation](01-content-contract-and-validation.md) | Complete | contentの形式、ID、参照、asset pathをbuild前に検証できる |
+| 2 | [Data-driven Field Runtime](02-data-driven-field-runtime.md) | Complete | Signal Ruinsのmap ruleと描画がMap Definitionから動く |
+| 3 | [Declarative Event and Dialogue Runtime](03-declarative-event-dialogue-runtime.md) | Complete | 会話、選択、flag、relationship、battle開始が許可済みcommandで進む |
+| 4 | [Content and Asset Loading Experience](04-content-asset-loading-experience.md) | Complete | 読込中、失敗、再試行を含むcontent/asset loadingが成立する |
+| 5 | [Second World Slice and Cutover](05-second-world-slice-and-cutover.md) | Complete | 二つ目のmap/eventを同じ仕組みで追加し、旧hard-codeを削除できる |
 
 ```mermaid
 flowchart LR
@@ -30,6 +30,14 @@ flowchart LR
 ```
 
 各Deliveryは独立したreview単位とし、unit testと対象範囲のintegration testを同じDeliveryで完了させる。Delivery 5だけにtestや旧経路の削除を先送りしない。
+
+## 実装結果
+
+- manifestとmap/event bundleを分離し、entry mapだけを先に読み込んで遷移先を必要時に取得する。
+- `signal-ruins` と `relay-camp` は同一のfield/event runtimeで動作する。
+- collision、entrance、checkpoint、interaction、random encounter、回復の泉は検証済みcontentから解決する。
+- content/asset読込の進捗、失敗理由、Retryを起動画面と実行中map遷移の両方で扱う。
+- build前validatorが重複ID、参照切れ、bundle不整合、asset欠落を検出する。
 
 ## Stage共通の設計判断
 

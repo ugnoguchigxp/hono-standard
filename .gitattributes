@@ -1,0 +1,2 @@
+art/action3d/**/*.blend filter=lfs diff=lfs merge=lfs -text
+art/action3d/**/*.png filter=lfs diff=lfs merge=lfs -text

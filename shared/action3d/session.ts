@@ -48,7 +48,14 @@ export class Action3dSession {
 		while (this.accumulatorMs >= ACTION3D_FIXED_STEP_MS) {
 			const stepInput = first
 				? input
-				: { ...input, jump: false, dodge: false, attack: false, lockOn: false };
+				: {
+						...input,
+						jump: false,
+						dodge: false,
+						attack: false,
+						lockOn: false,
+						pause: false,
+					};
 			const result = stepAction3dState(
 				this.state,
 				this.content,

@@ -5,6 +5,37 @@
 		"mapId": "signal-ruins",
 		"entranceId": "signal-ruins-entry"
 	},
+	"entryBundleId": "signal-ruins",
+	"bundles": [
+		{
+			"id": "signal-ruins",
+			"maps": [{ "id": "signal-ruins", "path": "maps/signal-ruins.json" }],
+			"events": [
+				{
+					"id": "signal-ruins-contact",
+					"path": "events/signal-ruins-contact.json"
+				}
+			]
+		},
+		{
+			"id": "relay-camp",
+			"maps": [{ "id": "relay-camp", "path": "maps/relay-camp.json" }],
+			"events": [
+				{
+					"id": "relay-camp-council",
+					"path": "events/relay-camp-council.json"
+				},
+				{
+					"id": "relay-camp-reaction",
+					"path": "events/relay-camp-reaction.json"
+				},
+				{
+					"id": "relay-camp-return",
+					"path": "events/relay-camp-return.json"
+				}
+			]
+		}
+	],
 	"documents": {
 		"maps": ["maps/signal-ruins.json", "maps/relay-camp.json"],
 		"events": [
@@ -42,5 +73,608 @@
 		{ "id": "lune", "displayName": "Lune", "textureKey": "field-lune" },
 		{ "id": "narrator", "displayName": "Narration", "textureKey": "field-mira" }
 	],
-	"encounterIds": ["signal-ruins-encounter", "signal-ruins-roamers"]
+	"statusEffects": [
+		{
+			"id": "valor",
+			"displayName": "Valor",
+			"description": "Raises attack for three actions.",
+			"polarity": "positive",
+			"durationTurns": 3,
+			"attackPercent": 25,
+			"defensePercent": 0,
+			"speedPercent": 0,
+			"damagePercentMaxHp": 0
+		},
+		{
+			"id": "exposed",
+			"displayName": "Exposed",
+			"description": "Reduces defense for three actions.",
+			"polarity": "negative",
+			"durationTurns": 3,
+			"attackPercent": 0,
+			"defensePercent": -30,
+			"speedPercent": 0,
+			"damagePercentMaxHp": 0
+		},
+		{
+			"id": "signal-slow",
+			"displayName": "Signal Slow",
+			"description": "Reduces action speed for three actions.",
+			"polarity": "negative",
+			"durationTurns": 3,
+			"attackPercent": 0,
+			"defensePercent": 0,
+			"speedPercent": -30,
+			"damagePercentMaxHp": 0
+		},
+		{
+			"id": "ruin-blight",
+			"displayName": "Ruin Blight",
+			"description": "Deals damage at the end of each action.",
+			"polarity": "negative",
+			"durationTurns": 3,
+			"attackPercent": 0,
+			"defensePercent": 0,
+			"speedPercent": 0,
+			"damagePercentMaxHp": 7
+		}
+	],
+	"abilities": [
+		{
+			"id": "arc-slash",
+			"displayName": "Arc Slash",
+			"description": "A focused physical arc against one enemy.",
+			"kind": "damage",
+			"target": "enemy-single",
+			"powerPercent": 150,
+			"mpCost": 6,
+			"element": "physical"
+		},
+		{
+			"id": "rallying-light",
+			"displayName": "Rallying Light",
+			"description": "Raises the party's attack for three actions.",
+			"kind": "status",
+			"target": "ally-all",
+			"powerPercent": 0,
+			"mpCost": 9,
+			"element": "restoration",
+			"statusEffectId": "valor",
+			"statusChance": 1
+		},
+		{
+			"id": "spark-shot",
+			"displayName": "Spark Shot",
+			"description": "A lightning shot that punishes arcane constructs.",
+			"kind": "damage",
+			"target": "enemy-single",
+			"powerPercent": 145,
+			"mpCost": 5,
+			"element": "lightning"
+		},
+		{
+			"id": "guard-break",
+			"displayName": "Guard Break",
+			"description": "Exposes one enemy and lowers its defense.",
+			"kind": "status",
+			"target": "enemy-single",
+			"powerPercent": 0,
+			"mpCost": 7,
+			"element": "physical",
+			"statusEffectId": "exposed",
+			"statusChance": 1
+		},
+		{
+			"id": "echo-strike",
+			"displayName": "Echo Strike",
+			"description": "An arcane resonance focused on one enemy.",
+			"kind": "damage",
+			"target": "enemy-single",
+			"powerPercent": 135,
+			"mpCost": 6,
+			"element": "arcane"
+		},
+		{
+			"id": "mend",
+			"displayName": "Mend",
+			"description": "Restores one ally's HP.",
+			"kind": "heal",
+			"target": "ally-single",
+			"powerPercent": 120,
+			"mpCost": 5,
+			"element": "restoration"
+		},
+		{
+			"id": "ember",
+			"displayName": "Ember",
+			"description": "A burning signal that may inflict Ruin Blight.",
+			"kind": "damage",
+			"target": "enemy-single",
+			"powerPercent": 110,
+			"mpCost": 0,
+			"element": "fire",
+			"statusEffectId": "ruin-blight",
+			"statusChance": 0.35
+		},
+		{
+			"id": "lunge",
+			"displayName": "Lunge",
+			"description": "A heavy physical charge.",
+			"kind": "damage",
+			"target": "enemy-single",
+			"powerPercent": 120,
+			"mpCost": 0,
+			"element": "physical"
+		},
+		{
+			"id": "ruin-pulse",
+			"displayName": "Ruin Pulse",
+			"description": "An arcane wave that strikes the entire party.",
+			"kind": "damage",
+			"target": "enemy-all",
+			"powerPercent": 72,
+			"mpCost": 0,
+			"element": "arcane"
+		},
+		{
+			"id": "signal-fracture",
+			"displayName": "Signal Fracture",
+			"description": "Slows the entire party's action gauges.",
+			"kind": "status",
+			"target": "enemy-all",
+			"powerPercent": 0,
+			"mpCost": 0,
+			"element": "arcane",
+			"statusEffectId": "signal-slow",
+			"statusChance": 1
+		}
+	],
+	"equipment": [
+		{
+			"id": "rune-blade",
+			"displayName": "Rune Blade",
+			"description": "A sword tuned to pale signals.",
+			"slot": "weapon",
+			"actorIds": ["mira"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 0,
+				"attack": 5,
+				"defense": 0,
+				"speed": 0
+			}
+		},
+		{
+			"id": "dawn-mail",
+			"displayName": "Dawn Mail",
+			"description": "Balanced armor for a vanguard.",
+			"slot": "armor",
+			"actorIds": ["mira"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 8,
+				"maxMp": 0,
+				"attack": 0,
+				"defense": 4,
+				"speed": 0
+			}
+		},
+		{
+			"id": "signal-guard",
+			"displayName": "Signal Guard",
+			"description": "A compact runic shield.",
+			"slot": "off-hand",
+			"actorIds": ["mira"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 0,
+				"attack": 0,
+				"defense": 3,
+				"speed": 0
+			}
+		},
+		{
+			"id": "relay-pendant",
+			"displayName": "Relay Pendant",
+			"description": "Keeps distant voices clear.",
+			"slot": "relic",
+			"actorIds": ["mira", "sol", "lune"],
+			"initialQuantity": 1,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 5,
+				"attack": 0,
+				"defense": 0,
+				"speed": 1
+			}
+		},
+		{
+			"id": "steel-spear",
+			"displayName": "Steel Spear",
+			"description": "A heavy frontline polearm.",
+			"slot": "weapon",
+			"actorIds": ["sol"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 0,
+				"attack": 6,
+				"defense": 0,
+				"speed": -1
+			}
+		},
+		{
+			"id": "knight-plate",
+			"displayName": "Knight Plate",
+			"description": "Layered steel battle armor.",
+			"slot": "armor",
+			"actorIds": ["sol"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 12,
+				"maxMp": 0,
+				"attack": 0,
+				"defense": 5,
+				"speed": -1
+			}
+		},
+		{
+			"id": "guard-shield",
+			"displayName": "Guard Shield",
+			"description": "Built to absorb a charge.",
+			"slot": "off-hand",
+			"actorIds": ["sol"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 5,
+				"maxMp": 0,
+				"attack": 0,
+				"defense": 4,
+				"speed": 0
+			}
+		},
+		{
+			"id": "red-plume",
+			"displayName": "Red Plume",
+			"description": "A veteran's field insignia.",
+			"slot": "relic",
+			"actorIds": ["sol"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 0,
+				"attack": 2,
+				"defense": 0,
+				"speed": 2
+			}
+		},
+		{
+			"id": "echo-staff",
+			"displayName": "Echo Staff",
+			"description": "Focuses resonant magic.",
+			"slot": "weapon",
+			"actorIds": ["lune"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 4,
+				"attack": 4,
+				"defense": 0,
+				"speed": 0
+			}
+		},
+		{
+			"id": "sage-robe",
+			"displayName": "Sage Robe",
+			"description": "A robe woven with warding thread.",
+			"slot": "armor",
+			"actorIds": ["lune"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 4,
+				"maxMp": 6,
+				"attack": 0,
+				"defense": 3,
+				"speed": 0
+			}
+		},
+		{
+			"id": "crystal-tome",
+			"displayName": "Crystal Tome",
+			"description": "Stores recovered spell patterns.",
+			"slot": "off-hand",
+			"actorIds": ["lune"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 5,
+				"attack": 1,
+				"defense": 1,
+				"speed": 0
+			}
+		},
+		{
+			"id": "moon-charm",
+			"displayName": "Moon Charm",
+			"description": "Sharpens the bearer's senses.",
+			"slot": "relic",
+			"actorIds": ["lune"],
+			"initialQuantity": 0,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 3,
+				"attack": 0,
+				"defense": 0,
+				"speed": 2
+			}
+		},
+		{
+			"id": "tempered-blade",
+			"displayName": "Tempered Blade",
+			"description": "A spare sword with a stronger edge.",
+			"slot": "weapon",
+			"actorIds": ["mira"],
+			"initialQuantity": 1,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 0,
+				"attack": 8,
+				"defense": 0,
+				"speed": -1
+			}
+		},
+		{
+			"id": "swift-band",
+			"displayName": "Swift Band",
+			"description": "A spare relic that accelerates its bearer.",
+			"slot": "relic",
+			"actorIds": ["mira", "sol", "lune"],
+			"initialQuantity": 1,
+			"modifiers": {
+				"maxHp": 0,
+				"maxMp": 0,
+				"attack": 0,
+				"defense": 0,
+				"speed": 4
+			}
+		}
+	],
+	"characters": [
+		{
+			"id": "mira",
+			"job": "HERO",
+			"initialLevel": 1,
+			"baseStats": {
+				"maxHp": 64,
+				"maxMp": 18,
+				"attack": 17,
+				"defense": 5,
+				"speed": 13
+			},
+			"growthPerLevel": {
+				"maxHp": 10,
+				"maxMp": 3,
+				"attack": 3,
+				"defense": 2,
+				"speed": 1
+			},
+			"abilityUnlocks": [
+				{ "level": 1, "abilityId": "arc-slash" },
+				{ "level": 2, "abilityId": "rallying-light" }
+			],
+			"initialEquipment": {
+				"weapon": "rune-blade",
+				"armor": "dawn-mail",
+				"off-hand": "signal-guard",
+				"relic": null
+			}
+		},
+		{
+			"id": "sol",
+			"job": "WARRIOR",
+			"initialLevel": 1,
+			"baseStats": {
+				"maxHp": 41,
+				"maxMp": 14,
+				"attack": 13,
+				"defense": 0,
+				"speed": 15
+			},
+			"growthPerLevel": {
+				"maxHp": 12,
+				"maxMp": 2,
+				"attack": 4,
+				"defense": 3,
+				"speed": 1
+			},
+			"abilityUnlocks": [
+				{ "level": 1, "abilityId": "spark-shot" },
+				{ "level": 2, "abilityId": "guard-break" }
+			],
+			"initialEquipment": {
+				"weapon": "steel-spear",
+				"armor": "knight-plate",
+				"off-hand": "guard-shield",
+				"relic": "red-plume"
+			}
+		},
+		{
+			"id": "lune",
+			"job": "MAGE",
+			"initialLevel": 1,
+			"baseStats": {
+				"maxHp": 60,
+				"maxMp": 24,
+				"attack": 12,
+				"defense": 7,
+				"speed": 9
+			},
+			"growthPerLevel": {
+				"maxHp": 8,
+				"maxMp": 5,
+				"attack": 3,
+				"defense": 2,
+				"speed": 1
+			},
+			"abilityUnlocks": [
+				{ "level": 1, "abilityId": "echo-strike" },
+				{ "level": 2, "abilityId": "mend" }
+			],
+			"initialEquipment": {
+				"weapon": "echo-staff",
+				"armor": "sage-robe",
+				"off-hand": "crystal-tome",
+				"relic": "moon-charm"
+			}
+		}
+	],
+	"items": [
+		{
+			"id": "potion",
+			"displayName": "Potion",
+			"description": "Restores 50 HP to one ally.",
+			"kind": "consumable",
+			"initialQuantity": 5,
+			"effect": "restore-hp",
+			"power": 50,
+			"statusIds": [],
+			"target": "ally-single"
+		},
+		{
+			"id": "ether",
+			"displayName": "Ether",
+			"description": "Restores 20 MP to one ally.",
+			"kind": "consumable",
+			"initialQuantity": 3,
+			"effect": "restore-mp",
+			"power": 20,
+			"statusIds": [],
+			"target": "ally-single"
+		},
+		{
+			"id": "antidote",
+			"displayName": "Antidote",
+			"description": "Cures Ruin Blight.",
+			"kind": "consumable",
+			"initialQuantity": 3,
+			"effect": "cure-status",
+			"power": 0,
+			"statusIds": ["ruin-blight"],
+			"target": "ally-single"
+		},
+		{
+			"id": "phoenix-feather",
+			"displayName": "Phoenix Feather",
+			"description": "Revives one fallen ally with 25% HP.",
+			"kind": "consumable",
+			"initialQuantity": 1,
+			"effect": "revive",
+			"power": 25,
+			"statusIds": [],
+			"target": "ally-single"
+		},
+		{
+			"id": "echo-shard",
+			"displayName": "Echo Shard",
+			"description": "A fragment carrying an old signal.",
+			"kind": "key",
+			"initialQuantity": 1,
+			"effect": "none",
+			"power": 0,
+			"statusIds": [],
+			"target": "ally-single"
+		}
+	],
+	"enemies": [
+		{
+			"id": "ash-wisp",
+			"displayName": "Ash Wisp",
+			"level": 1,
+			"stats": {
+				"maxHp": 42,
+				"maxMp": 0,
+				"attack": 13,
+				"defense": 6,
+				"speed": 10
+			},
+			"elementMultipliers": {
+				"physical": 1,
+				"fire": 0.5,
+				"lightning": 1.5,
+				"arcane": 1,
+				"restoration": 1
+			},
+			"abilityIds": ["ember"],
+			"aiPattern": ["ember"]
+		},
+		{
+			"id": "brass-hound",
+			"displayName": "Brass Hound",
+			"level": 1,
+			"stats": {
+				"maxHp": 56,
+				"maxMp": 0,
+				"attack": 15,
+				"defense": 8,
+				"speed": 8
+			},
+			"elementMultipliers": {
+				"physical": 1,
+				"fire": 1,
+				"lightning": 1.5,
+				"arcane": 0.75,
+				"restoration": 1
+			},
+			"abilityIds": ["lunge"],
+			"aiPattern": ["lunge"]
+		},
+		{
+			"id": "signal-warden",
+			"displayName": "Signal Warden",
+			"level": 4,
+			"stats": {
+				"maxHp": 192,
+				"maxMp": 0,
+				"attack": 20,
+				"defense": 12,
+				"speed": 9
+			},
+			"elementMultipliers": {
+				"physical": 0.9,
+				"fire": 1,
+				"lightning": 1.5,
+				"arcane": 0.75,
+				"restoration": 1
+			},
+			"abilityIds": ["ruin-pulse", "signal-fracture", "lunge"],
+			"aiPattern": ["lunge", "signal-fracture", "ruin-pulse"]
+		}
+	],
+	"encounters": [
+		{
+			"id": "signal-ruins-encounter",
+			"displayName": "Signal Warden",
+			"enemyIds": ["signal-warden"],
+			"boss": true,
+			"canEscape": false,
+			"rewards": {
+				"experience": 120,
+				"items": [{ "itemId": "echo-shard", "quantity": 1, "chance": 1 }]
+			}
+		},
+		{
+			"id": "signal-ruins-roamers",
+			"displayName": "Ruins Roamers",
+			"enemyIds": ["ash-wisp", "brass-hound"],
+			"boss": false,
+			"canEscape": true,
+			"rewards": {
+				"experience": 36,
+				"items": [{ "itemId": "potion", "quantity": 1, "chance": 0.35 }]
+			}
+		}
+	],
+	"encounterIds": []
 }

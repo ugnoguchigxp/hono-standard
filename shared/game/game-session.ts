@@ -7,6 +7,11 @@ import type {
 import { advanceEvent, type EventEngineTransition } from "./event-engine";
 import { createFieldStateAt, moveFieldParty } from "./field-engine";
 import { nextRandom } from "./deterministic-rng";
+import {
+	changePartyEquipment,
+	consumePartyItem,
+	grantExperience,
+} from "./progression-engine";
 import { getGameStateInvariantIssues } from "./model";
 import type {
 	ActiveEventState,
@@ -20,6 +25,7 @@ import type {
 	GameSessionStatus,
 	GameSessionTransition,
 	GameState,
+	InventoryState,
 } from "./model";
 
 export type GameSessionErrorCode =
@@ -41,11 +47,23 @@ export class GameSessionError extends Error {
 export type EncounterProvider = (
 	encounterId: string,
 	party: readonly CharacterState[],
+	inventory?: InventoryState,
 ) => BattleState;
 
 const cloneCharacter = (character: CharacterState): CharacterState => ({
 	...character,
-	ability: { ...character.ability },
+	ability: {
+		...character.ability,
+		...(character.ability.statusEffect
+			? { statusEffect: { ...character.ability.statusEffect } }
+			: {}),
+	},
+	abilities: character.abilities.map((ability) => ({
+		...ability,
+		...(ability.statusEffect
+			? { statusEffect: { ...ability.statusEffect } }
+			: {}),
+	})),
 });
 
 export const cloneBattleState = (
@@ -59,12 +77,24 @@ export const cloneBattleState = (
 					side: member.side,
 					actionGauge: member.actionGauge,
 					defending: member.defending,
+					statuses: member.statuses.map((status) => ({ ...status })),
+					elementMultipliers: { ...member.elementMultipliers },
+					aiPattern: [...member.aiPattern],
+					turnsTaken: member.turnsTaken,
 				})),
 				enemies: battle.enemies.map((enemy) => ({
 					...cloneCharacter(enemy),
 					side: enemy.side,
 					actionGauge: enemy.actionGauge,
 					defending: enemy.defending,
+					statuses: enemy.statuses.map((status) => ({ ...status })),
+					elementMultipliers: { ...enemy.elementMultipliers },
+					aiPattern: [...enemy.aiPattern],
+					turnsTaken: enemy.turnsTaken,
+				})),
+				items: battle.items.map((item) => ({
+					...item,
+					statusIds: [...item.statusIds],
 				})),
 			}
 		: null;
@@ -94,6 +124,14 @@ export const cloneGameState = (state: GameState): GameState => ({
 	event: cloneEventState(state.event),
 	party: {
 		members: state.party.members.map(cloneCharacter),
+		inventory: { ...state.party.inventory },
+		equipmentInventory: { ...state.party.equipmentInventory },
+		equipment: Object.fromEntries(
+			Object.entries(state.party.equipment).map(([actorId, equipment]) => [
+				actorId,
+				{ ...equipment },
+			]),
+		),
 	},
 	story: {
 		...state.story,
@@ -197,6 +235,59 @@ export function assertGameStateCompatible(
 				`Party member '${member.id}' has no content actor.`,
 			);
 		}
+		if (!content.charactersById[member.id]) {
+			throw new GameSessionError(
+				"invalid-content-reference",
+				`Party member '${member.id}' has no progression definition.`,
+			);
+		}
+		for (const ability of member.abilities) {
+			if (!content.abilitiesById[ability.id]) {
+				throw new GameSessionError(
+					"invalid-content-reference",
+					`Party member '${member.id}' references unknown ability '${ability.id}'.`,
+				);
+			}
+		}
+	}
+	for (const itemId of Object.keys(state.party.inventory)) {
+		if (!content.itemsById[itemId]) {
+			throw new GameSessionError(
+				"invalid-content-reference",
+				`Inventory references unknown item '${itemId}'.`,
+			);
+		}
+	}
+	for (const equipmentId of Object.keys(state.party.equipmentInventory)) {
+		if (!content.equipmentById[equipmentId]) {
+			throw new GameSessionError(
+				"invalid-content-reference",
+				`Equipment inventory references unknown equipment '${equipmentId}'.`,
+			);
+		}
+	}
+	for (const member of state.party.members) {
+		const loadout = state.party.equipment[member.id];
+		if (!loadout) {
+			throw new GameSessionError(
+				"invalid-state",
+				`Party member '${member.id}' has no equipment loadout.`,
+			);
+		}
+		for (const [slot, equipmentId] of Object.entries(loadout)) {
+			if (!equipmentId) continue;
+			const definition = content.equipmentById[equipmentId];
+			if (
+				!definition ||
+				definition.slot !== slot ||
+				!definition.actorIds.includes(member.id)
+			) {
+				throw new GameSessionError(
+					"invalid-content-reference",
+					`Party member '${member.id}' has invalid equipment '${equipmentId}'.`,
+				);
+			}
+		}
 	}
 	if (state.field.pendingTriggerId) {
 		const trigger = map.triggers.find(
@@ -294,7 +385,7 @@ type Reduction = {
 
 export class GameSession {
 	readonly id: string;
-	readonly content: GameContentRegistry;
+	private contentRegistry: GameContentRegistry;
 	private state: GameState;
 	private sessionStatus: GameSessionStatus = "active";
 	private eventSequence = 0;
@@ -309,10 +400,19 @@ export class GameSession {
 	}) {
 		assertIdentifier(options.sessionId, "Session ID");
 		this.id = options.sessionId;
-		this.content = options.registry;
+		this.contentRegistry = options.registry;
 		this.encounterProvider = options.encounterProvider;
 		assertGameStateCompatible(options.initialState, this.content);
 		this.state = cloneGameState(options.initialState);
+	}
+
+	get content(): GameContentRegistry {
+		return this.contentRegistry;
+	}
+
+	replaceContent(registry: GameContentRegistry): void {
+		assertGameStateCompatible(this.state, registry);
+		this.contentRegistry = registry;
 	}
 
 	get status(): GameSessionStatus {
@@ -345,6 +445,7 @@ export class GameSession {
 			return { state: this.snapshot(), events: [] };
 		}
 		reduced.state.revision = this.state.revision + 1;
+		assertGameStateCompatible(reduced.state, this.content);
 		this.state = reduced.state;
 		const transition = {
 			state: this.snapshot(),
@@ -487,6 +588,7 @@ export class GameSession {
 							const battle = this.encounterProvider(
 								encounterId,
 								next.party.members,
+								next.party.inventory,
 							);
 							if (battle.id !== encounterId) {
 								throw new GameSessionError(
@@ -541,18 +643,98 @@ export class GameSession {
 						(total, member) => total + Math.max(0, member.maxHp - member.hp),
 						0,
 					);
+					const restoredMp = next.party.members.reduce(
+						(total, member) => total + Math.max(0, member.maxMp - member.mp),
+						0,
+					);
 					next.party.members = next.party.members.map((member) => ({
 						...member,
 						hp: member.maxHp,
+						mp: member.maxMp,
 					}));
 					next.field.stepsSinceEncounter = 0;
 					events.push({
 						type: "party.recovered",
 						triggerId: trigger.id,
 						restoredHp,
+						restoredMp,
 					});
 				}
 				return { state: next, events, changed: true };
+			}
+			case "party.item.use": {
+				if (state.mode !== "field") {
+					throw new GameSessionError(
+						"invalid-command",
+						"Field item use requires field mode.",
+					);
+				}
+				assertStableIdentifier(command.itemId, "Item ID");
+				assertStableIdentifier(command.targetId, "Target ID");
+				const used = consumePartyItem(
+					state.party,
+					command.itemId,
+					command.targetId,
+					this.content,
+				);
+				if (!used) {
+					throw new GameSessionError(
+						"invalid-command",
+						"The selected item cannot be used on that target.",
+					);
+				}
+				const next = cloneGameState(state);
+				next.party = used.party;
+				return {
+					state: next,
+					events: [
+						{
+							type: "party.item.used",
+							itemId: command.itemId,
+							targetId: command.targetId,
+							amount: used.amount,
+						},
+					],
+					changed: true,
+				};
+			}
+			case "party.equipment.change": {
+				if (state.mode !== "field") {
+					throw new GameSessionError(
+						"invalid-command",
+						"Equipment changes require field mode.",
+					);
+				}
+				const previousEquipmentId =
+					state.party.equipment[command.actorId]?.[command.slot] ?? null;
+				const party = changePartyEquipment(
+					state.party,
+					command.actorId,
+					command.slot,
+					command.equipmentId,
+					this.content,
+				);
+				if (!party) {
+					throw new GameSessionError(
+						"invalid-command",
+						"The selected equipment cannot be equipped in that slot.",
+					);
+				}
+				const next = cloneGameState(state);
+				next.party = party;
+				return {
+					state: next,
+					events: [
+						{
+							type: "party.equipment.changed",
+							actorId: command.actorId,
+							slot: command.slot,
+							previousEquipmentId,
+							equipmentId: command.equipmentId,
+						},
+					],
+					changed: true,
+				};
 			}
 			case "event.start": {
 				const next = cloneGameState(state);
@@ -610,6 +792,7 @@ export class GameSession {
 				const battle = this.encounterProvider(
 					state.battle.id,
 					state.party.members,
+					state.party.inventory,
 				);
 				if (battle.id !== state.battle.id) {
 					throw new GameSessionError(
@@ -667,7 +850,8 @@ export class GameSession {
 					state.mode !== "battle" ||
 					!completedBattle ||
 					(completedBattle.phase !== "victory" &&
-						completedBattle.phase !== "defeat")
+						completedBattle.phase !== "defeat" &&
+						completedBattle.phase !== "escaped")
 				) {
 					throw new GameSessionError(
 						"invalid-command",
@@ -677,13 +861,22 @@ export class GameSession {
 				const next = cloneGameState(state);
 				const events: GameSessionEvent[] = [];
 				const result = completedBattle.phase;
-				if (result === "victory") {
+				if (result !== "defeat") {
 					next.party.members = next.party.members.map((member) => {
 						const combatant = completedBattle.party.find(
 							(actor) => actor.id === member.id,
 						);
-						return combatant ? { ...member, hp: combatant.hp } : member;
+						return combatant
+							? { ...member, hp: combatant.hp, mp: combatant.mp }
+							: member;
 					});
+					for (const item of completedBattle.items) {
+						if (item.count > 0) next.party.inventory[item.id] = item.count;
+						else delete next.party.inventory[item.id];
+					}
+				}
+				if (result === "victory") {
+					this.applyEncounterRewards(next, completedBattle.id, events);
 				}
 				next.battle = null;
 				events.push({ type: "battle.completed", result });
@@ -767,6 +960,7 @@ export class GameSession {
 					const battle = this.encounterProvider(
 						operation.encounterId,
 						state.party.members,
+						state.party.inventory,
 					);
 					if (battle.id !== operation.encounterId) {
 						throw new GameSessionError(
@@ -781,7 +975,12 @@ export class GameSession {
 					this.enterMap(state, operation.mapId, operation.entranceId, events);
 					break;
 				case "checkpoint.reach":
-					this.reachCheckpoint(state, operation.checkpointId, events);
+					this.reachCheckpoint(
+						state,
+						operation.checkpointId,
+						events,
+						operation.mapId,
+					);
 					break;
 				case "event.complete":
 					state.event = null;
@@ -840,6 +1039,50 @@ export class GameSession {
 		return true;
 	}
 
+	private applyEncounterRewards(
+		state: GameState,
+		encounterId: string,
+		events: GameSessionEvent[],
+	): void {
+		const encounter = this.content.getEncounter(encounterId);
+		state.party.members = state.party.members.map((member) => {
+			const loadout = state.party.equipment[member.id];
+			if (!loadout) {
+				throw new GameSessionError(
+					"invalid-state",
+					`Party member '${member.id}' has no equipment loadout.`,
+				);
+			}
+			const gained = grantExperience(
+				member,
+				encounter.rewards.experience,
+				loadout,
+				this.content,
+			);
+			events.push(...gained.events);
+			return gained.member;
+		});
+
+		const awardedItems: Array<{ itemId: string; quantity: number }> = [];
+		for (const reward of encounter.rewards.items) {
+			const random = nextRandom(state.rng);
+			state.rng = random.state;
+			if (random.value >= reward.chance) continue;
+			state.party.inventory[reward.itemId] =
+				(state.party.inventory[reward.itemId] ?? 0) + reward.quantity;
+			awardedItems.push({
+				itemId: reward.itemId,
+				quantity: reward.quantity,
+			});
+		}
+		events.push({
+			type: "party.reward.received",
+			encounterId,
+			experience: encounter.rewards.experience,
+			items: awardedItems,
+		});
+	}
+
 	private enterMap(
 		state: GameState,
 		mapId: string,
@@ -872,6 +1115,12 @@ export class GameSession {
 			entrance.position,
 			entrance.facing,
 			state.party.members.length,
+			(point) =>
+				point.x >= 0 &&
+				point.y >= 0 &&
+				point.x < map.width &&
+				point.y < map.height &&
+				!this.content.isCollision(map.id, point.x, point.y),
 		);
 		state.event = null;
 		state.battle = null;
@@ -891,8 +1140,15 @@ export class GameSession {
 		state: GameState,
 		checkpointId: string,
 		events: GameSessionEvent[],
+		expectedMapId = state.location.mapId,
 	): boolean {
 		assertIdentifier(checkpointId, "Checkpoint ID");
+		if (state.location.mapId !== expectedMapId) {
+			throw new GameSessionError(
+				"invalid-content-reference",
+				`Checkpoint '${expectedMapId}:${checkpointId}' cannot be reached while on map '${state.location.mapId}'.`,
+			);
+		}
 		const map = this.content.getMap(state.location.mapId);
 		if (!map.checkpoints.some(({ id }) => id === checkpointId)) {
 			throw new GameSessionError(

@@ -19,7 +19,7 @@ const engine = new NullEngine({
 	lockstepMaxSteps: 4,
 });
 const scene = new Scene(engine);
-const root = new TransformNode("Action3dAvatarRoot", scene);
+const root = new TransformNode("Action3dDiagnosticAvatarRoot", scene);
 const material = (name: string, color: Color3) => {
 	const value = new StandardMaterial(name, scene);
 	value.diffuseColor = color;
@@ -165,22 +165,26 @@ addAnimation(
 	false,
 );
 
-const exported = await GLTF2Export.GLBAsync(scene, "action3d-avatar", {
-	exportWithoutWaitingForScene: true,
-});
-const blob = exported.files["action3d-avatar.glb"];
+const exported = await GLTF2Export.GLBAsync(
+	scene,
+	"action3d-diagnostic-avatar",
+	{
+		exportWithoutWaitingForScene: true,
+	},
+);
+const blob = exported.files["action3d-diagnostic-avatar.glb"];
 if (!(blob instanceof Blob))
-	throw new Error("Babylon did not produce action3d-avatar.glb.");
+	throw new Error("Babylon did not produce action3d-diagnostic-avatar.glb.");
 const outputDirectory = path.join(
 	process.cwd(),
 	"web",
 	"public",
 	"assets",
 	"action3d",
-	"models",
+	"diagnostic",
 );
 await mkdir(outputDirectory, { recursive: true });
-const outputPath = path.join(outputDirectory, "action3d-avatar.glb");
+const outputPath = path.join(outputDirectory, "action3d-diagnostic-avatar.glb");
 await Bun.write(outputPath, blob);
 console.log(`OK generated ${outputPath} (${blob.size} bytes)`);
 scene.dispose();

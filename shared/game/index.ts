@@ -6,4 +6,5 @@ export * from "./event-engine";
 export * from "./field-engine";
 export * from "./game-session";
 export * from "./model";
+export * from "./progression-engine";
 export * from "./save-codec";

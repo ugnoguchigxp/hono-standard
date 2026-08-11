@@ -649,6 +649,8 @@ bun run verify:e2e
 
 目的: Signal Ruinsをhard-codeされたSceneから、検証可能なcontent dataへ移行する。
 
+実装状態: Complete。map/event bundleの遅延読込、`signal-ruins`と`relay-camp`、build/runtime共通validation、loading/error/Retryまで実装済み。
+
 対象:
 
 - map schemaとloader
@@ -666,6 +668,8 @@ bun run verify:e2e
 ### Stage 3: RPG Core
 
 目的: Battleの結果がpartyの継続的な成長へつながるようにする。
+
+実装状態: Complete。EXP/Level/Ability、HP/MP、Item/Inventory、Equipment、Reward/Retry、field menu操作、save v5 migrationまで実装済み。
 
 対象:
 
@@ -685,6 +689,8 @@ bun run verify:e2e
 
 目的: 通常攻撃以外の判断が意味を持つ戦闘へ拡張する。
 
+実装状態: Complete。属性、buff/debuff/継続damage、target rule、複数敵、敵AI pattern、item/escape、boss行動予告、演出event、balance simulationまで実装済み。
+
 対象:
 
 - status effect、buff、debuff、attribute
@@ -703,6 +709,8 @@ bun run verify:e2e
 ### Stage 5: Complete Player Interface
 
 目的: keyboard以外を含め、長時間遊べる操作と設定を整える。
+
+実装状態: Complete。keyboard / standard gamepad / touchを共通Game Actionへ統合し、key configuration、high-resolution bitmap font、Chrome向けOpus/MP3 Audio Manager、音量・文字速度・reduced motion・high contrast・fullscreen・画面倍率設定を実装済み。
 
 対象:
 
@@ -736,6 +744,13 @@ bun run verify:e2e
 - 別browser sessionから認証userのsaveを再開できる。
 - 一時切断後に二重適用なくresumeできる。
 - frame単位処理はbrowser内に残っている。
+
+実装状況（2026-08-11）:
+
+- Server-backed save経路は実装済み。認証user単位のSQLite save slot、REST API、optimistic revision、idempotency operation log、別browser再開を備える。
+- 既存browser saveはserver slotが空の場合のみ自動移行し、以後はserverをauthority、localStorageを障害時backupと未送信operation queueとして扱う。
+- 一時切断またはresponse loss後は同じidempotency keyで再送し、競合時は最新server revisionを取得して一度だけrebaseする。frame単位処理は引き続きbrowser内に置く。
+- WebSocketは、remote semantic commandを必要とする機能が導入される時点まで接続しない。現段階のcheckpoint同期に不要な常時接続を追加せず、protocol上必要なrevision・operation identity・resume semanticsをRESTで先に固定する。
 
 ### Stage 7: Optional AI Game Master
 

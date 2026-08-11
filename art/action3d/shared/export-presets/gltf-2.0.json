@@ -1,0 +1,14 @@
+{
+	"dcc": "Blender",
+	"dccVersion": "5.2 LTS",
+	"format": "GLB",
+	"animationMode": "ACTIONS",
+	"animations": true,
+	"applyModifiers": false,
+	"deformationBonesOnly": true,
+	"forceSampling": true,
+	"materials": "EXPORT",
+	"skins": true,
+	"tangents": false,
+	"yUp": true
+}

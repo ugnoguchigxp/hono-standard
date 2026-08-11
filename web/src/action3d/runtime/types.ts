@@ -6,6 +6,7 @@ import type {
 
 export type Action3dRuntimeStats = {
 	fps: number;
+	frameTimeMs: number;
 	activeMeshes: number;
 	drawCalls: number;
 };
@@ -15,7 +16,12 @@ export type Action3dRuntimeSnapshot = {
 	pointerLocked: boolean;
 };
 export type Action3dRuntimeError = {
-	code: "webgl-unsupported" | "context-lost" | "asset-load" | "startup";
+	code:
+		| "webgl-unsupported"
+		| "context-lost"
+		| "asset-load"
+		| "low-performance"
+		| "startup";
 	message: string;
 	recoverable: boolean;
 };
@@ -25,6 +31,7 @@ export type Action3dRuntimeOptions = {
 	onSnapshot: (snapshot: Action3dRuntimeSnapshot) => void;
 	onEvent: (event: Action3dEvent) => void;
 	onCheckpoint: (state: Action3dState) => void;
+	isMuted: () => boolean;
 	onWarning: (warning: Action3dRuntimeError) => void;
 	onError: (error: Action3dRuntimeError) => void;
 };

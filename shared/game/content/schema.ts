@@ -112,6 +112,190 @@ export const actorDefinitionSchema = z
 	})
 	.strict();
 
+export const battleElementSchema = z.enum([
+	"physical",
+	"fire",
+	"lightning",
+	"arcane",
+	"restoration",
+]);
+
+export const battleTargetSchema = z.enum([
+	"enemy-single",
+	"enemy-all",
+	"ally-single",
+	"ally-all",
+	"self",
+]);
+
+export const statusEffectDefinitionSchema = z
+	.object({
+		id: stableIdSchema,
+		displayName: z.string().min(1).max(48),
+		description: z.string().min(1).max(180),
+		polarity: z.enum(["positive", "negative"]),
+		durationTurns: z.number().int().positive().max(9),
+		attackPercent: z.number().int().min(-90).max(200).default(0),
+		defensePercent: z.number().int().min(-90).max(200).default(0),
+		speedPercent: z.number().int().min(-90).max(200).default(0),
+		damagePercentMaxHp: z.number().int().nonnegative().max(50).default(0),
+	})
+	.strict();
+
+export const abilityDefinitionSchema = z
+	.object({
+		id: stableIdSchema,
+		displayName: z.string().min(1).max(48),
+		description: z.string().min(1).max(180),
+		kind: z.enum(["damage", "heal", "status"]),
+		target: battleTargetSchema,
+		powerPercent: z.number().int().nonnegative().max(500),
+		mpCost: z.number().int().nonnegative().max(999),
+		element: battleElementSchema,
+		statusEffectId: stableIdSchema.optional(),
+		statusChance: z.number().min(0).max(1).optional(),
+	})
+	.strict()
+	.superRefine((ability, context) => {
+		if (ability.kind === "status" && !ability.statusEffectId) {
+			context.addIssue({
+				code: "custom",
+				path: ["statusEffectId"],
+				message: "Status abilities require a status effect ID.",
+			});
+		}
+		if (ability.kind === "heal" && ability.target.startsWith("enemy")) {
+			context.addIssue({
+				code: "custom",
+				path: ["target"],
+				message: "Healing abilities must target allies or self.",
+			});
+		}
+	});
+
+const statBlockSchema = z
+	.object({
+		maxHp: z.number().int().positive().max(99_999),
+		maxMp: z.number().int().nonnegative().max(9_999),
+		attack: z.number().int().positive().max(9_999),
+		defense: z.number().int().nonnegative().max(9_999),
+		speed: z.number().int().positive().max(999),
+	})
+	.strict();
+
+const equipmentLoadoutSchema = z
+	.object({
+		weapon: stableIdSchema.nullable(),
+		armor: stableIdSchema.nullable(),
+		"off-hand": stableIdSchema.nullable(),
+		relic: stableIdSchema.nullable(),
+	})
+	.strict();
+
+export const characterDefinitionSchema = z
+	.object({
+		id: stableIdSchema,
+		job: z.string().min(1).max(48),
+		initialLevel: z.number().int().positive().max(50),
+		baseStats: statBlockSchema,
+		growthPerLevel: statBlockSchema,
+		abilityUnlocks: z
+			.array(
+				z
+					.object({
+						level: z.number().int().positive().max(50),
+						abilityId: stableIdSchema,
+					})
+					.strict(),
+			)
+			.min(1)
+			.max(32),
+		initialEquipment: equipmentLoadoutSchema,
+	})
+	.strict();
+
+export const itemDefinitionSchema = z
+	.object({
+		id: stableIdSchema,
+		displayName: z.string().min(1).max(48),
+		description: z.string().min(1).max(180),
+		kind: z.enum(["consumable", "key"]),
+		initialQuantity: z.number().int().nonnegative().max(99).default(0),
+		effect: z.enum([
+			"restore-hp",
+			"restore-mp",
+			"revive",
+			"cure-status",
+			"none",
+		]),
+		power: z.number().int().nonnegative().max(9_999),
+		statusIds: z.array(stableIdSchema).max(16).default([]),
+		target: z.enum(["ally-single", "ally-all"]),
+	})
+	.strict();
+
+export const equipmentDefinitionSchema = z
+	.object({
+		id: stableIdSchema,
+		displayName: z.string().min(1).max(48),
+		description: z.string().min(1).max(180),
+		slot: z.enum(["weapon", "armor", "off-hand", "relic"]),
+		actorIds: z.array(stableIdSchema).min(1).max(8),
+		initialQuantity: z.number().int().nonnegative().max(99).default(0),
+		modifiers: z
+			.object({
+				maxHp: z.number().int().min(-9_999).max(9_999).default(0),
+				maxMp: z.number().int().min(-9_999).max(9_999).default(0),
+				attack: z.number().int().min(-999).max(999).default(0),
+				defense: z.number().int().min(-999).max(999).default(0),
+				speed: z.number().int().min(-99).max(99).default(0),
+			})
+			.strict(),
+	})
+	.strict();
+
+export const enemyDefinitionSchema = z
+	.object({
+		id: stableIdSchema,
+		displayName: z.string().min(1).max(64),
+		level: z.number().int().positive().max(99),
+		stats: statBlockSchema,
+		elementMultipliers: z
+			.partialRecord(battleElementSchema, z.number().positive().max(4))
+			.default({}),
+		abilityIds: z.array(stableIdSchema).max(16),
+		aiPattern: z.array(stableIdSchema).min(1).max(16),
+	})
+	.strict();
+
+const encounterRewardSchema = z
+	.object({
+		experience: z.number().int().nonnegative().max(999_999),
+		items: z
+			.array(
+				z
+					.object({
+						itemId: stableIdSchema,
+						quantity: z.number().int().positive().max(99),
+						chance: z.number().positive().max(1),
+					})
+					.strict(),
+			)
+			.max(16),
+	})
+	.strict();
+
+export const encounterDefinitionSchema = z
+	.object({
+		id: stableIdSchema,
+		displayName: z.string().min(1).max(80),
+		enemyIds: z.array(stableIdSchema).min(1).max(8),
+		boss: z.boolean(),
+		canEscape: z.boolean(),
+		rewards: encounterRewardSchema,
+	})
+	.strict();
+
 const collisionRegionSchema = z
 	.object({
 		id: stableIdSchema,
@@ -328,6 +512,7 @@ const checkpointReachNodeSchema = z
 	.object({
 		...nodeBase,
 		type: z.literal("checkpoint.reach"),
+		mapId: stableIdSchema,
 		checkpointId: stableIdSchema,
 		nextNodeId: stableIdSchema,
 	})
@@ -392,6 +577,18 @@ const documentPathSchema = z
 		"Content document paths must be relative JSON paths without traversal.",
 	);
 
+const bundledDocumentSchema = z
+	.object({ id: stableIdSchema, path: documentPathSchema })
+	.strict();
+
+export const contentBundleSchema = z
+	.object({
+		id: stableIdSchema,
+		maps: z.array(bundledDocumentSchema).max(32),
+		events: z.array(bundledDocumentSchema).max(MAX_CONTENT_COLLECTION_SIZE),
+	})
+	.strict();
+
 export const contentManifestSchema = z
 	.object({
 		manifestVersion: z.literal(CONTENT_MANIFEST_VERSION),
@@ -399,6 +596,11 @@ export const contentManifestSchema = z
 		entryPoint: z
 			.object({ mapId: stableIdSchema, entranceId: stableIdSchema })
 			.strict(),
+		entryBundleId: stableIdSchema,
+		bundles: z
+			.array(contentBundleSchema)
+			.min(1)
+			.max(MAX_CONTENT_COLLECTION_SIZE),
 		documents: z
 			.object({
 				maps: z
@@ -419,13 +621,55 @@ export const contentManifestSchema = z
 			.array(actorDefinitionSchema)
 			.min(1)
 			.max(MAX_CONTENT_COLLECTION_SIZE),
-		encounterIds: z.array(stableIdSchema).max(MAX_CONTENT_COLLECTION_SIZE),
+		statusEffects: z
+			.array(statusEffectDefinitionSchema)
+			.max(MAX_CONTENT_COLLECTION_SIZE)
+			.default([]),
+		abilities: z
+			.array(abilityDefinitionSchema)
+			.max(MAX_CONTENT_COLLECTION_SIZE)
+			.default([]),
+		characters: z
+			.array(characterDefinitionSchema)
+			.max(MAX_CONTENT_COLLECTION_SIZE)
+			.default([]),
+		items: z
+			.array(itemDefinitionSchema)
+			.max(MAX_CONTENT_COLLECTION_SIZE)
+			.default([]),
+		equipment: z
+			.array(equipmentDefinitionSchema)
+			.max(MAX_CONTENT_COLLECTION_SIZE)
+			.default([]),
+		enemies: z
+			.array(enemyDefinitionSchema)
+			.max(MAX_CONTENT_COLLECTION_SIZE)
+			.default([]),
+		encounters: z
+			.array(encounterDefinitionSchema)
+			.max(MAX_CONTENT_COLLECTION_SIZE)
+			.default([]),
+		encounterIds: z
+			.array(stableIdSchema)
+			.max(MAX_CONTENT_COLLECTION_SIZE)
+			.default([]),
 	})
 	.strict();
 
 export type ContentManifestV1 = z.infer<typeof contentManifestSchema>;
 export type AssetDefinitionV1 = z.infer<typeof assetDefinitionSchema>;
 export type ActorDefinitionV1 = z.infer<typeof actorDefinitionSchema>;
+export type StatusEffectDefinitionV1 = z.infer<
+	typeof statusEffectDefinitionSchema
+>;
+export type AbilityContentDefinitionV1 = z.infer<
+	typeof abilityDefinitionSchema
+>;
+export type CharacterDefinitionV1 = z.infer<typeof characterDefinitionSchema>;
+export type ItemDefinitionV1 = z.infer<typeof itemDefinitionSchema>;
+export type EquipmentDefinitionV1 = z.infer<typeof equipmentDefinitionSchema>;
+export type EnemyDefinitionV1 = z.infer<typeof enemyDefinitionSchema>;
+export type EncounterDefinitionV1 = z.infer<typeof encounterDefinitionSchema>;
 export type MapDefinitionV1 = z.infer<typeof mapDefinitionSchema>;
 export type MapTriggerV1 = z.infer<typeof mapTriggerSchema>;
 export type EventDefinitionV1 = z.infer<typeof eventDefinitionSchema>;

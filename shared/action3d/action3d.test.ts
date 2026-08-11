@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
 	ACTION3D_FIXED_STEP_MS,
+	ACTION3D_GAME_ID,
 	ACTION3D_STATE_SCHEMA_VERSION,
 	Action3dContentError,
+	type Action3dContentRegistry,
+	type Action3dInput,
 	Action3dSession,
+	type Action3dState,
 	createAction3dCheckpointState,
 	createAction3dSave,
 	createInitialAction3dState,
@@ -12,17 +16,52 @@ import {
 	parseAction3dBundle,
 	parseAction3dManifest,
 	stepAction3dState,
-	type Action3dContentRegistry,
-	type Action3dInput,
-	type Action3dState,
 } from ".";
 
+const runnerAsset = {
+	id: "runner",
+	type: "model" as const,
+	url: "/assets/action3d/runner.glb",
+	bytes: 10,
+	sha256:
+		"sha256:0000000000000000000000000000000000000000000000000000000000000000",
+	license: "MIT",
+	source: { label: "Test fixture", revision: "test" },
+	exportedBy: { tool: "Fixture", version: "1" },
+	model: {
+		role: "diagnostic" as const,
+		maturity: "diagnostic" as const,
+		rootNode: "Root",
+		skeletonRoot: null,
+		meshNodes: ["Body"],
+		clips: [],
+		sockets: [],
+		materials: [{ id: "body", name: "Body" }],
+		transform: {
+			upAxis: "Y" as const,
+			forwardAxis: "Z" as const,
+			unitMeters: 1,
+			groundOffset: 0,
+			boundsMeters: { width: 1, height: 2, depth: 1 },
+		},
+		budget: {
+			maxTransferBytes: 100,
+			maxTriangles: 100,
+			maxPrimitives: 10,
+			maxMaterials: 4,
+			maxTextures: 0,
+			maxTextureSize: 2048,
+			maxBones: 0,
+			maxBoneInfluences: 0,
+		},
+	},
+};
 const manifest = {
-	manifestVersion: 1 as const,
+	manifestVersion: 2 as const,
 	contentVersion: "test-field-1",
 	entryPoint: { worldId: "test-world", spawnId: "entry" },
 	documents: { worlds: ["worlds/test.json"] },
-	assets: [{ id: "runner", type: "model" as const, url: "/assets/action3d/runner.glb", bytes: 10, license: "MIT", source: { label: "Test fixture" } }],
+	assets: [runnerAsset],
 };
 const world = {
 	id: "test-world",
@@ -36,8 +75,18 @@ const world = {
 	landmarks: [{ id: "beacon", kind: "crystal" as const, position: { x: 0, y: 0, z: 8 }, scale: 1 }],
 	victoryCheckpointId: "north",
 	playerModelAssetId: "runner",
+	enemyModelAssetId: "runner",
 };
 const registry = (): Action3dContentRegistry => parseAction3dBundle({ manifest, worlds: [{ path: "worlds/test.json", data: world }], assetExists: () => true, assetSize: () => 10 });
+const registryWithSurfaces = (
+	surfaces: Array<{
+		id: string;
+		bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
+		axis: "x" | "z";
+		fromHeight: number;
+		toHeight: number;
+	}>,
+) => parseAction3dBundle({ manifest, worlds: [{ path: "worlds/test.json", data: { ...world, colliders: [], surfaces } }] });
 const input = (values: Partial<Action3dInput> = {}): Action3dInput => ({ ...EMPTY_ACTION3D_INPUT, ...values });
 
 describe("Action3D content registry", () => {
@@ -53,7 +102,7 @@ describe("Action3D content registry", () => {
 	});
 
 	it("reports schema, loaded-document, duplicate, reference, asset, and bounds failures", () => {
-		expect(() => parseAction3dManifest({ ...manifest, manifestVersion: 2 })).toThrow(Action3dContentError);
+		expect(() => parseAction3dManifest({ ...manifest, manifestVersion: 3 })).toThrow(Action3dContentError);
 		expect(() => parseAction3dBundle({ manifest, worlds: [] })).toThrow(/validation failed/);
 		const invalidManifest = { ...manifest, entryPoint: { worldId: "missing", spawnId: "missing" }, assets: [...manifest.assets, manifest.assets[0]] };
 		const invalidWorld = {
@@ -80,6 +129,204 @@ describe("Action3D content registry", () => {
 		expect(() => parseAction3dBundle({ manifest, worlds: [{ path: "worlds/test.json", data: { ...world, objective: "" } }] })).toThrow(Action3dContentError);
 		expect(() => parseAction3dManifest({ ...manifest, assets: [{ ...manifest.assets[0], url: "/assets/action3d/../secret" }] })).toThrow(Action3dContentError);
 	});
+
+	it("rejects a player blockout that omits required semantic members", () => {
+		const blockoutManifest = {
+			...manifest,
+			assets: [
+				{
+					...runnerAsset,
+					model: {
+						...runnerAsset.model,
+						role: "player" as const,
+						maturity: "blockout" as const,
+						skeletonRoot: "Root",
+					},
+				},
+			],
+		};
+		try {
+			parseAction3dBundle({
+				manifest: blockoutManifest,
+				worlds: [{ path: "worlds/test.json", data: world }],
+			});
+			expect.unreachable();
+		} catch (error) {
+			expect(error).toBeInstanceOf(Action3dContentError);
+			const messages = (error as Action3dContentError).issues.map(
+				(issue) => issue.message,
+			);
+			expect(messages).toEqual(
+				expect.arrayContaining([
+					"Player model is missing 'idle'.",
+					"Player model is missing 'socket.weapon.right'.",
+					"Player model is missing 'skin'.",
+				]),
+			);
+		}
+	});
+
+	it("resolves model clips and sockets with explicit accessor errors", () => {
+		const clip = {
+			id: "idle",
+			name: "Idle",
+			loop: true,
+			durationMs: { min: 100, max: 200 },
+		};
+		const socket = { id: "socket.hit.center" as const, node: "Chest" };
+		const modelAsset = {
+			...runnerAsset,
+			model: {
+				...runnerAsset.model,
+				clips: [clip],
+				sockets: [socket],
+			},
+		};
+		const textureAsset = {
+			id: "ground-texture",
+			type: "texture" as const,
+			url: "/assets/action3d/ground.png",
+			bytes: 4,
+			sha256:
+				"sha256:1111111111111111111111111111111111111111111111111111111111111111",
+			license: "MIT",
+			source: { label: "Test fixture", revision: "test" },
+		};
+		const content = parseAction3dBundle({
+			manifest: { ...manifest, assets: [modelAsset, textureAsset] },
+			worlds: [{ path: "worlds/test.json", data: world }],
+		});
+
+		expect(content.getModelClip("runner", "idle")).toEqual(clip);
+		expect(content.getModelSocket("runner", "socket.hit.center")).toEqual(
+			socket,
+		);
+		expect(() => content.getModelClip("runner", "missing")).toThrow(
+			"Unknown clip",
+		);
+		expect(() => content.getModelSocket("runner", "socket.core")).toThrow(
+			"Unknown socket",
+		);
+		expect(() => content.getModelClip("ground-texture", "idle")).toThrow(
+			"is not a model",
+		);
+		expect(() =>
+			content.getModelSocket("ground-texture", "socket.core"),
+		).toThrow("is not a model");
+	});
+
+	it("reports enemy model contract, model duplicates, and asset hash failures", () => {
+		const clip = {
+			id: "idle",
+			name: "Idle",
+			loop: true,
+			durationMs: { min: 100, max: 200 },
+		};
+		const socket = { id: "socket.hit.center" as const, node: "Chest" };
+		const material = { id: "body", name: "Body" };
+		const enemyAsset = {
+			...runnerAsset,
+			model: {
+				...runnerAsset.model,
+				role: "enemy" as const,
+				maturity: "blockout" as const,
+				skeletonRoot: null,
+				clips: [clip, clip],
+				sockets: [socket, socket],
+				materials: [material, material],
+			},
+		};
+
+		try {
+			parseAction3dBundle({
+				manifest: { ...manifest, assets: [enemyAsset] },
+				worlds: [{ path: "worlds/test.json", data: world }],
+				assetHash: () => "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			});
+			expect.unreachable();
+		} catch (error) {
+			const issues = (error as Action3dContentError).issues;
+			expect(issues.map((issue) => issue.code)).toContain("duplicate");
+			expect(issues.map((issue) => issue.message)).toEqual(
+				expect.arrayContaining([
+					"Blockout and production models require a skeleton root.",
+					"Enemy model is missing 'chase'.",
+					"Enemy model is missing 'socket.core'.",
+				]),
+			);
+			expect(issues.some((issue) => issue.message.includes("found sha256"))).toBe(
+				true,
+			);
+		}
+	});
+
+	it("aggregates every world reference, duplicate, and bounds class", () => {
+		const duplicateSpawn = {
+			...world.spawnPoints[0],
+			checkpointId: "missing-checkpoint",
+			position: { x: -20, y: 0, z: -4 },
+		};
+		const invalidWorld = {
+			...world,
+			spawnPoints: [duplicateSpawn, duplicateSpawn],
+			checkpoints: [
+				world.checkpoints[0],
+				world.checkpoints[0],
+				{ ...world.checkpoints[1], position: { x: 0, y: 0, z: 20 } },
+			],
+			colliders: [
+				{ id: "flat", bounds: { minX: 0, maxX: 1, minZ: 1, maxZ: 1 } },
+				{ id: "outside-min", bounds: { minX: -20, maxX: -19, minZ: 0, maxZ: 1 } },
+				{ id: "outside-max", bounds: { minX: 9, maxX: 11, minZ: 0, maxZ: 1 } },
+				{ id: "flat", bounds: { minX: 0, maxX: 1, minZ: 0, maxZ: 1 } },
+			],
+			surfaces: [
+				{
+					id: "bad-surface",
+					bounds: { minX: 1, maxX: 1, minZ: 0, maxZ: 1 },
+					axis: "x" as const,
+					fromHeight: 0,
+					toHeight: 1,
+				},
+				{
+					id: "bad-surface",
+					bounds: { minX: 9, maxX: 11, minZ: 0, maxZ: 1 },
+					axis: "z" as const,
+					fromHeight: 0,
+					toHeight: 1,
+				},
+			],
+			enemies: [world.enemies[0], world.enemies[0]],
+			landmarks: [
+				{ ...world.landmarks[0], position: { x: 20, y: 0, z: 8 } },
+			],
+			victoryCheckpointId: "missing-victory",
+			enemyModelAssetId: "missing-enemy-model",
+		};
+		try {
+			parseAction3dBundle({
+				manifest: {
+					...manifest,
+					entryPoint: { worldId: "test-world", spawnId: "missing-entry" },
+				},
+				worlds: [{ path: "worlds/test.json", data: invalidWorld }],
+			});
+			expect.unreachable();
+		} catch (error) {
+			const issues = (error as Action3dContentError).issues;
+			expect(issues.map((issue) => issue.code)).toEqual(
+				expect.arrayContaining(["duplicate", "reference", "bounds"]),
+			);
+			expect(issues.map((issue) => issue.message)).toEqual(
+				expect.arrayContaining([
+					"Unknown entry spawn 'missing-entry'.",
+					"Unknown checkpoint 'missing-checkpoint'.",
+					"Unknown model asset 'missing-enemy-model'.",
+				]),
+			);
+		}
+		expect(() => parseAction3dManifest(null)).toThrow(Action3dContentError);
+	});
 });
 
 describe("Action3D simulation", () => {
@@ -89,7 +336,8 @@ describe("Action3D simulation", () => {
 		expect(state.schemaVersion).toBe(ACTION3D_STATE_SCHEMA_VERSION);
 		expect(state.player.position).toEqual({ x: 0, y: 0, z: -4 });
 		state = stepAction3dState(state, content, input({ moveZ: 1, sprint: true, cameraYaw: Math.PI / 2 }), 100).state;
-		expect(state.player.position.x).toBeGreaterThan(0.6);
+		expect(state.player.position.x).toBeGreaterThan(0.35);
+		expect(state.player.velocity.x).toBeGreaterThan(4);
 		expect(state.player.locomotion).toBe("run");
 		expect(state.player.stamina).toBeLessThan(100);
 		for (let index = 0; index < 20; index += 1) state = stepAction3dState(state, content, input({ moveX: 1 }), 50).state;
@@ -117,6 +365,38 @@ describe("Action3D simulation", () => {
 		expect(state.player.stamina).toBeGreaterThanOrEqual(80);
 	});
 
+	it("traverses a permitted step and rejects an over-limit slope", () => {
+		const stepped = registryWithSurfaces([
+			{
+				id: "training-step",
+				bounds: { minX: 0.5, maxX: 2, minZ: -5, maxZ: -3 },
+				axis: "x",
+				fromHeight: 0.3,
+				toHeight: 0.3,
+			},
+		]);
+		let state = createInitialAction3dState(stepped);
+		state = stepAction3dState(state, stepped, input({ moveX: 1 }), 100).state;
+		state = stepAction3dState(state, stepped, input({ moveX: 1 }), 100).state;
+		expect(state.player.position.x).toBeGreaterThan(0.5);
+		expect(state.player.position.y).toBe(0.3);
+
+		const steep = registryWithSurfaces([
+			{
+				id: "steep-ramp",
+				bounds: { minX: -1, maxX: 1, minZ: -3, maxZ: -1 },
+				axis: "z",
+				fromHeight: 0,
+				toHeight: 3,
+			},
+		]);
+		state = createInitialAction3dState(steep);
+		for (let index = 0; index < 4; index += 1)
+			state = stepAction3dState(state, steep, input({ moveZ: 1 }), 100).state;
+		expect(state.player.position.z).toBeLessThan(-3);
+		expect(state.player.position.y).toBe(0);
+	});
+
 	it("runs an attack hit window through enemy defeat and victory", () => {
 		const content = registry();
 		let state = createInitialAction3dState(content);
@@ -129,6 +409,92 @@ describe("Action3D simulation", () => {
 		expect(result.state.phase).toBe("victory");
 		expect(result.state.location.checkpointId).toBe("north");
 		expect(stepAction3dState(result.state, content, input(), 16).state).toEqual(result.state);
+	});
+
+	it("never advances a defeated enemy while surviving enemies keep the field active", () => {
+		const secondEnemy = {
+			...world.enemies[0],
+			id: "sentinel-2",
+			position: { x: 8, y: 0, z: 8 },
+		};
+		const content = parseAction3dBundle({
+			manifest,
+			worlds: [
+				{
+					path: "worlds/test.json",
+					data: { ...world, enemies: [...world.enemies, secondEnemy] },
+				},
+			],
+			assetExists: () => true,
+			assetSize: () => 10,
+		});
+		const state = createInitialAction3dState(content);
+		Object.assign(state.enemies[0], {
+			position: { x: 1.25, y: 0, z: 2.5 },
+			yaw: 1.1,
+			hp: 0,
+			state: "defeated",
+			stateElapsedMs: 123,
+			attackCooldownMs: 456,
+		});
+		state.player.lockOnEnemyId = state.enemies[0].id;
+		const defeatedBefore = structuredClone(state.enemies[0]);
+
+		const result = stepAction3dState(state, content, input(), 1_000);
+
+		expect(result.state.phase).toBe("playing");
+		expect(result.state.enemies[0]).toEqual(defeatedBefore);
+		expect(result.state.player.lockOnEnemyId).toBeNull();
+	});
+
+	it("queues a deterministic three-hit combo and blocks hits through ruins", () => {
+		const content = registry();
+		let state = createInitialAction3dState(content);
+		state.player.position = { x: 0, y: 0, z: 0 };
+		state.player.yaw = 0;
+		state.enemies[0].position = { x: 0, y: 0, z: 1.5 };
+		state.enemies[0].hp = 200;
+		state.enemies[0].maxHp = 200;
+		const damages: number[] = [];
+		for (const [command, duration] of [
+			[input({ attack: true }), 180],
+			[input(), 60],
+			[input({ attack: true }), 50],
+			[input(), 230],
+			[input(), 180],
+			[input(), 60],
+			[input({ attack: true }), 50],
+			[input(), 230],
+			[input(), 180],
+		] as const) {
+			const result = stepAction3dState(state, content, command, duration);
+			state = result.state;
+			damages.push(
+				...result.events
+					.filter((event) => event.type === "enemy-hit")
+					.map((event) => event.damage),
+			);
+		}
+		expect(damages).toEqual([40, 45, 50]);
+		expect(state.player.attackComboIndex).toBe(2);
+
+		state = createInitialAction3dState(content);
+		state.player.position = { x: 1.3, y: 0, z: -4 };
+		state.player.yaw = Math.PI / 2;
+		state.enemies[0].position = { x: 3.6, y: 0, z: -4 };
+		let blocked = stepAction3dState(
+			state,
+			content,
+			input({ lockOn: true, attack: true }),
+			180,
+		);
+		expect(blocked.state.player.lockOnEnemyId).toBeNull();
+		expect(blocked.events).not.toContainEqual(
+			expect.objectContaining({ type: "enemy-hit" }),
+		);
+		blocked.state.player.lockOnEnemyId = "sentinel";
+		blocked = stepAction3dState(blocked.state, content, input(), 16);
+		expect(blocked.state.player.lockOnEnemyId).toBeNull();
 	});
 
 	it("applies enemy wind-up damage, dodge immunity, recovery, and defeat", () => {
@@ -171,6 +537,43 @@ describe("Action3D simulation", () => {
 		state.location.checkpointId = "missing";
 		expect(() => createAction3dCheckpointState(state, content)).toThrow("Unknown Action3D checkpoint");
 	});
+
+	it("covers normalized diagonal movement and non-terminal combat AI branches", () => {
+		const content = registry();
+		let state = createInitialAction3dState(content);
+		state = stepAction3dState(state, content, input({ moveX: 1, moveZ: 1 }), 50).state;
+		expect(Math.hypot(state.player.position.x, state.player.position.z + 4)).toBeLessThan(0.3);
+		state.enemies[0].position = { x: 30, y: 0, z: 30 };
+		state = stepAction3dState(state, content, input({ lockOn: true }), 16).state;
+		expect(state.player.lockOnEnemyId).toBeNull();
+
+		state.player.position = { x: 0, y: 0, z: 0 };
+		state.player.yaw = Math.PI;
+		state.enemies[0].position = { x: 0, y: 0, z: 1.5 };
+		let result = stepAction3dState(state, content, input({ attack: true }), 180);
+		expect(result.state.enemies[0].hp).toBe(80);
+		state = result.state;
+		state.player.attackElapsedMs = null;
+		state.player.lockOnEnemyId = "sentinel";
+		result = stepAction3dState(state, content, input({ attack: true }), 180);
+		expect(result.state.enemies[0]).toMatchObject({ hp: 40, state: "stagger" });
+		result = stepAction3dState(result.state, content, input(), 120);
+		expect(result.state.enemies[0].state).toBe("chase");
+		result.state.enemies[0].position = { x: 9, y: 0, z: 9 };
+		result = stepAction3dState(result.state, content, input(), 300);
+		expect(result.state.player.attackElapsedMs).toBeNull();
+		result.state.enemies[0].state = "recover";
+		result.state.enemies[0].stateElapsedMs = 0;
+		result = stepAction3dState(result.state, content, input(), 100);
+		expect(result.state.enemies[0].state).toBe("recover");
+		result = stepAction3dState(result.state, content, input(), 600);
+		expect(result.state.enemies[0].state).toBe("chase");
+		result.state.enemies.push({ ...result.state.enemies[0], id: "unknown", state: "idle" });
+		result = stepAction3dState(result.state, content, input(), 16);
+		expect(result.state.enemies.find((enemy) => enemy.id === "unknown")?.state).toBe("idle");
+		const stable = createAction3dCheckpointState(result.state, content);
+		expect(stable.phase).toBe("playing");
+	});
 });
 
 describe("Action3D session and save", () => {
@@ -196,11 +599,14 @@ describe("Action3D session and save", () => {
 	it("encodes ready saves and distinguishes corrupt and unsupported data", () => {
 		const state = createInitialAction3dState(registry());
 		const save = createAction3dSave(state, "2026-08-11T00:00:00.000Z");
+		expect(save.gameId).toBe(ACTION3D_GAME_ID);
 		expect(decodeAction3dSave(JSON.stringify(save))).toEqual({ status: "ready", save });
 		expect(decodeAction3dSave("not-json")).toMatchObject({ status: "corrupt" });
 		expect(decodeAction3dSave("null")).toMatchObject({ status: "corrupt" });
 		expect(decodeAction3dSave(JSON.stringify({ ...save, formatVersion: 8 }))).toMatchObject({ status: "unsupported", formatVersion: 8 });
+		expect(decodeAction3dSave(JSON.stringify({ ...save, formatVersion: "future" }))).toMatchObject({ status: "unsupported", formatVersion: undefined });
 		expect(decodeAction3dSave(JSON.stringify({ ...save, state: { ...state, schemaVersion: 8 } }))).toMatchObject({ status: "unsupported", stateVersion: 8 });
+		expect(decodeAction3dSave(JSON.stringify({ ...save, state: { ...state, schemaVersion: "future" } }))).toMatchObject({ status: "corrupt" });
 		expect(decodeAction3dSave(JSON.stringify({ ...save, savedAt: "bad" }))).toMatchObject({ status: "corrupt" });
 		expect(() => createAction3dSave(state, "bad")).toThrow();
 	});

@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
 import { createInitialAction3dState, parseAction3dBundle } from "@shared/action3d";
+import { describe, expect, it } from "vitest";
 import { action3dSaveStorageKey, LocalAction3dSaveRepository } from "./LocalAction3dSaveRepository";
 
 const state = () => createInitialAction3dState(parseAction3dBundle({
-	manifest: { manifestVersion: 1, contentVersion: "save-world-1", entryPoint: { worldId: "world", spawnId: "entry" }, documents: { worlds: ["world.json"] }, assets: [{ id: "runner", type: "model", url: "/assets/action3d/runner.glb", bytes: 1, license: "MIT", source: { label: "Fixture" } }] },
-	worlds: [{ path: "world.json", data: { id: "world", displayName: "World", objective: "Win.", bounds: { minX: -2, maxX: 2, minZ: -2, maxZ: 2 }, spawnPoints: [{ id: "entry", position: { x: 0, y: 0, z: -1 }, yaw: 0, checkpointId: "start" }], checkpoints: [{ id: "start", position: { x: 0, y: 0, z: -1 }, yaw: 0 }], colliders: [], enemies: [{ id: "enemy", position: { x: 0, y: 0, z: 1 }, maxHp: 40, moveSpeed: 1, attackRange: 1, damage: 1 }], landmarks: [], victoryCheckpointId: "start", playerModelAssetId: "runner" } }],
+	manifest: { manifestVersion: 2, contentVersion: "save-world-1", entryPoint: { worldId: "world", spawnId: "entry" }, documents: { worlds: ["world.json"] }, assets: [{ id: "runner", type: "model", url: "/assets/action3d/runner.glb", bytes: 1, sha256: "sha256:0000000000000000000000000000000000000000000000000000000000000000", license: "MIT", source: { label: "Fixture", revision: "test" }, exportedBy: { tool: "Fixture", version: "1" }, model: { role: "diagnostic", maturity: "diagnostic", rootNode: "Root", skeletonRoot: null, meshNodes: ["Body"], clips: [], sockets: [], materials: [{ id: "body", name: "Body" }], transform: { upAxis: "Y", forwardAxis: "Z", unitMeters: 1, groundOffset: 0, boundsMeters: { width: 1, height: 2, depth: 1 } }, budget: { maxTransferBytes: 10, maxTriangles: 10, maxPrimitives: 2, maxMaterials: 2, maxTextures: 0, maxTextureSize: 2048, maxBones: 0, maxBoneInfluences: 0 } } }] },
+	worlds: [{ path: "world.json", data: { id: "world", displayName: "World", objective: "Win.", bounds: { minX: -2, maxX: 2, minZ: -2, maxZ: 2 }, spawnPoints: [{ id: "entry", position: { x: 0, y: 0, z: -1 }, yaw: 0, checkpointId: "start" }], checkpoints: [{ id: "start", position: { x: 0, y: 0, z: -1 }, yaw: 0 }], colliders: [], enemies: [{ id: "enemy", position: { x: 0, y: 0, z: 1 }, maxHp: 40, moveSpeed: 1, attackRange: 1, damage: 1 }], landmarks: [], victoryCheckpointId: "start", playerModelAssetId: "runner", enemyModelAssetId: "runner" } }],
 }));
 const memoryStorage = () => {
 	const values = new Map<string, string>();

@@ -6,15 +6,27 @@ import {
 	type MapDefinitionV1,
 } from "@shared/game";
 import Phaser from "phaser";
-import { GAME_RENDER_SCALE, GAME_TEXT_RESOLUTION } from "../display";
 import {
-	getFieldCharacterTextureKey,
 	type FieldWalkFrame,
+	getFieldCharacterTextureKey,
 } from "../art/pixel-textures";
+import { getRequiredAssetIdsForMap } from "../content/content-assets";
+import {
+	ContentLoadError,
+	type GameContentLoader,
+} from "../content/GameContentLoader";
+import { GAME_RENDER_SCALE, GAME_TEXT_RESOLUTION } from "../display";
 import { InputManager } from "../input/InputManager";
+import { getPendingFieldTriggerAction } from "../presentation/field-transition";
+import type { GameRuntimeError } from "../runtime-errors";
+import { fieldMusicForMap } from "../audio/audio-catalog";
+import type { GameAudioManager } from "../audio/GameAudioManager";
+import { gameSettingsStore } from "../settings/GameSettingsStore";
 
 const parseColor = (color: string): number =>
 	Number.parseInt(color.slice(1), 16);
+
+class ReportedRuntimeError extends Error {}
 
 const directionBetween = (
 	from: { x: number; y: number },
@@ -36,10 +48,17 @@ export class FieldScene extends Phaser.Scene {
 	private partyTextureKeys: string[] = [];
 	private partyFacings: FieldDirection[] = [];
 	private walkFrame: Exclude<FieldWalkFrame, 0> = 1;
-	private lastMoveAt = 0;
+	private lastMoveAt = Number.NEGATIVE_INFINITY;
 	private transitionStarted = false;
+	private contentAbortController?: AbortController;
+	private sceneActive = false;
 
-	constructor(private readonly gameSession: GameSession) {
+	constructor(
+		private readonly gameSession: GameSession,
+		private readonly contentLoader: GameContentLoader,
+		private readonly onRuntimeError: (error: GameRuntimeError) => void,
+		private readonly audioManager: GameAudioManager,
+	) {
 		super("field");
 	}
 
@@ -47,29 +66,52 @@ export class FieldScene extends Phaser.Scene {
 		const snapshot = this.gameSession.snapshot();
 		this.fieldState = snapshot.field;
 		this.map = this.gameSession.content.getMap(snapshot.location.mapId);
-		this.transitionStarted = false;
+		this.audioManager.playBgm(fieldMusicForMap(this.map.id));
+		this.transitionStarted = true;
+		this.sceneActive = true;
 		this.partySprites = [];
 		this.partyShadows = [];
 		this.partyTextureKeys = [];
 		this.partyFacings = [];
 		this.walkFrame = 1;
-		this.inputManager = new InputManager(this);
+		this.lastMoveAt = Number.NEGATIVE_INFINITY;
 		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+			this.sceneActive = false;
+			this.contentAbortController?.abort();
 			this.inputManager?.destroy();
 		});
 
+		this.setMapBackgroundStatus("loading");
+		if (!this.textures.exists(this.map.backgroundAssetId)) {
+			void this.restoreCurrentMapAssets();
+			return;
+		}
+		this.initializeField();
+	}
+
+	private initializeField(): void {
+		if (!this.sceneActive) return;
+		if (!this.textures.exists(this.map.backgroundAssetId)) {
+			this.reportAssetFailure(this.map.backgroundAssetId);
+			return;
+		}
+		this.inputManager = new InputManager(this);
 		this.drawMap();
 		this.createAtmosphere();
 		this.createParty();
 		this.configureCamera();
+		this.setMapBackgroundStatus("ready");
+		if (!this.resumePendingTrigger()) this.transitionStarted = false;
 	}
 
 	update(time: number): void {
 		if (!this.inputManager || this.transitionStarted) return;
+		this.inputManager.update();
 		if (
 			this.inputManager.justPressed("CANCEL") ||
 			this.inputManager.justPressed("MENU")
 		) {
+			this.audioManager.playSe("se-ui-confirm");
 			this.transitionStarted = true;
 			this.scene.start("field-menu");
 			return;
@@ -106,7 +148,10 @@ export class FieldScene extends Phaser.Scene {
 		);
 		if (moveEvent?.event.type !== "field.moved") return;
 		this.walkFrame = this.walkFrame === 1 ? 2 : 1;
-		this.syncPartySprites(true, previousPositions);
+		this.syncPartySprites(
+			!gameSettingsStore.getSnapshot().reducedMotion,
+			previousPositions,
+		);
 
 		if (transition.state.mode === "battle") {
 			this.transitionStarted = true;
@@ -114,8 +159,42 @@ export class FieldScene extends Phaser.Scene {
 			this.time.delayedCall(260, () => this.scene.start("battle"));
 			return;
 		}
-		if (!moveEvent.event.pendingTriggerId) return;
+		const pendingTriggerId = moveEvent.event.pendingTriggerId;
+		if (!pendingTriggerId) return;
 		this.transitionStarted = true;
+		this.continuePendingTrigger(pendingTriggerId);
+	}
+
+	private resumePendingTrigger(): boolean {
+		const pendingTriggerId = this.fieldState.pendingTriggerId;
+		if (!pendingTriggerId) return false;
+		this.transitionStarted = true;
+		this.continuePendingTrigger(pendingTriggerId);
+		return true;
+	}
+
+	private continuePendingTrigger(pendingTriggerId: string): void {
+		const action = getPendingFieldTriggerAction(
+			pendingTriggerId,
+			this.map.triggers,
+			(mapId) => Boolean(this.gameSession.content.mapsById[mapId]),
+		);
+		if (action?.type === "load-map") {
+			void this.loadTargetMapAndResolve(action.mapId);
+			return;
+		}
+		if (action?.type === "invalid") {
+			this.onRuntimeError({
+				code: "content",
+				retryable: false,
+				message: `The pending world trigger '${action.triggerId}' no longer exists.`,
+			});
+			return;
+		}
+		if (action?.type === "resolve") this.resolvePendingTrigger();
+	}
+
+	private resolvePendingTrigger(): void {
 		const resolved = this.gameSession.dispatch({
 			type: "field.trigger.resolve",
 		});
@@ -123,7 +202,7 @@ export class FieldScene extends Phaser.Scene {
 			(envelope) => envelope.event.type === "party.recovered",
 		);
 		if (recovery?.event.type === "party.recovered") {
-			this.showRecovery(recovery.event.restoredHp);
+			this.showRecovery(recovery.event.restoredHp, recovery.event.restoredMp);
 			return;
 		}
 		this.cameras.main.fadeOut(240, 12, 18, 38);
@@ -138,12 +217,110 @@ export class FieldScene extends Phaser.Scene {
 		});
 	}
 
-	private showRecovery(restoredHp: number): void {
+	private async loadTargetMapAndResolve(mapId: string): Promise<void> {
+		this.contentAbortController?.abort();
+		const controller = new AbortController();
+		this.contentAbortController = controller;
+		try {
+			const registry = await this.contentLoader.loadMap(
+				mapId,
+				controller.signal,
+			);
+			if (controller.signal.aborted) return;
+			await this.loadRequiredAssets(registry, mapId);
+			if (controller.signal.aborted) return;
+			this.gameSession.replaceContent(registry);
+			this.resolvePendingTrigger();
+		} catch (error) {
+			if (controller.signal.aborted || error instanceof ReportedRuntimeError)
+				return;
+			this.onRuntimeError({
+				code: "content",
+				retryable: error instanceof ContentLoadError ? error.retryable : true,
+				message:
+					error instanceof Error
+						? error.message
+						: "The next world area could not be loaded.",
+			});
+		} finally {
+			if (this.contentAbortController === controller) {
+				this.contentAbortController = undefined;
+			}
+		}
+	}
+
+	private loadRequiredAssets(
+		registry: GameSession["content"],
+		mapId: string,
+	): Promise<void> {
+		const assets = getRequiredAssetIdsForMap(registry, mapId)
+			.filter((assetId) => !this.textures.exists(assetId))
+			.map((assetId) => registry.getAsset(assetId));
+		if (assets.length === 0) return Promise.resolve();
+		return new Promise((resolve, reject) => {
+			const cleanup = () => {
+				this.load.off("complete", completed);
+				this.load.off("loaderror", failed);
+			};
+			const completed = () => {
+				cleanup();
+				const missingAsset = assets.find(
+					(asset) => !this.textures.exists(asset.id),
+				);
+				if (missingAsset) {
+					this.reportAssetFailure(missingAsset.id);
+					reject(new ReportedRuntimeError());
+					return;
+				}
+				resolve();
+			};
+			const failed = (file: { key: string }) => {
+				cleanup();
+				this.reportAssetFailure(file.key);
+				reject(new ReportedRuntimeError());
+			};
+			this.load.once("complete", completed);
+			this.load.once("loaderror", failed);
+			for (const asset of assets) this.load.image(asset.id, asset.url);
+			this.load.start();
+		});
+	}
+
+	private async restoreCurrentMapAssets(): Promise<void> {
+		try {
+			await this.loadRequiredAssets(this.gameSession.content, this.map.id);
+			if (!this.sceneActive) return;
+			this.initializeField();
+		} catch (error) {
+			if (!this.sceneActive || error instanceof ReportedRuntimeError) return;
+			this.reportAssetFailure(this.map.backgroundAssetId);
+		}
+	}
+
+	private reportAssetFailure(assetId: string): void {
+		this.setMapBackgroundStatus("error");
+		this.onRuntimeError({
+			code: "asset",
+			assetId,
+			retryable: true,
+			message: `A required world image (${assetId}) could not be loaded.`,
+		});
+	}
+
+	private setMapBackgroundStatus(status: "loading" | "ready" | "error"): void {
+		this.game.canvas.dataset.mapBackground = status;
+		this.game.canvas.dataset.mapBackgroundId = this.map.backgroundAssetId;
+	}
+
+	private showRecovery(restoredHp: number, restoredMp: number): void {
+		this.audioManager.playSe("se-field-recovery");
 		const camera = this.cameras.main;
 		const centerX = camera.worldView.centerX;
 		const centerY = camera.worldView.centerY;
 		camera.stopFollow();
-		camera.flash(280, 114, 215, 192);
+		if (!gameSettingsStore.getSnapshot().reducedMotion) {
+			camera.flash(280, 114, 215, 192);
+		}
 		this.add
 			.rectangle(centerX, centerY, 174, 28, 0x071523, 0.92)
 			.setStrokeStyle(1, 0x72d7c0, 0.9)
@@ -152,8 +329,8 @@ export class FieldScene extends Phaser.Scene {
 			.text(
 				centerX,
 				centerY,
-				restoredHp > 0
-					? `THE SPRING RESTORES ${restoredHp} HP`
+				restoredHp > 0 || restoredMp > 0
+					? `THE SPRING RESTORES ${restoredHp} HP / ${restoredMp} MP`
 					: "THE PARTY IS ALREADY RESTORED",
 				{
 					fontFamily: '"Trebuchet MS", Arial, sans-serif',
@@ -309,7 +486,10 @@ export class FieldScene extends Phaser.Scene {
 					.setDepth(2.1);
 				this.add.circle(x - 1, y - 1, 1.5, 0xe8fff8, 0.95).setDepth(2.2);
 			}
-			if (trigger.marker.pulse) {
+			if (
+				trigger.marker.pulse &&
+				!gameSettingsStore.getSnapshot().reducedMotion
+			) {
 				this.tweens.add({
 					targets: marker,
 					alpha: { from: 0.25, to: 0.75 },
@@ -339,6 +519,7 @@ export class FieldScene extends Phaser.Scene {
 			const mote = this.add
 				.circle(particle.x, particle.y, 1, 0xc5e8dc, 0.45)
 				.setDepth(190);
+			if (gameSettingsStore.getSnapshot().reducedMotion) continue;
 			this.tweens.add({
 				targets: mote,
 				x: particle.x + 9,

@@ -1,4 +1,4 @@
-import { EMPTY_ACTION3D_INPUT, type Action3dInput } from "@shared/action3d";
+import { type Action3dInput, EMPTY_ACTION3D_INPUT } from "@shared/action3d";
 
 const blockedKeys = new Set([
 	"KeyW",
@@ -15,6 +15,7 @@ const blockedKeys = new Set([
 	"ControlLeft",
 	"ControlRight",
 	"KeyE",
+	"KeyP",
 ]);
 export class Action3dInputController {
 	private readonly down = new Set<string>();
@@ -25,6 +26,7 @@ export class Action3dInputController {
 	private gamepadDodge = false;
 	private gamepadJump = false;
 	private gamepadLock = false;
+	private gamepadPause = false;
 	cameraYaw = 0;
 	cameraPitch = -0.3;
 	constructor(
@@ -33,6 +35,7 @@ export class Action3dInputController {
 	) {
 		window.addEventListener("keydown", this.onKeyDown);
 		window.addEventListener("keyup", this.onKeyUp);
+		window.addEventListener("blur", this.clear);
 		document.addEventListener("mousemove", this.onMouseMove);
 		document.addEventListener("pointerlockchange", this.onPointerLockChange);
 		canvas.addEventListener("pointerdown", this.onPointerDown);
@@ -57,14 +60,29 @@ export class Action3dInputController {
 	private onPointerDown = (event: PointerEvent) => {
 		this.canvas.focus();
 		if (document.pointerLockElement !== this.canvas)
-			void this.canvas.requestPointerLock();
+			void this.canvas.requestPointerLock().catch(() => {
+				// Pointer lock is an optional enhancement and may be rejected while
+				// the route or document is being replaced.
+			});
 		if (event.button === 0) this.pointerAttack = true;
 		if (event.button === 2) this.pressed.add("KeyE");
 	};
 	private onContextMenu = (event: Event) => event.preventDefault();
 	private onPointerLockChange = () => {
 		this.pointerLock = document.pointerLockElement === this.canvas;
+		if (!this.pointerLock) this.clear();
 		this.onPointerLock(this.pointerLock);
+	};
+	private clear = () => {
+		this.down.clear();
+		this.pressed.clear();
+		this.pointerAttack = false;
+		const gamepad = navigator.getGamepads?.()[0];
+		this.gamepadAttack = Boolean(gamepad?.buttons[2]?.pressed);
+		this.gamepadDodge = Boolean(gamepad?.buttons[1]?.pressed);
+		this.gamepadJump = Boolean(gamepad?.buttons[0]?.pressed);
+		this.gamepadLock = Boolean(gamepad?.buttons[10]?.pressed);
+		this.gamepadPause = Boolean(gamepad?.buttons[9]?.pressed);
 	};
 	private buttonEdge(active: boolean, previous: boolean) {
 		return active && !previous;
@@ -88,6 +106,7 @@ export class Action3dInputController {
 		const dodge = Boolean(gamepad?.buttons[1]?.pressed);
 		const jump = Boolean(gamepad?.buttons[0]?.pressed);
 		const lock = Boolean(gamepad?.buttons[10]?.pressed);
+		const pause = Boolean(gamepad?.buttons[9]?.pressed);
 		const result: Action3dInput = {
 			...EMPTY_ACTION3D_INPUT,
 			moveX:
@@ -115,6 +134,8 @@ export class Action3dInputController {
 				this.buttonEdge(attack, this.gamepadAttack),
 			lockOn:
 				this.pressed.has("KeyE") || this.buttonEdge(lock, this.gamepadLock),
+			pause:
+				this.pressed.has("KeyP") || this.buttonEdge(pause, this.gamepadPause),
 		};
 		this.pressed.clear();
 		this.pointerAttack = false;
@@ -122,11 +143,13 @@ export class Action3dInputController {
 		this.gamepadDodge = dodge;
 		this.gamepadJump = jump;
 		this.gamepadLock = lock;
+		this.gamepadPause = pause;
 		return result;
 	}
 	dispose(): void {
 		window.removeEventListener("keydown", this.onKeyDown);
 		window.removeEventListener("keyup", this.onKeyUp);
+		window.removeEventListener("blur", this.clear);
 		document.removeEventListener("mousemove", this.onMouseMove);
 		document.removeEventListener("pointerlockchange", this.onPointerLockChange);
 		this.canvas.removeEventListener("pointerdown", this.onPointerDown);

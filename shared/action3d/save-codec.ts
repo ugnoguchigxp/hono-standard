@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GAME_IDS } from "../game-platform";
 import { ACTION3D_STATE_SCHEMA_VERSION, type Action3dState } from "./model";
 
 export const ACTION3D_SAVE_FORMAT_VERSION = 1 as const;
@@ -64,6 +65,8 @@ export const action3dStateSchema: z.ZodType<Action3dState> = z
 					"defeated",
 				]),
 				attackElapsedMs: z.number().nonnegative().nullable(),
+				attackComboIndex: z.number().int().min(0).max(2),
+				attackQueued: z.boolean(),
 				attackHitEnemyIds: z.array(z.string()),
 				dodgeElapsedMs: z.number().nonnegative().nullable(),
 				dodgeCooldownMs: z.number().nonnegative(),
@@ -76,6 +79,7 @@ export const action3dStateSchema: z.ZodType<Action3dState> = z
 	.strict();
 export type Action3dSaveEnvelope = {
 	formatVersion: typeof ACTION3D_SAVE_FORMAT_VERSION;
+	gameId: typeof GAME_IDS.action3d;
 	slotId: typeof ACTION3D_AUTOSAVE_SLOT;
 	savedAt: string;
 	state: Action3dState;
@@ -83,6 +87,7 @@ export type Action3dSaveEnvelope = {
 const envelopeSchema: z.ZodType<Action3dSaveEnvelope> = z
 	.object({
 		formatVersion: z.literal(ACTION3D_SAVE_FORMAT_VERSION),
+		gameId: z.literal(GAME_IDS.action3d),
 		slotId: z.literal(ACTION3D_AUTOSAVE_SLOT),
 		savedAt: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
 		state: action3dStateSchema,
@@ -103,6 +108,7 @@ export const createAction3dSave = (
 ): Action3dSaveEnvelope =>
 	envelopeSchema.parse({
 		formatVersion: ACTION3D_SAVE_FORMAT_VERSION,
+		gameId: GAME_IDS.action3d,
 		slotId: ACTION3D_AUTOSAVE_SLOT,
 		savedAt,
 		state,

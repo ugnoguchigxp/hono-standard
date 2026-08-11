@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	createGameSave,
 	createInitialGameState,
+	type GameContentRegistry,
 	type GameSession,
 	type GameState,
 } from "@shared/game";
@@ -15,9 +17,59 @@ import {
 	gameSaveStorageKey,
 	LocalGameSaveRepository,
 } from "./save/LocalGameSaveRepository";
+import type { GameSaveRepository } from "./save/ServerGameSaveRepository";
+
+vi.mock("./save/ServerGameSaveRepository", async (importOriginal) => {
+	const original =
+		await importOriginal<typeof import("./save/ServerGameSaveRepository")>();
+	const { LocalGameSaveRepository: LocalRepository } = await import(
+		"./save/LocalGameSaveRepository"
+	);
+	class TestServerGameSaveRepository {
+		private readonly local: LocalGameSaveRepository;
+
+		constructor(storage: Storage, playerId: string) {
+			this.local = new LocalRepository(storage, playerId);
+		}
+
+		load() {
+			const result = this.local.load();
+			return { ...result, source: "local" as const };
+		}
+
+		save(state: GameState, savedAt?: string) {
+			const result = this.local.save(state, savedAt);
+			return result.ok
+				? { ...result, revision: 1, synced: true as const }
+				: { ...result, synced: false as const };
+		}
+	}
+	return {
+		...original,
+		ServerGameSaveRepository: TestServerGameSaveRepository,
+	};
+});
 
 const registry = validateGameContentDirectory();
 const mocks = vi.hoisted(() => ({ latestSession: null as GameSession | null }));
+
+const toLegacyParty = (state: GameState) => ({
+	members: state.party.members.map((member) => ({
+		id: member.id,
+		name: member.name,
+		level: member.level,
+		hp: member.hp,
+		maxHp: member.maxHp,
+		attack: member.attack,
+		defense: member.defense,
+		speed: member.speed,
+		ability: {
+			id: member.ability.id,
+			name: member.ability.name,
+			powerPercent: member.ability.powerPercent,
+		},
+	})),
+});
 
 vi.mock("./GameScreen", () => ({
 	GameScreen: ({
@@ -50,6 +102,7 @@ vi.mock("./GameScreen", () => ({
 const readyLoader = () => {
 	const loader = new GameContentLoader();
 	vi.spyOn(loader, "load").mockResolvedValue(registry);
+	vi.spyOn(loader, "loadMap").mockResolvedValue(registry);
 	vi.spyOn(loader, "reset").mockImplementation(() => undefined);
 	return loader;
 };
@@ -216,7 +269,7 @@ describe("GameLauncher", () => {
 						id: "signal-ruins",
 						checkpoint: { x: 3, y: 6 },
 					},
-					party: current.party,
+					party: toLegacyParty(current),
 					story: current.story,
 					battle: current.battle,
 				},
@@ -276,7 +329,7 @@ describe("GameLauncher", () => {
 						id: "signal-ruins",
 						checkpoint: { x: 3, y: 6 },
 					},
-					party: current.party,
+					party: toLegacyParty(current),
 					story: current.story,
 					battle: current.battle,
 				},
@@ -335,5 +388,150 @@ describe("GameLauncher", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Reach checkpoint" }));
 		expect(save).toHaveBeenCalledTimes(2);
 		view.unmount();
+	});
+
+	it("confirms async cloud writes and reports a browser-only autosave", async () => {
+		const repository: GameSaveRepository = {
+			load: async () => ({ status: "empty", source: "server" }),
+			save: vi
+				.fn()
+				.mockImplementationOnce(async (state: GameState) => ({
+					ok: true,
+					save: createGameSave(state),
+					revision: 1,
+					synced: true,
+				}))
+				.mockImplementationOnce(async (state: GameState) => ({
+					ok: false,
+					message: "Cloud sync is waiting.",
+					save: createGameSave(state),
+					synced: false,
+				})),
+		};
+		render(
+			<GameLauncher
+				playerId="cloud@example.com"
+				contentLoader={readyLoader()}
+				saveRepository={repository}
+			/>,
+		);
+		fireEvent.click(await screen.findByRole("button", { name: "New Game" }));
+		expect(screen.getByRole("status")).toHaveTextContent("Saving checkpoint…");
+		await screen.findByText("Initial checkpoint saved.");
+
+		fireEvent.click(screen.getByRole("button", { name: "Reach checkpoint" }));
+		await screen.findByText("Cloud sync is waiting.");
+		expect(repository.save).toHaveBeenCalledTimes(2);
+	});
+
+	it("normalizes rejected cloud loading and saving operations", async () => {
+		const loadFailure: GameSaveRepository = {
+			load: async () => {
+				throw new Error("private load failure");
+			},
+			save: vi.fn(),
+		};
+		const failedLoadView = render(
+			<GameLauncher
+				playerId="load-failure@example.com"
+				contentLoader={readyLoader()}
+				saveRepository={loadFailure}
+			/>,
+		);
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"Cloud saves could not be loaded.",
+		);
+		failedLoadView.unmount();
+
+		const saveFailure: GameSaveRepository = {
+			load: async () => ({ status: "empty", source: "server" }),
+			save: async () => {
+				throw new Error("private save failure");
+			},
+		};
+		render(
+			<GameLauncher
+				playerId="save-failure@example.com"
+				contentLoader={readyLoader()}
+				saveRepository={saveFailure}
+			/>,
+		);
+		fireEvent.click(await screen.findByRole("button", { name: "New Game" }));
+		expect(
+			await screen.findByText(/please keep this page open and retry/i),
+		).toBeVisible();
+	});
+
+	it("shows a cloud summary and loads a declared saved map on demand", async () => {
+		const state = createInitialGameState({ registry });
+		state.location = {
+			mapId: "relay-camp",
+			entranceId: "ruins-gate",
+			checkpointId: "relay-gate",
+		};
+		state.field.partyPositions = [
+			{ x: 2, y: 5 },
+			{ x: 1, y: 5 },
+			{ x: 1, y: 6 },
+		];
+		const repository: GameSaveRepository = {
+			load: async () => ({
+				status: "ready",
+				save: createGameSave(state),
+				migrated: false,
+				source: "server",
+			}),
+			save: vi.fn(),
+		};
+		const loader = readyLoader();
+		const baseRegistry = Object.assign(
+			Object.create(Object.getPrototypeOf(registry)) as GameContentRegistry,
+			registry,
+			{
+				mapsById: Object.fromEntries(
+					Object.entries(registry.mapsById).filter(
+						([id]) => id !== "relay-camp",
+					),
+				),
+			},
+		);
+		vi.mocked(loader.load).mockResolvedValue(baseRegistry);
+		vi.spyOn(loader, "hasDeclaredMap").mockReturnValue(true);
+
+		render(
+			<GameLauncher
+				playerId="cloud@example.com"
+				contentLoader={loader}
+				saveRepository={repository}
+			/>,
+		);
+
+		expect(await screen.findByText(/Cloud save/)).toBeVisible();
+		expect(loader.loadMap).toHaveBeenCalledWith(
+			"relay-camp",
+			expect.any(AbortSignal),
+		);
+	});
+
+	it("cancels an in-flight save load when unmounted", async () => {
+		const repository: GameSaveRepository = {
+			load: (signal) =>
+				new Promise((_resolve, reject) => {
+					signal?.addEventListener("abort", () =>
+						reject(new DOMException("aborted", "AbortError")),
+					);
+				}),
+			save: vi.fn(),
+		};
+		const view = render(
+			<GameLauncher
+				playerId="abort@example.com"
+				contentLoader={readyLoader()}
+				saveRepository={repository}
+			/>,
+		);
+
+		view.unmount();
+		await Promise.resolve();
 	});
 });

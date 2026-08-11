@@ -1,12 +1,15 @@
-import Phaser from "phaser";
 import {
+	type AbilityDefinition,
 	ACTION_GAUGE_MAX,
 	type BattleCombatant,
+	type BattleCommand,
 	type BattleEvent,
+	type BattleItemStack,
 	type BattleState,
 	type GameSession,
+	levelForExperience,
 } from "@shared/game";
-import { InputManager } from "../input/InputManager";
+import Phaser from "phaser";
 import {
 	getBattleCharacterTextureKey,
 	getFieldCharacterTextureKey,
@@ -17,8 +20,19 @@ import {
 	GAME_RENDER_SCALE,
 	GAME_TEXT_RESOLUTION,
 } from "../display";
+import { InputManager } from "../input/InputManager";
+import {
+	getNextEnemyIntentLabel,
+	splitBattlePresentationEvents,
+} from "../presentation/battle-presentation";
+import {
+	battleMusicForEncounter,
+	battleSoundForEvent,
+} from "../audio/audio-catalog";
+import type { GameAudioManager } from "../audio/GameAudioManager";
+import { gameSettingsStore } from "../settings/GameSettingsStore";
 
-const commands = ["Attack", "Ability", "Defend"] as const;
+const commands = ["Attack", "Abilities", "Items", "Defend", "Escape"] as const;
 const enemyTextureKeys: Readonly<Record<string, string>> = {
 	"ash-wisp": "enemy-ash-wisp",
 	"brass-hound": "enemy-brass-hound",
@@ -32,18 +46,29 @@ const partyBattlePositions = [
 ] as const;
 
 type DamageBattleEvent = Extract<BattleEvent, { type: "action.damage" }>;
+type BattleMenuLayer = "commands" | "abilities" | "items" | "target";
+type PendingBattleAction =
+	| { type: "attack" }
+	| { type: "ability"; ability: AbilityDefinition }
+	| { type: "item"; item: BattleItemStack };
 
 export class BattleScene extends Phaser.Scene {
 	private inputManager?: InputManager;
 	private battleState!: BattleState;
 	private commandIndex = 0;
 	private targetIndex = 0;
+	private abilityIndex = 0;
+	private itemIndex = 0;
+	private menuLayer: BattleMenuLayer = "commands";
+	private pendingAction: PendingBattleAction | null = null;
 	private actionAnimating = false;
+	private victoryAcknowledged = false;
 	private status = "The encounter takes shape.";
 	private partyText?: Phaser.GameObjects.Text;
 	private enemyText?: Phaser.GameObjects.Text;
 	private commandText?: Phaser.GameObjects.Text;
 	private statusText?: Phaser.GameObjects.Text;
+	private bossIntentText?: Phaser.GameObjects.Text;
 	private gaugeGraphics?: Phaser.GameObjects.Graphics;
 	private targetCursor?: Phaser.GameObjects.Triangle;
 	private readonly combatantSprites = new Map<
@@ -51,7 +76,10 @@ export class BattleScene extends Phaser.Scene {
 		Phaser.GameObjects.Image
 	>();
 
-	constructor(private readonly gameSession: GameSession) {
+	constructor(
+		private readonly gameSession: GameSession,
+		private readonly audioManager: GameAudioManager,
+	) {
 		super("battle");
 	}
 
@@ -64,9 +92,18 @@ export class BattleScene extends Phaser.Scene {
 		const battle = this.gameSession.snapshot().battle;
 		if (!battle) throw new Error("BattleScene requires an active battle.");
 		this.battleState = battle;
+		this.audioManager.playBgm(battleMusicForEncounter(battle.id));
+		if (battle.id === SIGNAL_RUINS_BOSS_ID) {
+			this.audioManager.playSe("se-battle-boss-roar");
+		}
 		this.commandIndex = 0;
 		this.targetIndex = 0;
+		this.abilityIndex = 0;
+		this.itemIndex = 0;
+		this.menuLayer = "commands";
+		this.pendingAction = null;
 		this.actionAnimating = false;
+		this.victoryAcknowledged = false;
 		this.status =
 			battle.id === SIGNAL_RUINS_BOSS_ID
 				? "The Signal Warden awakens."
@@ -81,6 +118,8 @@ export class BattleScene extends Phaser.Scene {
 	}
 
 	update(_time: number, delta: number): void {
+		this.inputManager?.update();
+		this.playInputAudio();
 		if (this.actionAnimating) {
 			this.renderHud();
 			return;
@@ -92,12 +131,19 @@ export class BattleScene extends Phaser.Scene {
 			});
 			if (transition.state.battle) this.battleState = transition.state.battle;
 			const events = this.battleEvents(transition.events);
-			this.updateStatus(events);
 			this.playBattleEvents(events);
 		} else if (this.battleState.phase === "awaiting-command") {
 			this.handleCommandInput();
 		} else if (this.inputManager?.justPressed("CONFIRM")) {
-			if (this.battleState.phase === "victory") {
+			if (
+				this.battleState.phase === "victory" ||
+				this.battleState.phase === "escaped"
+			) {
+				if (this.battleState.phase === "victory" && !this.victoryAcknowledged) {
+					this.victoryAcknowledged = true;
+					this.status = this.createVictorySummary();
+					return;
+				}
 				const completed = this.gameSession.dispatch({
 					type: "battle.complete",
 				});
@@ -110,68 +156,226 @@ export class BattleScene extends Phaser.Scene {
 		this.renderHud();
 	}
 
+	private playInputAudio(): void {
+		if (!this.inputManager || this.actionAnimating) return;
+		if (
+			this.inputManager.justPressed("UP") ||
+			this.inputManager.justPressed("DOWN") ||
+			this.inputManager.justPressed("LEFT") ||
+			this.inputManager.justPressed("RIGHT")
+		) {
+			this.audioManager.playSe("se-ui-navigate");
+		} else if (this.inputManager.justPressed("CONFIRM")) {
+			this.audioManager.playSe("se-ui-confirm");
+		} else if (this.inputManager.justPressed("CANCEL")) {
+			this.audioManager.playSe("se-ui-cancel");
+		}
+	}
+
 	private handleCommandInput(): void {
 		if (!this.inputManager) return;
+		if (this.inputManager.justPressed("CANCEL")) {
+			if (this.menuLayer === "target") {
+				this.menuLayer =
+					this.pendingAction?.type === "ability"
+						? "abilities"
+						: this.pendingAction?.type === "item"
+							? "items"
+							: "commands";
+				this.pendingAction = null;
+				this.targetIndex = 0;
+			} else if (this.menuLayer !== "commands") {
+				this.menuLayer = "commands";
+			}
+			return;
+		}
+		if (this.menuLayer === "target") {
+			this.handleTargetInput();
+			return;
+		}
+
+		const entries = this.currentMenuEntries();
+		if (entries.length === 0) {
+			if (this.inputManager.justPressed("CONFIRM")) {
+				this.status = "Nothing is available in this list.";
+			}
+			return;
+		}
+		const currentIndex =
+			this.menuLayer === "commands"
+				? this.commandIndex
+				: this.menuLayer === "abilities"
+					? this.abilityIndex
+					: this.itemIndex;
+		let nextIndex = currentIndex;
 		if (this.inputManager.justPressed("UP")) {
-			this.commandIndex =
-				(this.commandIndex + commands.length - 1) % commands.length;
+			nextIndex = (currentIndex + entries.length - 1) % entries.length;
 		}
 		if (this.inputManager.justPressed("DOWN")) {
-			this.commandIndex = (this.commandIndex + 1) % commands.length;
+			nextIndex = (currentIndex + 1) % entries.length;
 		}
-
-		const livingEnemies = this.battleState.enemies.filter(
-			(enemy) => enemy.hp > 0,
-		);
-		if (livingEnemies.length > 0) {
-			if (this.inputManager.justPressed("LEFT")) {
-				this.targetIndex =
-					(this.targetIndex + livingEnemies.length - 1) % livingEnemies.length;
-			}
-			if (this.inputManager.justPressed("RIGHT")) {
-				this.targetIndex = (this.targetIndex + 1) % livingEnemies.length;
-			}
-		}
+		if (this.menuLayer === "commands") this.commandIndex = nextIndex;
+		else if (this.menuLayer === "abilities") this.abilityIndex = nextIndex;
+		else this.itemIndex = nextIndex;
 
 		if (!this.inputManager.justPressed("CONFIRM")) return;
-		const actorId = this.battleState.activeActorId;
-		if (!actorId) return;
-		const actor = this.battleState.party.find(
-			(member) => member.id === actorId,
-		);
+		const actor = this.activeActor();
 		if (!actor) return;
+		if (this.menuLayer === "commands") {
+			const selected = commands[this.commandIndex];
+			if (selected === "Abilities") {
+				this.menuLayer = "abilities";
+				this.abilityIndex = 0;
+			} else if (selected === "Items") {
+				this.menuLayer = "items";
+				this.itemIndex = 0;
+			} else if (selected === "Defend") {
+				this.executeCommand({ type: "defend", actorId: actor.id });
+			} else if (selected === "Escape") {
+				if (this.battleState.canEscape) {
+					this.executeCommand({ type: "escape", actorId: actor.id });
+				} else {
+					this.status = "The boss field prevents escape.";
+				}
+			} else {
+				this.beginTargeting({ type: "attack" });
+			}
+			return;
+		}
+		if (this.menuLayer === "abilities") {
+			const ability = actor.abilities[this.abilityIndex];
+			if (!ability) return;
+			if (actor.mp < ability.mpCost) {
+				this.status = `${actor.name} needs ${ability.mpCost} MP.`;
+				return;
+			}
+			this.beginTargeting({ type: "ability", ability });
+			return;
+		}
+		const item = this.availableBattleItems()[this.itemIndex];
+		if (item) this.beginTargeting({ type: "item", item });
+	}
 
-		const selected = commands[this.commandIndex];
-		const target = livingEnemies[this.targetIndex % livingEnemies.length];
-		if (selected !== "Defend" && !target) return;
-		const battleCommand =
-			selected === "Defend"
-				? ({
-						type: "defend",
-						actorId,
-					} as const)
-				: selected === "Ability"
-					? ({
+	private currentMenuEntries(): readonly string[] {
+		const actor = this.activeActor();
+		if (this.menuLayer === "commands") return commands;
+		if (this.menuLayer === "abilities") {
+			return actor?.abilities.map(({ name }) => name) ?? [];
+		}
+		return this.availableBattleItems().map(({ name }) => name);
+	}
+
+	private availableBattleItems(): BattleItemStack[] {
+		return this.battleState.items.filter(
+			(item) => item.count > 0 && item.effect !== "none",
+		);
+	}
+
+	private activeActor(): BattleCombatant | undefined {
+		return this.battleState.party.find(
+			(member) => member.id === this.battleState.activeActorId,
+		);
+	}
+
+	private beginTargeting(action: PendingBattleAction): void {
+		this.pendingAction = action;
+		this.targetIndex = 0;
+		const targets = this.targetCandidates(action);
+		if (targets.length === 0) {
+			this.status = "There is no valid target.";
+			this.pendingAction = null;
+			return;
+		}
+		if (
+			action.type === "ability" &&
+			(action.ability.target.endsWith("all") ||
+				action.ability.target === "self")
+		) {
+			this.executePendingAction(targets[0].id);
+			return;
+		}
+		this.menuLayer = "target";
+	}
+
+	private targetCandidates(action = this.pendingAction): BattleCombatant[] {
+		const actor = this.activeActor();
+		if (!action || !actor) return [];
+		if (action.type === "attack") {
+			return this.battleState.enemies.filter((enemy) => enemy.hp > 0);
+		}
+		if (action.type === "item") {
+			return this.battleState.party.filter((member) =>
+				action.item.effect === "revive" ? member.hp === 0 : member.hp > 0,
+			);
+		}
+		if (action.ability.target === "self") return [actor];
+		if (action.ability.target.startsWith("ally")) {
+			return this.battleState.party.filter((member) => member.hp > 0);
+		}
+		return this.battleState.enemies.filter((enemy) => enemy.hp > 0);
+	}
+
+	private handleTargetInput(): void {
+		if (!this.inputManager || !this.pendingAction) return;
+		const targets = this.targetCandidates();
+		if (targets.length === 0) return;
+		if (
+			this.inputManager.justPressed("UP") ||
+			this.inputManager.justPressed("LEFT")
+		) {
+			this.targetIndex =
+				(this.targetIndex + targets.length - 1) % targets.length;
+		}
+		if (
+			this.inputManager.justPressed("DOWN") ||
+			this.inputManager.justPressed("RIGHT")
+		) {
+			this.targetIndex = (this.targetIndex + 1) % targets.length;
+		}
+		if (this.inputManager.justPressed("CONFIRM")) {
+			this.executePendingAction(targets[this.targetIndex].id);
+		}
+	}
+
+	private executePendingAction(targetId: string): void {
+		const actorId = this.battleState.activeActorId;
+		const action = this.pendingAction;
+		if (!actorId || !action) return;
+		const command: BattleCommand =
+			action.type === "attack"
+				? { type: "attack", actorId, targetId }
+				: action.type === "ability"
+					? {
 							type: "ability",
 							actorId,
-							targetId: target.id,
-							abilityId: actor.ability.id,
-						} as const)
-					: ({
-							type: "attack",
+							targetId,
+							abilityId: action.ability.id,
+						}
+					: {
+							type: "item",
 							actorId,
-							targetId: target.id,
-						} as const);
-		const transition = this.gameSession.dispatch({
-			type: "battle.command",
-			command: battleCommand,
-		});
-		if (transition.state.battle) this.battleState = transition.state.battle;
-		this.commandIndex = 0;
-		this.targetIndex = 0;
-		const events = this.battleEvents(transition.events);
-		this.updateStatus(events);
-		this.playBattleEvents(events);
+							targetId,
+							itemId: action.item.id,
+						};
+		this.executeCommand(command);
+	}
+
+	private executeCommand(command: BattleCommand): void {
+		try {
+			const transition = this.gameSession.dispatch({
+				type: "battle.command",
+				command,
+			});
+			if (transition.state.battle) this.battleState = transition.state.battle;
+			this.commandIndex = 0;
+			this.targetIndex = 0;
+			this.menuLayer = "commands";
+			this.pendingAction = null;
+			this.playBattleEvents(this.battleEvents(transition.events));
+		} catch (error) {
+			this.status =
+				error instanceof Error ? error.message : "The command failed.";
+		}
 	}
 
 	private battleEvents(
@@ -196,9 +400,48 @@ export class BattleScene extends Phaser.Scene {
 			case "action.damage": {
 				const actor = this.findCombatant(event.actorId);
 				const target = this.findCombatant(event.targetId);
+				const ability = actor?.abilities.find(
+					({ id }) => id === event.abilityId,
+				);
+				const affinity =
+					event.multiplier > 1
+						? " Weakness!"
+						: event.multiplier < 1
+							? " Resisted."
+							: "";
 				this.status = event.abilityId
-					? `${actor?.name ?? "Unknown"} uses ${actor?.ability.name ?? "an ability"}! ${event.amount} damage.`
-					: `${actor?.name ?? "Unknown"} hits ${target?.name ?? "the target"} for ${event.amount}.`;
+					? `${actor?.name ?? "Unknown"} uses ${ability?.name ?? "an ability"}! ${event.amount} damage.${affinity}`
+					: `${actor?.name ?? "Unknown"} hits ${target?.name ?? "the target"} for ${event.amount}.${affinity}`;
+				break;
+			}
+			case "action.heal": {
+				const target = this.findCombatant(event.targetId);
+				this.status = `${target?.name ?? "An ally"} recovers ${event.amount} HP.`;
+				break;
+			}
+			case "resource.spent":
+				break;
+			case "item.used": {
+				const item = this.battleState.items.find(
+					({ id }) => id === event.itemId,
+				);
+				const target = this.findCombatant(event.targetId);
+				this.status = `${item?.name ?? "Item"} used on ${target?.name ?? "an ally"}.`;
+				break;
+			}
+			case "status.applied": {
+				const target = this.findCombatant(event.targetId);
+				this.status = `${target?.name ?? "The target"} gains ${event.statusId.toUpperCase()}.`;
+				break;
+			}
+			case "status.damage": {
+				const target = this.findCombatant(event.combatantId);
+				this.status = `${target?.name ?? "The target"} suffers ${event.amount} ${event.statusId} damage.`;
+				break;
+			}
+			case "status.expired": {
+				const target = this.findCombatant(event.combatantId);
+				this.status = `${event.statusId.toUpperCase()} fades from ${target?.name ?? "the target"}.`;
 				break;
 			}
 			case "action.defend": {
@@ -217,30 +460,102 @@ export class BattleScene extends Phaser.Scene {
 						? this.isBossBattle()
 							? "The Warden's signal breaks. Press confirm to continue."
 							: "Victory. Press confirm to continue."
-						: "The party was overwhelmed. Press confirm to retry.";
+						: event.result === "escaped"
+							? "The party escaped. Press confirm to return."
+							: "The party was overwhelmed. Press confirm to retry.";
 				break;
 		}
 	}
 
 	private playBattleEvents(events: BattleEvent[]): void {
-		const damage = events.find(
-			(event): event is DamageBattleEvent => event.type === "action.damage",
-		);
-		if (damage) {
-			this.playDamageAction(damage);
+		const { action, afterAction } = splitBattlePresentationEvents(events);
+		if (!action) {
+			this.updateStatus(afterAction);
 			return;
 		}
-		const defend = events.find((event) => event.type === "action.defend");
-		if (defend?.type === "action.defend") {
-			this.playDefendAction(defend.actorId);
+		this.updateStatus([action]);
+		const sound = battleSoundForEvent(action);
+		if (sound) this.audioManager.playSe(sound);
+		if (gameSettingsStore.getSnapshot().reducedMotion) {
+			this.updateStatus(afterAction);
+			this.renderHud();
+			return;
+		}
+		const finish = () => {
+			this.updateStatus(afterAction);
+			this.renderHud();
+		};
+		if (action.type === "action.damage") {
+			this.playDamageAction(action, finish);
+		} else if (action.type === "action.defend") {
+			this.playDefendAction(action.actorId, finish);
+		} else {
+			this.playSupportAction(action, finish);
 		}
 	}
 
-	private playDamageAction(event: DamageBattleEvent): void {
+	private playSupportAction(
+		event: Extract<
+			BattleEvent,
+			{ type: "action.heal" | "item.used" | "status.applied" }
+		>,
+		onComplete: () => void,
+	): void {
+		const targetSprite = this.combatantSprites.get(event.targetId);
+		if (!targetSprite) {
+			onComplete();
+			return;
+		}
+		this.actionAnimating = true;
+		const color =
+			event.type === "status.applied"
+				? 0xb398ef
+				: event.type === "item.used"
+					? 0xf2cf7a
+					: 0x72d7c0;
+		const centerY = targetSprite.y - targetSprite.displayHeight * 0.48;
+		const ring = this.add
+			.circle(targetSprite.x, centerY, 8, color, 0.16)
+			.setStrokeStyle(2, color, 1)
+			.setBlendMode(Phaser.BlendModes.ADD)
+			.setDepth(36);
+		for (let index = 0; index < 4; index += 1) {
+			const mote = this.add
+				.circle(targetSprite.x - 7 + index * 5, centerY + 9, 1.5, color, 0.95)
+				.setBlendMode(Phaser.BlendModes.ADD)
+				.setDepth(37);
+			this.tweens.add({
+				targets: mote,
+				y: centerY - 13 - (index % 2) * 4,
+				alpha: 0,
+				duration: 320 + index * 45,
+				onComplete: () => mote.destroy(),
+			});
+		}
+		this.tweens.add({
+			targets: ring,
+			alpha: 0,
+			scale: 1.8,
+			duration: 360,
+			onComplete: () => {
+				ring.destroy();
+				this.actionAnimating = false;
+				onComplete();
+			},
+		});
+	}
+
+	private playDamageAction(
+		event: DamageBattleEvent,
+		onComplete: () => void,
+	): void {
 		const actor = this.findCombatant(event.actorId);
 		const actorSprite = this.combatantSprites.get(event.actorId);
 		const targetSprite = this.combatantSprites.get(event.targetId);
-		if (!actor || !actorSprite || !targetSprite) return;
+		if (!actor || !actorSprite || !targetSprite) {
+			onComplete();
+			return;
+		}
 
 		this.actionAnimating = true;
 		const homeX = actorSprite.x;
@@ -294,6 +609,7 @@ export class BattleScene extends Phaser.Scene {
 									.setFlipX(true);
 							}
 							this.actionAnimating = false;
+							onComplete();
 						},
 					});
 				});
@@ -486,9 +802,12 @@ export class BattleScene extends Phaser.Scene {
 		});
 	}
 
-	private playDefendAction(actorId: string): void {
+	private playDefendAction(actorId: string, onComplete: () => void): void {
 		const sprite = this.combatantSprites.get(actorId);
-		if (!sprite) return;
+		if (!sprite) {
+			onComplete();
+			return;
+		}
 		this.actionAnimating = true;
 		const shield = this.add
 			.circle(
@@ -510,6 +829,7 @@ export class BattleScene extends Phaser.Scene {
 			onComplete: () => {
 				shield.destroy();
 				this.actionAnimating = false;
+				onComplete();
 			},
 		});
 	}
@@ -527,13 +847,41 @@ export class BattleScene extends Phaser.Scene {
 			repeat: 2,
 			onComplete: () => sprite.setX(homeX),
 		});
-		this.cameras.main.shake(100, 0.004);
+		if (!gameSettingsStore.getSnapshot().reducedMotion) {
+			this.cameras.main.shake(100, 0.004);
+		}
 	}
 
 	private findCombatant(combatantId: string): BattleCombatant | undefined {
 		return [...this.battleState.party, ...this.battleState.enemies].find(
 			(combatant) => combatant.id === combatantId,
 		);
+	}
+
+	private createVictorySummary(): string {
+		const encounter = this.gameSession.content.getEncounter(
+			this.battleState.id,
+		);
+		const persistentParty = this.gameSession.snapshot().party;
+		const levelNames = persistentParty.members.flatMap((member) =>
+			levelForExperience(member.experience + encounter.rewards.experience) >
+			member.level
+				? [member.name]
+				: [],
+		);
+		const summary = [
+			`${encounter.rewards.experience} EXP`,
+			...encounter.rewards.items
+				.filter(({ chance }) => chance >= 1)
+				.map(
+					({ itemId, quantity }) =>
+						`${this.gameSession.content.getItem(itemId).displayName} ×${quantity}`,
+				),
+		];
+		if (levelNames.length > 0) {
+			summary.push(`LEVEL UP: ${levelNames.join(", ")}`);
+		}
+		return `VICTORY! ${summary.join(" · ")}\nPress confirm to continue.`;
 	}
 
 	private isBossBattle(): boolean {
@@ -583,6 +931,15 @@ export class BattleScene extends Phaser.Scene {
 					fontSize: "7px",
 					fontStyle: "bold",
 					color: "#f6edd4",
+					resolution: GAME_TEXT_RESOLUTION,
+				})
+				.setDepth(21);
+			this.bossIntentText = this.add
+				.text(11, 17, "", {
+					fontFamily: '"Trebuchet MS", Arial, sans-serif',
+					fontSize: "4px",
+					fontStyle: "bold",
+					color: "#72d7c0",
 					resolution: GAME_TEXT_RESOLUTION,
 				})
 				.setDepth(21);
@@ -723,6 +1080,8 @@ export class BattleScene extends Phaser.Scene {
 				color: "#d6e1df",
 				backgroundColor: "#07101dcc",
 				padding: { x: 4, y: 2 },
+				wordWrap: { width: 294, useAdvancedWrap: true },
+				align: "center",
 			})
 			.setOrigin(0.5, 1)
 			.setDepth(42);
@@ -730,13 +1089,17 @@ export class BattleScene extends Phaser.Scene {
 	}
 
 	private renderHud(): void {
+		const boss = this.isBossBattle() ? this.battleState.enemies[0] : undefined;
+		this.bossIntentText?.setText(
+			boss && boss.hp > 0 ? `NEXT ${getNextEnemyIntentLabel(boss)}` : "",
+		);
 		this.partyText?.setText(
 			this.battleState.party
 				.map(
 					(member) =>
-						`${member.name.padEnd(5)} HP ${String(member.hp).padStart(2)}/${member.maxHp}`,
+						`${member.name.padEnd(5)} HP ${String(member.hp).padStart(2)}/${member.maxHp}  MP ${member.mp}/${member.maxMp}${member.statuses.length > 0 ? `  ${member.statuses.map(({ id }) => id.toUpperCase()).join(",")}` : ""}`,
 				)
-				.join("\n\n"),
+				.join("\n"),
 		);
 		this.enemyText
 			?.setVisible(!this.isBossBattle())
@@ -744,7 +1107,7 @@ export class BattleScene extends Phaser.Scene {
 				this.battleState.enemies
 					.map(
 						(enemy) =>
-							`${enemy.name.toUpperCase()}  HP ${enemy.hp}/${enemy.maxHp}`,
+							`${enemy.name.toUpperCase()}  HP ${enemy.hp}/${enemy.maxHp}${enemy.statuses.length > 0 ? ` [${enemy.statuses.map(({ id }) => id.toUpperCase()).join(",")}]` : ""}`,
 					)
 					.join("  /  "),
 			);
@@ -753,12 +1116,35 @@ export class BattleScene extends Phaser.Scene {
 			(member) => member.id === this.battleState.activeActorId,
 		);
 		if (this.battleState.phase === "awaiting-command" && actor) {
+			let entries: string[];
+			let selectedIndex: number;
+			if (this.menuLayer === "abilities") {
+				entries = actor.abilities.map(
+					(ability) =>
+						`${ability.name} ${ability.mpCost}MP ${ability.target.replace("-", " ")}`,
+				);
+				selectedIndex = this.abilityIndex;
+			} else if (this.menuLayer === "items") {
+				entries = this.availableBattleItems().map(
+					(item) => `${item.name} ×${item.count}`,
+				);
+				selectedIndex = this.itemIndex;
+			} else if (this.menuLayer === "target") {
+				entries = ["SELECT TARGET", "Z CONFIRM", "X BACK"];
+				selectedIndex = -1;
+			} else {
+				entries = commands.map((command) =>
+					command === "Escape" && !this.battleState.canEscape
+						? "Escape —"
+						: command,
+				);
+				selectedIndex = this.commandIndex;
+			}
 			this.commandText?.setText(
-				commands
-					.map((command, index) => {
-						const label = command === "Ability" ? actor.ability.name : command;
-						return `${index === this.commandIndex ? ">" : " "} ${label}`;
-					})
+				entries
+					.map(
+						(entry, index) => `${index === selectedIndex ? ">" : " "} ${entry}`,
+					)
 					.join("\n"),
 			);
 		} else {
@@ -772,7 +1158,6 @@ export class BattleScene extends Phaser.Scene {
 
 		this.gaugeGraphics?.clear();
 		if (this.isBossBattle()) {
-			const boss = this.battleState.enemies[0];
 			const ratio = boss ? boss.hp / boss.maxHp : 0;
 			this.gaugeGraphics?.fillStyle(0x36101f, 1);
 			this.gaugeGraphics?.fillRect(101, 17, 205, 4);
@@ -803,16 +1188,16 @@ export class BattleScene extends Phaser.Scene {
 			}
 		}
 
-		const livingEnemies = this.battleState.enemies.filter(
-			(enemy) => enemy.hp > 0,
-		);
-		const target = livingEnemies[this.targetIndex % livingEnemies.length];
+		const targets = this.menuLayer === "target" ? this.targetCandidates() : [];
+		const target = targets[this.targetIndex % targets.length];
 		const targetSprite = target
 			? this.combatantSprites.get(target.id)
 			: undefined;
 		this.targetCursor
 			?.setVisible(
-				this.battleState.phase === "awaiting-command" && Boolean(targetSprite),
+				this.battleState.phase === "awaiting-command" &&
+					this.menuLayer === "target" &&
+					Boolean(targetSprite),
 			)
 			.setPosition(
 				targetSprite?.x ?? 0,

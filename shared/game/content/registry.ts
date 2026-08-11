@@ -1,5 +1,10 @@
 import type { StoryState } from "../model";
 import {
+	createFieldStateAt,
+	FieldPlacementError,
+	MAX_FIELD_PARTY_SIZE,
+} from "../field-placement";
+import {
 	contentManifestSchema,
 	MAX_CONDITION_DEPTH,
 	mapDefinitionSchema,
@@ -8,9 +13,16 @@ import {
 	type AssetDefinitionV1,
 	type ContentCondition,
 	type ContentManifestV1,
+	type AbilityContentDefinitionV1,
+	type CharacterDefinitionV1,
+	type EncounterDefinitionV1,
+	type EnemyDefinitionV1,
+	type EquipmentDefinitionV1,
 	type EventDefinitionV1,
 	type EventNodeV1,
+	type ItemDefinitionV1,
 	type MapDefinitionV1,
+	type StatusEffectDefinitionV1,
 } from "./schema";
 
 export type ContentValidationIssue = {
@@ -21,6 +33,7 @@ export type ContentValidationIssue = {
 		| "duplicate"
 		| "reference"
 		| "bounds"
+		| "placement"
 		| "graph"
 		| "asset"
 		| "limit";
@@ -82,8 +95,8 @@ const zodIssues = (
 		message: issue.message,
 	}));
 
-const addDuplicateIssues = <T extends { id: string }>(
-	values: readonly T[],
+const addDuplicateIssues = (
+	values: readonly { id: string }[],
 	documentPath: string,
 	dataPath: string,
 	issues: ContentValidationIssue[],
@@ -156,6 +169,15 @@ export class GameContentRegistry {
 	readonly eventsById: Readonly<Record<string, EventDefinitionV1>>;
 	readonly assetsById: Readonly<Record<string, AssetDefinitionV1>>;
 	readonly actorsById: Readonly<Record<string, ActorDefinitionV1>>;
+	readonly statusEffectsById: Readonly<
+		Record<string, StatusEffectDefinitionV1>
+	>;
+	readonly abilitiesById: Readonly<Record<string, AbilityContentDefinitionV1>>;
+	readonly charactersById: Readonly<Record<string, CharacterDefinitionV1>>;
+	readonly itemsById: Readonly<Record<string, ItemDefinitionV1>>;
+	readonly equipmentById: Readonly<Record<string, EquipmentDefinitionV1>>;
+	readonly enemiesById: Readonly<Record<string, EnemyDefinitionV1>>;
+	readonly encountersById: Readonly<Record<string, EncounterDefinitionV1>>;
 	readonly assets: readonly AssetDefinitionV1[];
 	readonly encounterIds: readonly string[];
 	private readonly collisionKeysByMap: Readonly<
@@ -179,7 +201,19 @@ export class GameContentRegistry {
 		this.assets = deepFreeze(manifest.assets.map((asset) => ({ ...asset })));
 		this.assetsById = indexById(this.assets);
 		this.actorsById = indexById(manifest.actors);
-		this.encounterIds = deepFreeze([...manifest.encounterIds]);
+		this.statusEffectsById = indexById(manifest.statusEffects);
+		this.abilitiesById = indexById(manifest.abilities);
+		this.charactersById = indexById(manifest.characters);
+		this.itemsById = indexById(manifest.items);
+		this.equipmentById = indexById(manifest.equipment);
+		this.enemiesById = indexById(manifest.enemies);
+		this.encountersById = indexById(manifest.encounters);
+		this.encounterIds = deepFreeze([
+			...new Set([
+				...manifest.encounterIds,
+				...manifest.encounters.map(({ id }) => id),
+			]),
+		]);
 		const collisionKeysByMap = Object.create(null) as Record<
 			string,
 			ReadonlySet<string>
@@ -223,6 +257,49 @@ export class GameContentRegistry {
 		return actor;
 	}
 
+	getStatusEffect(statusEffectId: string): StatusEffectDefinitionV1 {
+		const statusEffect = this.statusEffectsById[statusEffectId];
+		if (!statusEffect)
+			throw new Error(`Unknown status effect '${statusEffectId}'.`);
+		return statusEffect;
+	}
+
+	getAbility(abilityId: string): AbilityContentDefinitionV1 {
+		const ability = this.abilitiesById[abilityId];
+		if (!ability) throw new Error(`Unknown ability '${abilityId}'.`);
+		return ability;
+	}
+
+	getCharacter(characterId: string): CharacterDefinitionV1 {
+		const character = this.charactersById[characterId];
+		if (!character) throw new Error(`Unknown character '${characterId}'.`);
+		return character;
+	}
+
+	getItem(itemId: string): ItemDefinitionV1 {
+		const item = this.itemsById[itemId];
+		if (!item) throw new Error(`Unknown item '${itemId}'.`);
+		return item;
+	}
+
+	getEquipment(equipmentId: string): EquipmentDefinitionV1 {
+		const equipment = this.equipmentById[equipmentId];
+		if (!equipment) throw new Error(`Unknown equipment '${equipmentId}'.`);
+		return equipment;
+	}
+
+	getEnemy(enemyId: string): EnemyDefinitionV1 {
+		const enemy = this.enemiesById[enemyId];
+		if (!enemy) throw new Error(`Unknown enemy '${enemyId}'.`);
+		return enemy;
+	}
+
+	getEncounter(encounterId: string): EncounterDefinitionV1 {
+		const encounter = this.encountersById[encounterId];
+		if (!encounter) throw new Error(`Unknown encounter '${encounterId}'.`);
+		return encounter;
+	}
+
 	hasEncounter(encounterId: string): boolean {
 		return this.encounterIds.includes(encounterId);
 	}
@@ -245,6 +322,7 @@ export function parseContentManifest(
 
 export function parseGameContentBundle(
 	raw: RawGameContentBundle,
+	options: { allowPartial?: boolean } = {},
 ): GameContentRegistry {
 	const manifestPath = raw.manifestPath ?? "manifest.json";
 	const issues: ContentValidationIssue[] = [];
@@ -255,6 +333,65 @@ export function parseGameContentBundle(
 		);
 	}
 	const manifest = manifestResult.data;
+	const bundledMaps = manifest.bundles.flatMap((bundle) => bundle.maps);
+	const bundledEvents = manifest.bundles.flatMap((bundle) => bundle.events);
+	const knownMapIds = new Set(bundledMaps.map(({ id }) => id));
+	const knownEventIds = new Set(bundledEvents.map(({ id }) => id));
+	const expectedMapIdByPath = new Map(
+		bundledMaps.map(({ id, path }) => [path, id]),
+	);
+	const expectedEventIdByPath = new Map(
+		bundledEvents.map(({ id, path }) => [path, id]),
+	);
+	addDuplicateIssues(manifest.bundles, manifestPath, "$.bundles", issues);
+	addDuplicateIssues(bundledMaps, manifestPath, "$.bundles.maps", issues);
+	addDuplicateIssues(bundledEvents, manifestPath, "$.bundles.events", issues);
+	const entryBundle = manifest.bundles.find(
+		({ id }) => id === manifest.entryBundleId,
+	);
+	if (!entryBundle) {
+		issues.push({
+			documentPath: manifestPath,
+			dataPath: "$.entryBundleId",
+			code: "reference",
+			message: `Entry bundle '${manifest.entryBundleId}' does not exist.`,
+		});
+	} else if (
+		!entryBundle.maps.some(({ id }) => id === manifest.entryPoint.mapId)
+	) {
+		issues.push({
+			documentPath: manifestPath,
+			dataPath: "$.entryBundleId",
+			code: "reference",
+			message: `Entry bundle '${manifest.entryBundleId}' does not contain entry map '${manifest.entryPoint.mapId}'.`,
+		});
+	}
+	for (const [kind, declaredPaths, bundledDocuments] of [
+		["maps", manifest.documents.maps, bundledMaps],
+		["events", manifest.documents.events, bundledEvents],
+	] as const) {
+		const bundledPaths = bundledDocuments.map(({ path }) => path);
+		for (const path of declaredPaths) {
+			if (bundledPaths.filter((candidate) => candidate === path).length !== 1) {
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: `$.bundles`,
+					code: "reference",
+					message: `Declared ${kind} document '${path}' must belong to exactly one bundle.`,
+				});
+			}
+		}
+		for (const path of bundledPaths) {
+			if (!declaredPaths.includes(path)) {
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: "$.bundles",
+					code: "reference",
+					message: `Bundle ${kind} document '${path}' is not declared in the manifest document list.`,
+				});
+			}
+		}
+	}
 
 	const parseDocuments = <T>(
 		documents: RawContentDocument[],
@@ -265,7 +402,19 @@ export function parseGameContentBundle(
 			documents.map((document) => [document.path, document]),
 		);
 		const parsed: ParsedDocument<T>[] = [];
-		for (const path of paths) {
+		const selectedPaths = options.allowPartial
+			? documents.map(({ path }) => path)
+			: paths;
+		for (const path of selectedPaths) {
+			if (!paths.includes(path)) {
+				issues.push({
+					documentPath: path,
+					dataPath: "$",
+					code: "reference",
+					message: `Content document '${path}' is not declared by the manifest.`,
+				});
+				continue;
+			}
 			const document = byPath.get(path);
 			if (!document) {
 				issues.push({
@@ -296,6 +445,28 @@ export function parseGameContentBundle(
 		manifest.documents.events,
 		eventDefinitionSchema,
 	);
+	for (const { path, data } of maps) {
+		const expectedId = expectedMapIdByPath.get(path);
+		if (expectedId !== data.id) {
+			issues.push({
+				documentPath: path,
+				dataPath: "$.id",
+				code: "reference",
+				message: `Map document '${path}' must define bundled ID '${String(expectedId)}'.`,
+			});
+		}
+	}
+	for (const { path, data } of events) {
+		const expectedId = expectedEventIdByPath.get(path);
+		if (expectedId !== data.id) {
+			issues.push({
+				documentPath: path,
+				dataPath: "$.id",
+				code: "reference",
+				message: `Event document '${path}' must define bundled ID '${String(expectedId)}'.`,
+			});
+		}
+	}
 
 	addDuplicateIssues(manifest.assets, manifestPath, "$.assets", issues);
 	addDuplicateIssues(manifest.actors, manifestPath, "$.actors", issues);
@@ -326,15 +497,140 @@ export function parseGameContentBundle(
 	);
 	const assetIds = new Set(manifest.assets.map((asset) => asset.id));
 	const actorIds = new Set(manifest.actors.map((actor) => actor.id));
-	const encounterIds = new Set(manifest.encounterIds);
-	const checkpointIds = new Set(
-		maps.flatMap(({ data }) =>
-			data.checkpoints.map((checkpoint) => checkpoint.id),
-		),
-	);
+	for (const [field, values] of [
+		["statusEffects", manifest.statusEffects],
+		["abilities", manifest.abilities],
+		["characters", manifest.characters],
+		["items", manifest.items],
+		["equipment", manifest.equipment],
+		["enemies", manifest.enemies],
+		["encounters", manifest.encounters],
+	] as const) {
+		addDuplicateIssues(values, manifestPath, `$.${field}`, issues);
+	}
+	const statusEffectIds = new Set(manifest.statusEffects.map(({ id }) => id));
+	const abilityIds = new Set(manifest.abilities.map(({ id }) => id));
+	const itemIds = new Set(manifest.items.map(({ id }) => id));
+	const equipmentIds = new Set(manifest.equipment.map(({ id }) => id));
+	const enemyIds = new Set(manifest.enemies.map(({ id }) => id));
+	const encounterIds = new Set([
+		...manifest.encounterIds,
+		...manifest.encounters.map(({ id }) => id),
+	]);
+	manifest.abilities.forEach((ability, index) => {
+		if (
+			ability.statusEffectId &&
+			!statusEffectIds.has(ability.statusEffectId)
+		) {
+			issues.push({
+				documentPath: manifestPath,
+				dataPath: `$.abilities.${index}.statusEffectId`,
+				code: "reference",
+				message: `Ability '${ability.id}' references missing status effect '${ability.statusEffectId}'.`,
+			});
+		}
+	});
+	manifest.characters.forEach((character, index) => {
+		if (!actorIds.has(character.id)) {
+			issues.push({
+				documentPath: manifestPath,
+				dataPath: `$.characters.${index}.id`,
+				code: "reference",
+				message: `Character '${character.id}' has no matching actor.`,
+			});
+		}
+		character.abilityUnlocks.forEach((unlock, unlockIndex) => {
+			if (!abilityIds.has(unlock.abilityId)) {
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: `$.characters.${index}.abilityUnlocks.${unlockIndex}.abilityId`,
+					code: "reference",
+					message: `Character '${character.id}' references missing ability '${unlock.abilityId}'.`,
+				});
+			}
+		});
+		for (const [slot, equipmentId] of Object.entries(
+			character.initialEquipment,
+		)) {
+			if (equipmentId && !equipmentIds.has(equipmentId)) {
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: `$.characters.${index}.initialEquipment.${slot}`,
+					code: "reference",
+					message: `Character '${character.id}' references missing equipment '${equipmentId}'.`,
+				});
+			}
+		}
+	});
+	manifest.items.forEach((item, index) => {
+		item.statusIds.forEach((statusId, statusIndex) => {
+			if (!statusEffectIds.has(statusId)) {
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: `$.items.${index}.statusIds.${statusIndex}`,
+					code: "reference",
+					message: `Item '${item.id}' references missing status effect '${statusId}'.`,
+				});
+			}
+		});
+	});
+	manifest.equipment.forEach((equipment, index) => {
+		equipment.actorIds.forEach((actorId, actorIndex) => {
+			if (!actorIds.has(actorId)) {
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: `$.equipment.${index}.actorIds.${actorIndex}`,
+					code: "reference",
+					message: `Equipment '${equipment.id}' references missing actor '${actorId}'.`,
+				});
+			}
+		});
+	});
+	manifest.enemies.forEach((enemy, index) => {
+		for (const [field, ids] of [
+			["abilityIds", enemy.abilityIds],
+			["aiPattern", enemy.aiPattern],
+		] as const) {
+			ids.forEach((abilityId, abilityIndex) => {
+				if (!abilityIds.has(abilityId)) {
+					issues.push({
+						documentPath: manifestPath,
+						dataPath: `$.enemies.${index}.${field}.${abilityIndex}`,
+						code: "reference",
+						message: `Enemy '${enemy.id}' references missing ability '${abilityId}'.`,
+					});
+				}
+			});
+		}
+	});
+	manifest.encounters.forEach((encounter, index) => {
+		encounter.enemyIds.forEach((enemyId, enemyIndex) => {
+			if (!enemyIds.has(enemyId)) {
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: `$.encounters.${index}.enemyIds.${enemyIndex}`,
+					code: "reference",
+					message: `Encounter '${encounter.id}' references missing enemy '${enemyId}'.`,
+				});
+			}
+		});
+		encounter.rewards.items.forEach((reward, rewardIndex) => {
+			if (!itemIds.has(reward.itemId)) {
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: `$.encounters.${index}.rewards.items.${rewardIndex}.itemId`,
+					code: "reference",
+					message: `Encounter '${encounter.id}' references missing reward item '${reward.itemId}'.`,
+				});
+			}
+		});
+	});
 
 	const entryMap = mapIndex.get(manifest.entryPoint.mapId)?.data;
-	if (!entryMap) {
+	if (
+		!entryMap &&
+		(!options.allowPartial || !knownMapIds.has(manifest.entryPoint.mapId))
+	) {
 		issues.push({
 			documentPath: manifestPath,
 			dataPath: "$.entryPoint.mapId",
@@ -342,6 +638,7 @@ export function parseGameContentBundle(
 			message: `Entry map '${manifest.entryPoint.mapId}' does not exist.`,
 		});
 	} else if (
+		entryMap &&
 		!entryMap.entrances.some(
 			(entrance) => entrance.id === manifest.entryPoint.entranceId,
 		)
@@ -366,6 +663,16 @@ export function parseGameContentBundle(
 		addDuplicateIssues(map.triggers, path, "$.triggers", issues);
 		const inBounds = (point: { x: number; y: number }) =>
 			point.x < map.width && point.y < map.height;
+		const isCollision = (point: { x: number; y: number }) =>
+			map.collisionRegions.some(
+				(region) =>
+					point.x >= region.x &&
+					point.x < region.x + region.width &&
+					point.y >= region.y &&
+					point.y < region.y + region.height,
+			);
+		const isWalkable = (point: { x: number; y: number }) =>
+			inBounds(point) && !isCollision(point);
 		map.entrances.forEach((entrance, index) => {
 			if (!inBounds(entrance.position)) {
 				issues.push({
@@ -374,6 +681,30 @@ export function parseGameContentBundle(
 					code: "bounds",
 					message: `Entrance '${entrance.id}' is outside map bounds.`,
 				});
+			} else if (isCollision(entrance.position)) {
+				issues.push({
+					documentPath: path,
+					dataPath: `$.entrances.${index}.position`,
+					code: "placement",
+					message: `Entrance '${entrance.id}' is placed on collision geometry.`,
+				});
+			} else {
+				try {
+					createFieldStateAt(
+						entrance.position,
+						entrance.facing,
+						MAX_FIELD_PARTY_SIZE,
+						isWalkable,
+					);
+				} catch (error) {
+					if (!(error instanceof FieldPlacementError)) throw error;
+					issues.push({
+						documentPath: path,
+						dataPath: `$.entrances.${index}.position`,
+						code: "placement",
+						message: `Entrance '${entrance.id}' cannot hold a full party formation.`,
+					});
+				}
 			}
 			if (!map.checkpoints.some(({ id }) => id === entrance.checkpointId)) {
 				issues.push({
@@ -391,6 +722,13 @@ export function parseGameContentBundle(
 					dataPath: `$.checkpoints.${index}.position`,
 					code: "bounds",
 					message: `Checkpoint '${checkpoint.id}' is outside map bounds.`,
+				});
+			} else if (isCollision(checkpoint.position)) {
+				issues.push({
+					documentPath: path,
+					dataPath: `$.checkpoints.${index}.position`,
+					code: "placement",
+					message: `Checkpoint '${checkpoint.id}' is placed on collision geometry.`,
 				});
 			}
 		});
@@ -415,6 +753,13 @@ export function parseGameContentBundle(
 					code: "bounds",
 					message: `Trigger '${trigger.id}' is outside map bounds.`,
 				});
+			} else if (isCollision(trigger.position)) {
+				issues.push({
+					documentPath: path,
+					dataPath: `$.triggers.${index}.position`,
+					code: "placement",
+					message: `Trigger '${trigger.id}' is placed on collision geometry and cannot be reached.`,
+				});
 			}
 			validateConditionDepth(
 				trigger.condition,
@@ -422,7 +767,11 @@ export function parseGameContentBundle(
 				`$.triggers.${index}.condition`,
 				issues,
 			);
-			if (trigger.kind === "event" && !eventIndex.has(trigger.targetId)) {
+			if (
+				trigger.kind === "event" &&
+				!eventIndex.has(trigger.targetId) &&
+				(!options.allowPartial || !knownEventIds.has(trigger.targetId))
+			) {
 				issues.push({
 					documentPath: path,
 					dataPath: `$.triggers.${index}.targetId`,
@@ -432,7 +781,10 @@ export function parseGameContentBundle(
 			}
 			if (trigger.kind === "map") {
 				const targetMap = mapIndex.get(trigger.targetId)?.data;
-				if (!targetMap) {
+				if (
+					!targetMap &&
+					(!options.allowPartial || !knownMapIds.has(trigger.targetId))
+				) {
 					issues.push({
 						documentPath: path,
 						dataPath: `$.triggers.${index}.targetId`,
@@ -440,6 +792,7 @@ export function parseGameContentBundle(
 						message: `Trigger '${trigger.id}' references missing map '${trigger.targetId}'.`,
 					});
 				} else if (
+					targetMap &&
 					!targetMap.entrances.some(
 						(entrance) => entrance.id === trigger.targetEntranceId,
 					)
@@ -624,9 +977,12 @@ export function parseGameContentBundle(
 			if (node.type === "map.enter") {
 				const targetMap = mapIndex.get(node.mapId)?.data;
 				if (
-					!targetMap?.entrances.some(
-						(entrance) => entrance.id === node.entranceId,
-					)
+					(targetMap &&
+						!targetMap.entrances.some(
+							(entrance) => entrance.id === node.entranceId,
+						)) ||
+					(!targetMap &&
+						(!options.allowPartial || !knownMapIds.has(node.mapId)))
 				) {
 					issues.push({
 						documentPath: path,
@@ -636,16 +992,23 @@ export function parseGameContentBundle(
 					});
 				}
 			}
-			if (
-				node.type === "checkpoint.reach" &&
-				!checkpointIds.has(node.checkpointId)
-			) {
-				issues.push({
-					documentPath: path,
-					dataPath: `$.nodes.${index}.checkpointId`,
-					code: "reference",
-					message: `Node '${node.id}' references missing checkpoint '${node.checkpointId}'.`,
-				});
+			if (node.type === "checkpoint.reach") {
+				const targetMap = mapIndex.get(node.mapId)?.data;
+				if (
+					(targetMap &&
+						!targetMap.checkpoints.some(
+							(checkpoint) => checkpoint.id === node.checkpointId,
+						)) ||
+					(!targetMap &&
+						(!options.allowPartial || !knownMapIds.has(node.mapId)))
+				) {
+					issues.push({
+						documentPath: path,
+						dataPath: `$.nodes.${index}.checkpointId`,
+						code: "reference",
+						message: `Node '${node.id}' references missing map checkpoint '${node.mapId}:${node.checkpointId}'.`,
+					});
+				}
 			}
 		});
 

@@ -50,7 +50,14 @@ export class LocalGameSaveRepository {
 
 	save(state: GameState, savedAt?: string): LocalGameSaveWriteResult {
 		try {
-			const save = createGameSave(state, savedAt);
+			return this.saveEnvelope(createGameSave(state, savedAt));
+		} catch {
+			return { ok: false, message: "Could not write the local autosave." };
+		}
+	}
+
+	saveEnvelope(save: GameSaveEnvelope): LocalGameSaveWriteResult {
+		try {
 			this.storage.setItem(this.key, JSON.stringify(save));
 			return { ok: true, save };
 		} catch {

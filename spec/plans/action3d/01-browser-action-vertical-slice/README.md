@@ -22,12 +22,12 @@ Login
 
 | 順序 | Delivery | 状態 | 完了時に証明すること |
 | --- | --- | --- | --- |
-| 1 | [Domain Boundary and Shared Platform Contract](01-domain-boundary-and-shared-platform.md) | Implemented / Gate pending | 2D/3Dの依存方向、route、共有可能範囲をtestで固定できる |
-| 2 | [WebGL Runtime and World Bootstrap](02-webgl-runtime-and-world-bootstrap.md) | Planned | Babylon runtimeを遅延起動・破棄し、独立Canvasへ小規模3D worldを描画できる |
-| 3 | [Player Controller, Camera and Collision](03-player-controller-camera-and-collision.md) | Planned | 三人称移動、camera、静的collision、基本animationが安定して動く |
-| 4 | [Action Combat Vertical Slice](04-action-combat-vertical-slice.md) | Planned | dodge、attack、lock-on、敵AI、勝敗をAction3D domainで成立させる |
-| 5 | [Action3D Content and Save](05-action3d-content-and-save.md) | Planned | 3D contentを検証して読み込み、独立saveからcheckpoint再開できる |
-| 6 | [Dual Runtime Integration and Quality Gate](06-dual-runtime-integration-and-quality-gate.md) | Planned | 2D回帰、bundle分離、性能、accessibilityを検証し継続判断を出せる |
+| 1 | [Domain Boundary and Shared Platform Contract](01-domain-boundary-and-shared-platform.md) | Implemented | 2D/3Dの依存方向、route、共有可能範囲をtestで固定できる |
+| 2 | [WebGL Runtime and World Bootstrap](02-webgl-runtime-and-world-bootstrap.md) | Implemented | Babylon runtimeを遅延起動・破棄し、独立Canvasへ小規模3D worldを描画できる |
+| 3 | [Player Controller, Camera and Collision](03-player-controller-camera-and-collision.md) | Implemented | 三人称移動、camera、静的collision、基本animationが安定して動く |
+| 4 | [Action Combat Vertical Slice](04-action-combat-vertical-slice.md) | Implemented | dodge、attack、lock-on、敵AI、勝敗をAction3D domainで成立させる |
+| 5 | [Action3D Content and Save](05-action3d-content-and-save.md) | Implemented | 3D contentを検証して読み込み、独立saveからcheckpoint再開できる |
+| 6 | [Dual Runtime Integration and Quality Gate](06-dual-runtime-integration-and-quality-gate.md) | Implemented / Repository gate pending | 2D回帰、bundle分離、性能、accessibilityを検証し継続判断を出せる |
 
 ```mermaid
 flowchart LR
@@ -94,6 +94,10 @@ performanceは通常CIの単発値だけで合否を決めず、同一環境で�
 - dependency validationが2D/3Dの相互importを拒否する。
 - 2D routeで3D bundleとassetがloadされない。
 - performance、bundle、memory、制作工数の実測結果から、Web継続・scope縮小・engine再選定の判断を記録できる。
+
+## 完了記録
+
+2026-08-11にStage A1の実装とAction3D固有gateを完了した。実装・検証値は[Implementation Evidence](A1-implementation-evidence.md)、継続判断は[Decision Record](A1-decision-record.md)を正本とする。同じworktreeで並行実装中の2D拡張がrepository全体のunit/type/E2E gateを通過した時点で、Stage状態をCompleteへ更新する。
 
 ## A1後の判断基準
 

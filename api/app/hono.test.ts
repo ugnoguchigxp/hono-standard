@@ -119,6 +119,15 @@ describe("hono app entry", () => {
 		);
 	});
 
+	it("requires authentication for game save routes", async () => {
+		const res = await app.request(
+			"/api/games/echoes-at-dawn/saves/autosave",
+		);
+
+		expect(res.status).toBe(401);
+		await expect(res.json()).resolves.toEqual({ message: "Unauthorized" });
+	});
+
 	it("should handle CORS origins", async () => {
 		const res = await app.request("/api/health", {
 			headers: {

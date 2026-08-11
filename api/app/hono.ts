@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { serveStatic } from "hono/bun";
 import { csrf } from "hono/csrf";
+import { bodyLimit } from "hono/body-limit";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -11,17 +12,21 @@ import type { DbRuntime } from "../db";
 import { createDbRuntime } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { AuthService } from "../modules/auth/auth.service";
+import { GameSaveService } from "../modules/game-save/game-save.service";
 import { HttpError } from "../modules/auth/errors";
 import { createAuthRoute } from "../routes/auth.route";
 import { createHealthRoute } from "../routes/health.route";
+import { createGameSaveRoute } from "../routes/game-save.route";
 import { createProtectedRoute } from "../routes/protected.route";
 import { readAppEnv, type AppEnv } from "./env";
 import { appContentSecurityPolicy } from "./security-headers";
+import { GAME_SAVE_MAX_BYTES } from "../../shared/schemas/game-save.schema";
 
 export type AppDeps = {
 	env: AppEnv;
 	dbRuntime: DbRuntime;
 	authService: AuthService;
+	gameSaveService: GameSaveService;
 };
 
 declare global {
@@ -32,7 +37,8 @@ export async function createDefaultAppDeps(): Promise<AppDeps> {
 	const env = readAppEnv();
 	const dbRuntime = createDbRuntime(env);
 	const authService = new AuthService(dbRuntime.client, env);
-	return { env, dbRuntime, authService };
+	const gameSaveService = new GameSaveService(dbRuntime.client);
+	return { env, dbRuntime, authService, gameSaveService };
 }
 
 export async function getAppRuntime(): Promise<AppDeps> {
@@ -53,6 +59,22 @@ const distWebIndex = path.resolve(distWebRoot, "index.html");
 export function createApiRoutes(deps: AppDeps) {
 	return new Hono()
 		.route("/health", createHealthRoute())
+		.use(
+			"/games/*",
+			requireAuth({
+				env: deps.env,
+				authService: deps.authService,
+			}),
+		)
+		.use(
+			"/games/*",
+			bodyLimit({
+				maxSize: GAME_SAVE_MAX_BYTES + 1024,
+				onError: (c) =>
+					c.json({ message: "Game save payload is too large." }, 413),
+			}),
+		)
+		.route("/games", createGameSaveRoute(deps.gameSaveService))
 		.use(
 			"/protected/*",
 			requireAuth({
@@ -102,8 +124,8 @@ export function createApp(deps: AppDeps) {
 				return null;
 			},
 			credentials: true,
-			allowMethods: ["GET", "POST", "OPTIONS"],
-			allowHeaders: ["Content-Type", "Authorization"],
+			allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+			allowHeaders: ["Content-Type", "Authorization", "X-Game-Save-Owner"],
 		}),
 	);
 	app.use("/api/*", csrf());
@@ -115,7 +137,7 @@ export function createApp(deps: AppDeps) {
 			}
 			return c.json(
 				{ message: error.message },
-				error.status as 400 | 401 | 403 | 404 | 409 | 500,
+				error.status as 400 | 401 | 403 | 404 | 409 | 413 | 500,
 			);
 		}
 		if (error instanceof HTTPException) {
@@ -133,7 +155,7 @@ export function createApp(deps: AppDeps) {
 				"Request failed";
 			return c.json(
 				{ message },
-				error.status as 400 | 401 | 403 | 404 | 409 | 500,
+				error.status as 400 | 401 | 403 | 404 | 409 | 413 | 500,
 			);
 		}
 		const message =
@@ -150,6 +172,7 @@ export function createApp(deps: AppDeps) {
 
 	app.use("/assets/*", serveStatic({ root: "./dist-web" }));
 	app.use("/game-content/*", serveStatic({ root: "./dist-web" }));
+	app.use("/action3d-content/*", serveStatic({ root: "./dist-web" }));
 	app.use("/favicon.ico", serveStatic({ root: "./dist-web" }));
 	app.get("*", async (c) => {
 		if (c.req.path.startsWith("/api/")) {

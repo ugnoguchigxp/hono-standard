@@ -27,6 +27,49 @@ const lineEvent = (): NonNullable<GameState["event"]> => ({
 	],
 });
 
+const toLegacyCharacter = (member: GameState["party"]["members"][number]) => ({
+	id: member.id,
+	name: member.name,
+	level: member.level,
+	hp: member.hp,
+	maxHp: member.maxHp,
+	attack: member.attack,
+	defense: member.defense,
+	speed: member.speed,
+	ability: {
+		id: member.ability.id,
+		name: member.ability.name,
+		powerPercent: member.ability.powerPercent,
+	},
+});
+
+const toLegacyParty = (state: GameState) => ({
+	members: state.party.members.map(toLegacyCharacter),
+});
+
+const toLegacyBattle = (state: GameState) =>
+	state.battle
+		? {
+				id: state.battle.id,
+				phase:
+					state.battle.phase === "escaped" ? ("defeat" as const) : state.battle.phase,
+				elapsedMs: state.battle.elapsedMs,
+				activeActorId: state.battle.activeActorId,
+				party: state.battle.party.map((member) => ({
+					...toLegacyCharacter(member),
+					side: member.side,
+					actionGauge: member.actionGauge,
+					defending: member.defending,
+				})),
+				enemies: state.battle.enemies.map((enemy) => ({
+					...toLegacyCharacter(enemy),
+					side: enemy.side,
+					actionGauge: enemy.actionGauge,
+					defending: enemy.defending,
+				})),
+			}
+		: null;
+
 const createLegacyV2State = (checkpoint = { x: 3, y: 6 }) => {
 	const current = currentState();
 	return {
@@ -40,9 +83,9 @@ const createLegacyV2State = (checkpoint = { x: 3, y: 6 }) => {
 			eventTriggered: false,
 		},
 		currentMap: { id: "signal-ruins", checkpoint },
-		party: current.party,
+		party: toLegacyParty(current),
 		story: current.story,
-		battle: current.battle,
+		battle: toLegacyBattle(current),
 	};
 };
 
@@ -112,11 +155,13 @@ describe("game save codec", () => {
 		const { event: _event, ...legacy } = current;
 		const result = decodeGameSave(
 			JSON.stringify(
-				envelope({
-					...legacy,
-					schemaVersion: 3,
-					contentVersion: "legacy-content",
-					mode: "event",
+					envelope({
+						...legacy,
+						schemaVersion: 3,
+						contentVersion: "legacy-content",
+						mode: "event",
+						party: toLegacyParty(current),
+						battle: toLegacyBattle(current),
 				}),
 			),
 		);
@@ -128,7 +173,7 @@ describe("game save codec", () => {
 		expect(result.save.state.contentVersion).toBe("legacy-content");
 	});
 
-	it("loads earlier v4 saves with a zeroed encounter step counter", () => {
+	it("loads current saves with a missing optional encounter step counter", () => {
 		const state = currentState();
 		const legacyField = { ...state.field } as Partial<typeof state.field>;
 		delete legacyField.stepsSinceEncounter;
@@ -140,6 +185,139 @@ describe("game save codec", () => {
 		if (result.status !== "ready") return;
 		expect(result.migrated).toBe(false);
 		expect(result.save.state.field.stepsSinceEncounter).toBe(0);
+	});
+
+	it("migrates a v4 party into progression, inventory, and equipment state", () => {
+		const state = currentState();
+		const result = decodeGameSave(
+			JSON.stringify(
+				envelope({
+					...state,
+					schemaVersion: 4,
+					party: toLegacyParty(state),
+					battle: toLegacyBattle(state),
+				}),
+			),
+		);
+
+		expect(result.status).toBe("ready");
+		if (result.status !== "ready") return;
+		expect(result.migrated).toBe(true);
+		expect(result.save.state.schemaVersion).toBe(GAME_STATE_SCHEMA_VERSION);
+		expect(result.save.state.party.members[0]).toMatchObject({
+			id: "mira",
+			experience: 0,
+			mp: 18,
+			maxMp: 18,
+		});
+		expect(result.save.state.party.inventory).toMatchObject({
+			potion: 5,
+			ether: 3,
+		});
+		expect(result.save.state.party.equipment.mira.weapon).toBe("rune-blade");
+	});
+
+	it("migrates current v4 members and battles without degrading their data", () => {
+		const state = currentState();
+		state.mode = "battle";
+		state.battle = createDemoBattleState(state.party.members);
+		const result = decodeGameSave(
+			JSON.stringify(envelope({ ...state, schemaVersion: 4 })),
+		);
+
+		expect(result).toMatchObject({
+			status: "ready",
+			migrated: true,
+			save: {
+				state: {
+					mode: "battle",
+					battle: { items: state.battle.items },
+				},
+			},
+		});
+	});
+
+	it("migrates active legacy battles, non-level-one guests, and inventory items", () => {
+		for (const battleId of ["signal-ruins-encounter", "random-encounter"]) {
+			const state = currentState();
+			state.mode = "battle";
+			state.battle = createDemoBattleState(state.party.members);
+			state.battle.id = battleId;
+			const legacyParty = toLegacyParty(state);
+			legacyParty.members[0].level = 2;
+			const legacyBattle = toLegacyBattle(state);
+			if (legacyBattle) legacyBattle.party[0].level = 2;
+			const { event: _event, ...withoutEvent } = state;
+			const result = decodeGameSave(
+				JSON.stringify(
+					envelope({
+						...withoutEvent,
+						schemaVersion: 3,
+						party: legacyParty,
+						battle: legacyBattle,
+					}),
+				),
+			);
+			expect(result).toMatchObject({ status: "ready", migrated: true });
+			if (result.status !== "ready") continue;
+			expect(result.save.state.mode).toBe("battle");
+			expect(result.save.state.party.members[0].experience).toBe(100);
+			expect(result.save.state.battle).toMatchObject({
+				canEscape: battleId !== "signal-ruins-encounter",
+				items: [{ id: "potion", count: 5 }],
+			});
+		}
+
+		const guestState = currentState();
+		const guestParty = toLegacyParty(guestState);
+		guestParty.members[0].id = "guest";
+		const guest = decodeGameSave(
+			JSON.stringify(
+				envelope({
+					...guestState,
+					schemaVersion: 4,
+					party: guestParty,
+					battle: null,
+				}),
+			),
+		);
+		expect(guest).toMatchObject({
+			status: "ready",
+			save: {
+				state: {
+					party: {
+						equipment: {
+							guest: {
+								weapon: null,
+								armor: null,
+								"off-hand": null,
+								relic: null,
+							},
+						},
+					},
+				},
+			},
+		});
+	});
+
+	it("normalizes battle mode without a battle during v3 migration", () => {
+		const state = currentState();
+		const { event: _event, ...legacy } = state;
+		const result = decodeGameSave(
+			JSON.stringify(
+				envelope({
+					...legacy,
+					schemaVersion: 3,
+					mode: "battle",
+					party: toLegacyParty(state),
+					battle: null,
+				}),
+			),
+		);
+		expect(result).toMatchObject({
+			status: "ready",
+			save: { state: { mode: "field", battle: null } },
+		});
 	});
 
 
@@ -236,6 +414,39 @@ describe("game save codec", () => {
 				};
 			},
 		],
+		[
+			"battle HP above maximum",
+			(state) => {
+				state.mode = "battle";
+				state.battle = createDemoBattleState(state.party.members);
+				state.battle.party[0].hp = state.battle.party[0].maxHp + 1;
+			},
+		],
+		[
+			"battle actor on the wrong side",
+			(state) => {
+				state.mode = "battle";
+				state.battle = createDemoBattleState(state.party.members);
+				state.battle.party[0].side = "enemy";
+			},
+		],
+		[
+			"unknown active battle actor",
+			(state) => {
+				state.mode = "battle";
+				state.battle = createDemoBattleState(state.party.members);
+				state.battle.phase = "awaiting-command";
+				state.battle.activeActorId = "ghost";
+			},
+		],
+		[
+			"victory with a surviving enemy",
+			(state) => {
+				state.mode = "battle";
+				state.battle = createDemoBattleState(state.party.members);
+				state.battle.phase = "victory";
+			},
+		],
 	])("rejects current saves with %s", (_label, mutate) => {
 		const state = currentState();
 		mutate(state);
@@ -254,9 +465,9 @@ describe("game save codec", () => {
 				schemaVersion: 1,
 				mode: current.mode,
 				currentMap: { id: "signal-ruins", checkpoint: { x: 3, y: 6 } },
-				party: current.party,
+				party: toLegacyParty(current),
 				story: current.story,
-				battle: current.battle,
+				battle: toLegacyBattle(current),
 			},
 		};
 		const result = decodeGameSave(JSON.stringify(legacy));
@@ -335,6 +546,46 @@ describe("game save codec", () => {
 		expect(
 			decodeGameSave(JSON.stringify({ formatVersion: 0, state: null })),
 		).toMatchObject({ status: "corrupt" });
+	});
+
+	it("covers malformed migration envelopes, states, and unknown legacy maps", () => {
+		expect(
+			decodeGameSave(
+				JSON.stringify({
+					formatVersion: GAME_SAVE_FORMAT_VERSION,
+					state: { schemaVersion: 4 },
+				}),
+			),
+		).toMatchObject({ status: "corrupt" });
+		expect(
+			decodeGameSave(
+				JSON.stringify({
+					...envelope([]),
+				}),
+			),
+		).toMatchObject({ status: "corrupt" });
+		expect(
+			decodeGameSave(JSON.stringify(envelope({ schemaVersion: 4 }))),
+		).toMatchObject({
+			status: "corrupt",
+			message: "Version 4 save data is corrupt.",
+		});
+		expect(
+			decodeGameSave(JSON.stringify(envelope({ schemaVersion: 3 }))),
+		).toMatchObject({
+			status: "corrupt",
+			message: "Version 3 save data is corrupt.",
+		});
+		expect(
+			decodeGameSave(JSON.stringify(envelope({ schemaVersion: "future" }))),
+		).toMatchObject({ status: "corrupt" });
+
+		const unknownMap = createLegacyV2State();
+		unknownMap.currentMap.id = "unknown-map";
+		expect(decodeGameSave(JSON.stringify(envelope(unknownMap)))).toMatchObject({
+			status: "unsupported",
+			stateVersion: 2,
+		});
 	});
 
 	it("rejects invalid state and save timestamps when encoding", () => {

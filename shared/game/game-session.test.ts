@@ -35,7 +35,7 @@ const createLineEvent = () => ({
 describe("GameSession", () => {
 	it("owns an isolated serializable content-compatible snapshot", () => {
 		const initialState = createState();
-		initialState.battle = createDemoBattleState();
+		initialState.battle = createDemoBattleState(initialState.party.members);
 		initialState.mode = "battle";
 		const session = new GameSession({
 			sessionId: "isolated",
@@ -144,6 +144,45 @@ describe("GameSession", () => {
 			(state) => (state.field.partyPositions[0] = { x: 18, y: 10 }),
 		],
 		["unknown party actor", (state) => (state.party.members[0].id = "nova")],
+		[
+			"party actor without progression content",
+			(state) => {
+				state.party.members[0].id = "narrator";
+				state.party.equipment.narrator = state.party.equipment.mira;
+				delete state.party.equipment.mira;
+			},
+		],
+		[
+			"unknown party ability",
+			(state) => {
+				state.party.members[0].ability.id = "missing-ability";
+				state.party.members[0].abilities[0].id = "missing-ability";
+			},
+		],
+		[
+			"unknown inventory item",
+			(state) => {
+				state.party.inventory["missing-item"] = 1;
+			},
+		],
+		[
+			"unknown equipment inventory item",
+			(state) => {
+				state.party.equipmentInventory["missing-equipment"] = 1;
+			},
+		],
+		[
+			"missing equipment loadout",
+			(state) => {
+				delete state.party.equipment.mira;
+			},
+		],
+		[
+			"equipment in an invalid slot",
+			(state) => {
+				state.party.equipment.mira.armor = "rune-blade";
+			},
+		],
 		[
 			"unknown pending trigger",
 			(state) => (state.field.pendingTriggerId = "missing-trigger"),
@@ -414,6 +453,7 @@ describe("GameSession", () => {
 		if (!won) throw new Error("Expected battle state.");
 		won.phase = "victory";
 		won.party[0].hp = 61;
+		for (const enemy of won.enemies) enemy.hp = 0;
 		session.dispatch({ type: "battle.start", battle: won });
 		const completed = session.dispatch({ type: "battle.complete" });
 		expect(completed.state).toMatchObject({
@@ -423,8 +463,18 @@ describe("GameSession", () => {
 			battle: null,
 			event: null,
 		});
-		expect(completed.state.party.members[0].hp).toBe(61);
+		expect(completed.state.party.members[0].hp).toBe(71);
 		expect(completed.events.map(({ event }) => event.type)).toEqual([
+			"party.experience.gained",
+			"party.level.gained",
+			"party.ability.learned",
+			"party.experience.gained",
+			"party.level.gained",
+			"party.ability.learned",
+			"party.experience.gained",
+			"party.level.gained",
+			"party.ability.learned",
+			"party.reward.received",
 			"battle.completed",
 			"mode.changed",
 			"story.flag.changed",
@@ -458,6 +508,26 @@ describe("GameSession", () => {
 			"mode.changed",
 			"battle.started",
 		]);
+	});
+
+	it("keeps the field formation valid when reversing after a random encounter", () => {
+		const session = createSession("post-encounter-reverse");
+		for (let step = 0; step < 15; step += 1) {
+			session.dispatch({ type: "field.move", direction: "RIGHT" });
+		}
+		const endedBattle = session.snapshot().battle;
+		if (!endedBattle) throw new Error("Expected a random encounter.");
+		endedBattle.phase = "victory";
+		for (const enemy of endedBattle.enemies) enemy.hp = 0;
+		session.dispatch({ type: "battle.start", battle: endedBattle });
+		session.dispatch({ type: "battle.complete" });
+
+		const moved = session.dispatch({ type: "field.move", direction: "LEFT" });
+		const positionKeys = moved.state.field.partyPositions.map(
+			({ x, y }) => `${x},${y}`,
+		);
+		expect(moved.state.mode).toBe("field");
+		expect(new Set(positionKeys).size).toBe(positionKeys.length);
 	});
 
 	it("fully restores the party at the spring and resets encounter steps", () => {
@@ -501,6 +571,49 @@ describe("GameSession", () => {
 			type: "party.recovered",
 			triggerId: "restoring-spring",
 			restoredHp: 88,
+			restoredMp: 0,
+		});
+	});
+
+	it("uses field items and changes equipment through session commands", () => {
+		const state = createState();
+		state.party.members[0].hp = 10;
+		const session = new GameSession({
+			sessionId: "party-menu-actions",
+			initialState: state,
+			registry,
+			encounterProvider: createDemoEncounterProvider(registry),
+		});
+
+		const itemUsed = session.dispatch({
+			type: "party.item.use",
+			itemId: "potion",
+			targetId: "mira",
+		});
+		expect(itemUsed.state.party.members[0].hp).toBe(60);
+		expect(itemUsed.state.party.inventory.potion).toBe(4);
+		expect(itemUsed.events[0].event).toEqual({
+			type: "party.item.used",
+			itemId: "potion",
+			targetId: "mira",
+			amount: 50,
+		});
+
+		const equipped = session.dispatch({
+			type: "party.equipment.change",
+			actorId: "mira",
+			slot: "weapon",
+			equipmentId: "tempered-blade",
+		});
+		expect(equipped.state.party.members[0].attack).toBe(25);
+		expect(equipped.state.party.equipment.mira.weapon).toBe("tempered-blade");
+		expect(equipped.state.party.equipmentInventory["rune-blade"]).toBe(1);
+		expect(equipped.events[0].event).toEqual({
+			type: "party.equipment.changed",
+			actorId: "mira",
+			slot: "weapon",
+			previousEquipmentId: "rune-blade",
+			equipmentId: "tempered-blade",
 		});
 	});
 
@@ -592,15 +705,19 @@ describe("GameSession", () => {
 		});
 		expect(acted.state.battle?.phase).toBe("victory");
 		const completed = session.dispatch({ type: "battle.complete" });
-		expect(completed.state.party.members[0].hp).toBe(64);
+		expect(completed.state.party.members[0].hp).toBe(74);
 		expect(completed.state.mode).toBe("field");
 
-		const partialVictory = createDemoBattleState();
+		const partialVictory = createDemoBattleState(
+			session.snapshot().party.members,
+		);
 		partialVictory.phase = "victory";
+		for (const enemy of partialVictory.enemies) enemy.hp = 0;
 		partialVictory.party = partialVictory.party.slice(0, 1);
-		session.dispatch({ type: "battle.start", battle: partialVictory });
-		expect(session.dispatch({ type: "battle.complete" }).state.party.members[1].hp).toBe(
-			58,
+		expect(() =>
+			session.dispatch({ type: "battle.start", battle: partialVictory }),
+		).toThrow(
+			"Battle party identity and order must match the persistent party",
 		);
 
 		const running = createSignalRuinsEncounterState(
@@ -616,8 +733,9 @@ describe("GameSession", () => {
 		const ticked = session.dispatch({ type: "battle.tick", deltaMs: 10_000 });
 		expect(ticked.state.battle?.phase).toBe("awaiting-command");
 
-		const defeat = createDemoBattleState();
+		const defeat = createDemoBattleState(session.snapshot().party.members);
 		defeat.phase = "defeat";
+		for (const member of defeat.party) member.hp = 0;
 		session.dispatch({ type: "battle.start", battle: defeat });
 		const retried = session.dispatch({ type: "battle.retry" });
 		expect(retried.state.battle?.phase).toBe("running");
@@ -629,6 +747,28 @@ describe("GameSession", () => {
 
 	it("rejects incompatible commands without partially mutating state", () => {
 		const session = createSession("invalid-commands");
+		expect(() =>
+			session.dispatch({
+				type: "story.relationship.adjust",
+				relationshipId: "invalid",
+				amount: 1,
+			}),
+		).toThrow("separated by a colon");
+		expect(() =>
+			session.dispatch({
+				type: "party.item.use",
+				itemId: "potion",
+				targetId: "mira",
+			}),
+		).toThrow("cannot be used");
+		expect(() =>
+			session.dispatch({
+				type: "party.equipment.change",
+				actorId: "mira",
+				slot: "weapon",
+				equipmentId: "rune-blade",
+			}),
+		).toThrow("cannot be equipped");
 		expect(() =>
 			session.dispatch({ type: "field.trigger.resolve" }),
 		).toThrow("pending field trigger");
@@ -642,6 +782,33 @@ describe("GameSession", () => {
 			type: "event.start",
 			eventId: "signal-ruins-contact",
 		});
+		expect(() =>
+			session.dispatch({
+				type: "checkpoint.reached",
+				checkpointId: "signal-core",
+			}),
+		).toThrow("field mode");
+		expect(() =>
+			session.dispatch({
+				type: "party.item.use",
+				itemId: "potion",
+				targetId: "mira",
+			}),
+		).toThrow("field mode");
+		expect(() =>
+			session.dispatch({
+				type: "party.equipment.change",
+				actorId: "mira",
+				slot: "weapon",
+				equipmentId: null,
+			}),
+		).toThrow("field mode");
+		expect(() =>
+			session.dispatch({
+				type: "event.start",
+				eventId: "relay-camp-council",
+			}),
+		).toThrow("already active");
 		expect(() =>
 			session.dispatch({ type: "field.move", direction: "UP" }),
 		).toThrow("field mode");
@@ -686,6 +853,100 @@ describe("GameSession", () => {
 		);
 		expect(badProvider.revision).toBe(revision);
 		expect(badProvider.snapshot().mode).toBe("event");
+	});
+
+	it("rejects invalid battle providers and completes defeat and escape cleanup", () => {
+		const unknownBattleSession = createSession("unknown-battle");
+		const unknownBattle = createDemoBattleState(
+			unknownBattleSession.snapshot().party.members,
+		);
+		unknownBattle.id = "missing-encounter";
+		expect(() =>
+			unknownBattleSession.dispatch({ type: "battle.start", battle: unknownBattle }),
+		).toThrow("unknown encounter");
+
+		const duringBattle = createSession("event-during-battle");
+		duringBattle.dispatch({
+			type: "battle.start",
+			battle: createDemoBattleState(duringBattle.snapshot().party.members),
+		});
+		expect(() =>
+			duringBattle.dispatch({
+				type: "event.start",
+				eventId: "signal-ruins-contact",
+			}),
+		).toThrow("during an active battle");
+		expect(
+			duringBattle.dispatch({ type: "battle.tick", deltaMs: 0 }).events,
+		).toEqual([]);
+
+		const defeatedState = createState();
+		defeatedState.mode = "battle";
+		defeatedState.battle = createDemoBattleState(defeatedState.party.members);
+		defeatedState.battle.phase = "defeat";
+		for (const member of defeatedState.battle.party) member.hp = 0;
+		const badRetry = new GameSession({
+			sessionId: "bad-retry-provider",
+			initialState: defeatedState,
+			registry,
+			encounterProvider: () => ({
+				...createDemoBattleState(defeatedState.party.members),
+				id: "wrong",
+			}),
+		});
+		expect(() => badRetry.dispatch({ type: "battle.retry" })).toThrow(
+			"Encounter provider returned",
+		);
+
+		const defeatSession = new GameSession({
+			sessionId: "complete-defeat",
+			initialState: defeatedState,
+			registry,
+			encounterProvider: createDemoEncounterProvider(),
+		});
+		expect(defeatSession.dispatch({ type: "battle.complete" }).state.mode).toBe(
+			"field",
+		);
+
+		const escapedState = createState();
+		escapedState.mode = "battle";
+		escapedState.battle = createDemoBattleState(escapedState.party.members);
+		escapedState.battle.phase = "escaped";
+		escapedState.battle.items = [
+			{
+				id: "potion",
+				name: "Potion",
+				description: "Potion",
+				effect: "restore-hp",
+				power: 50,
+				statusIds: [],
+				target: "ally-single",
+				count: 0,
+			},
+		];
+		const escapedSession = new GameSession({
+			sessionId: "complete-escape",
+			initialState: escapedState,
+			registry,
+			encounterProvider: createDemoEncounterProvider(),
+		});
+		const escaped = escapedSession.dispatch({ type: "battle.complete" });
+		expect(escaped.state.mode).toBe("field");
+		expect(escaped.state.party.inventory.potion).toBeUndefined();
+	});
+
+	it("rejects an invalid battle returned through a command without committing it", () => {
+		const session = createSession("invalid-battle-state");
+		const before = session.snapshot();
+		const battle = createDemoBattleState(before.party.members);
+		battle.phase = "awaiting-command";
+		battle.activeActorId = "ghost";
+
+		expect(() =>
+			session.dispatch({ type: "battle.start", battle }),
+		).toThrow("Awaiting-command battles require one living, ready party actor");
+		expect(session.revision).toBe(before.revision);
+		expect(session.snapshot().battle).toBeNull();
 	});
 
 	it("publishes lifecycle transitions until unsubscribed or closed", () => {

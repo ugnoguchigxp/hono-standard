@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 describe("GameContentLoader", () => {
-	it("fetches, validates, and caches a complete bundle", async () => {
+	it("loads and caches the entry bundle before fetching another map on demand", async () => {
 		const fetcher = createFetcher();
 		const loader = new GameContentLoader("data-driven-world-1", fetcher);
 		const firstPromise = loader.load();
@@ -53,8 +53,140 @@ describe("GameContentLoader", () => {
 		const first = await firstPromise;
 		const second = await loader.load();
 		expect(first).toBe(second);
-		expect(first.getMap("relay-camp").displayName).toBe("Relay Camp");
+		expect(first.getMap("signal-ruins").displayName).toBe("Signal Ruins");
+		expect(() => first.getMap("relay-camp")).toThrow("Unknown map");
+		expect(fetcher).toHaveBeenCalledTimes(3);
+
+		const [relay, sharedRelay] = await Promise.all([
+			loader.loadMap("relay-camp"),
+			loader.loadMap("relay-camp"),
+		]);
+		expect(sharedRelay).toBe(relay);
+		expect(relay.getMap("relay-camp").displayName).toBe("Relay Camp");
+		expect(relay.getMap("signal-ruins").displayName).toBe("Signal Ruins");
 		expect(fetcher).toHaveBeenCalledTimes(7);
+	});
+
+	it("reports declared maps and covers loader reference guardrails", async () => {
+		const loader = new GameContentLoader(
+			"data-driven-world-1",
+			createFetcher(),
+		);
+		expect(loader.hasDeclaredMap("signal-ruins")).toBeNull();
+		const initial = await loader.load();
+		expect(loader.hasDeclaredMap("signal-ruins")).toBe(true);
+		expect(loader.hasDeclaredMap("missing-map")).toBe(false);
+		await expect(loader.loadMap("signal-ruins")).resolves.toBe(initial);
+		await expect(loader.loadMap("missing-map")).rejects.toMatchObject({
+			code: "reference",
+			retryable: false,
+		});
+
+		const internals = loader as unknown as {
+			fetchBundleDocuments: (
+				bundleId: string,
+				signal: AbortSignal,
+			) => Promise<void>;
+			requireManifest: () => unknown;
+		};
+		const signal = new AbortController().signal;
+		await internals.fetchBundleDocuments("relay-camp", signal);
+		await internals.fetchBundleDocuments("relay-camp", signal);
+		await expect(
+			internals.fetchBundleDocuments("missing-bundle", signal),
+		).rejects.toMatchObject({ code: "reference" });
+
+		const emptyLoader = new GameContentLoader(
+			"data-driven-world-1",
+			createFetcher(),
+		) as unknown as { requireManifest: () => unknown };
+		expect(() => emptyLoader.requireManifest()).toThrow("has not been loaded");
+	});
+
+	it("rejects an already aborted caller request", async () => {
+		const fetcher = vi.fn(
+			async (_input: string | URL | Request, init?: RequestInit) => {
+				if (init?.signal?.aborted) {
+					throw new DOMException("aborted", "AbortError");
+				}
+				return new Response("missing", { status: 404 });
+			},
+		) as unknown as typeof fetch;
+		const controller = new AbortController();
+		controller.abort();
+		await expect(
+			new GameContentLoader("data-driven-world-1", fetcher).load(
+				controller.signal,
+			),
+		).rejects.toMatchObject({ code: "network" });
+	});
+
+	it("reports declared maps and rejects unknown on-demand map IDs", async () => {
+		const loader = new GameContentLoader(
+			"data-driven-world-1",
+			createFetcher(),
+		);
+		expect(loader.hasDeclaredMap("signal-ruins")).toBeNull();
+		const initial = await loader.load();
+		expect(loader.hasDeclaredMap("signal-ruins")).toBe(true);
+		expect(loader.hasDeclaredMap("missing")).toBe(false);
+		await expect(loader.loadMap("signal-ruins")).resolves.toBe(initial);
+		await expect(loader.loadMap("missing")).rejects.toMatchObject({
+			code: "reference",
+			retryable: false,
+		});
+	});
+
+	it("guards internal bundle lookups and skips documents already in cache", async () => {
+		const loader = new GameContentLoader(
+			"data-driven-world-1",
+			createFetcher(),
+		);
+		const internals = loader as unknown as {
+			requireManifest: () => unknown;
+			fetchBundleDocuments: (
+				bundleId: string,
+				signal: AbortSignal,
+			) => Promise<void>;
+		};
+		expect(() => internals.requireManifest()).toThrow("has not been loaded");
+		await loader.load();
+		const controller = new AbortController();
+		await expect(
+			internals.fetchBundleDocuments("missing", controller.signal),
+		).rejects.toMatchObject({ code: "reference" });
+		await expect(
+			internals.fetchBundleDocuments("signal-ruins", controller.signal),
+		).resolves.toBeUndefined();
+	});
+
+	it("rejects bundles whose built registry omits the requested or entry map", async () => {
+		const missingEntryLoader = new GameContentLoader(
+			"data-driven-world-1",
+			createFetcher(),
+		);
+		const missingEntryInternals = missingEntryLoader as unknown as {
+			buildRegistry: () => { mapsById: Record<string, unknown> };
+		};
+		vi.spyOn(missingEntryInternals, "buildRegistry").mockReturnValue({
+			mapsById: {},
+		});
+		await expect(missingEntryLoader.load()).rejects.toMatchObject({
+			code: "reference",
+		});
+
+		const loader = new GameContentLoader(
+			"data-driven-world-1",
+			createFetcher(),
+		);
+		const initial = await loader.load();
+		const internals = loader as unknown as {
+			buildRegistry: () => typeof initial;
+		};
+		vi.spyOn(internals, "buildRegistry").mockReturnValue(initial);
+		await expect(loader.loadMap("relay-camp")).rejects.toMatchObject({
+			code: "reference",
+		});
 	});
 
 	it("calls a browser-style fetch function without rebinding its receiver", async () => {
@@ -145,12 +277,15 @@ describe("GameContentLoader", () => {
 		};
 		relayMap.backgroundAssetId = "missing-asset";
 		referenceResponses.set(relayMapPath, relayMap);
-		await expect(
-			new GameContentLoader(
-				"data-driven-world-1",
-				createFetcher(referenceResponses),
-			).load(),
-		).rejects.toMatchObject({ code: "reference", retryable: false });
+		const referenceLoader = new GameContentLoader(
+			"data-driven-world-1",
+			createFetcher(referenceResponses),
+		);
+		await referenceLoader.load();
+		await expect(referenceLoader.loadMap("relay-camp")).rejects.toMatchObject({
+			code: "reference",
+			retryable: false,
+		});
 	});
 
 	it("aborts timed-out requests and can reset for a clean retry", async () => {
@@ -197,6 +332,85 @@ describe("GameContentLoader", () => {
 		const rejection = expect(request).rejects.toBeInstanceOf(ContentLoadError);
 		controller.abort();
 		await rejection;
+	});
+
+	it("starts a fresh shared load when an earlier caller signal is aborted", async () => {
+		const fallback = createFetcher();
+		let first = true;
+		const fetcher = vi.fn(
+			(input: string | URL | Request, init?: RequestInit) => {
+				if (!first) return fallback(input, init);
+				first = false;
+				return new Promise<Response>((_resolve, reject) => {
+					init?.signal?.addEventListener("abort", () => {
+						reject(new DOMException("aborted", "AbortError"));
+					});
+				});
+			},
+		) as unknown as typeof fetch;
+		const loader = new GameContentLoader("data-driven-world-1", fetcher);
+		const staleController = new AbortController();
+		const stale = loader.load(staleController.signal);
+		staleController.abort();
+		const fresh = loader.load(new AbortController().signal);
+		await expect(stale).rejects.toMatchObject({ code: "network" });
+		await expect(fresh).resolves.toMatchObject({
+			contentVersion: "data-driven-world-1",
+		});
+	});
+
+	it("starts a fresh map load when an earlier caller signal is aborted", async () => {
+		const fallback = createFetcher();
+		let relayMapAttempts = 0;
+		const fetcher = vi.fn(
+			(input: string | URL | Request, init?: RequestInit) => {
+				if (String(input).endsWith("/maps/relay-camp.json")) {
+					relayMapAttempts += 1;
+					if (relayMapAttempts === 1) {
+						return new Promise<Response>((_resolve, reject) => {
+							init?.signal?.addEventListener("abort", () => {
+								reject(new DOMException("aborted", "AbortError"));
+							});
+						});
+					}
+				}
+				return fallback(input, init);
+			},
+		) as unknown as typeof fetch;
+		const loader = new GameContentLoader("data-driven-world-1", fetcher);
+		await loader.load();
+		const staleController = new AbortController();
+		const stale = loader.loadMap("relay-camp", staleController.signal);
+		await vi.waitFor(() => expect(relayMapAttempts).toBe(1));
+		staleController.abort();
+		const fresh = loader.loadMap(
+			"relay-camp",
+			new AbortController().signal,
+		);
+
+		await expect(stale).rejects.toMatchObject({ code: "network" });
+		await expect(fresh).resolves.toMatchObject({
+			mapsById: { "relay-camp": expect.any(Object) },
+		});
+		expect(relayMapAttempts).toBe(2);
+	});
+
+	it("honors a signal that was already aborted", async () => {
+		const fetcher = vi.fn(
+			(_input: string | URL | Request, init?: RequestInit) => {
+				if (init?.signal?.aborted) {
+					throw new DOMException("aborted", "AbortError");
+				}
+				return Promise.resolve(new Response("unexpected"));
+			},
+		) as unknown as typeof fetch;
+		const controller = new AbortController();
+		controller.abort();
+		await expect(
+			new GameContentLoader("data-driven-world-1", fetcher).load(
+				controller.signal,
+			),
+		).rejects.toMatchObject({ code: "network" });
 	});
 
 	it("does not let a request settled after reset overwrite the new cache", async () => {

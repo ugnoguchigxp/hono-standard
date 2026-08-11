@@ -1,0 +1,266 @@
+[
+  {
+    "assetId": "aether-runner",
+    "file": "web/public/assets/action3d/characters/aether-runner.glb",
+    "bytes": 441108,
+    "sha256": "sha256:f7bb5e113b195d461e1d607a99c5dd212c3d8bc6439991435b208224298de60f",
+    "generator": "Khronos glTF Blender I/O v5.2.39",
+    "nodes": [
+      "cape",
+      "head",
+      "neck",
+      "hand.L",
+      "lower_arm.L",
+      "upper_arm.L",
+      "shoulder.L",
+      "socket.blade.root",
+      "socket.blade.tip",
+      "socket.weapon.right",
+      "hand.R",
+      "lower_arm.R",
+      "upper_arm.R",
+      "shoulder.R",
+      "socket.hit.center",
+      "chest",
+      "spine",
+      "foot.L",
+      "lower_leg.L",
+      "upper_leg.L",
+      "foot.R",
+      "lower_leg.R",
+      "upper_leg.R",
+      "hips",
+      "socket.vfx.feet",
+      "root",
+      "AetherRunnerMesh",
+      "AetherRunnerSkeleton",
+      "AetherRunnerRoot"
+    ],
+    "meshNodes": [
+      "AetherRunnerMesh"
+    ],
+    "materials": [
+      "Runner.Body",
+      "Runner.Cloth",
+      "Runner.Ivory",
+      "Runner.Metal",
+      "Runner.Skin",
+      "Runner.Energy",
+      "Runner.Hair",
+      "Runner.Leather"
+    ],
+    "clips": [
+      {
+        "name": "Attack1",
+        "durationMs": 600,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Attack2",
+        "durationMs": 667,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Attack3",
+        "durationMs": 867,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Defeat",
+        "durationMs": 1067,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Dodge",
+        "durationMs": 467,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Hit",
+        "durationMs": 333,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Idle",
+        "durationMs": 2000,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "JumpLoop",
+        "durationMs": 600,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "JumpStart",
+        "durationMs": 267,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Land",
+        "durationMs": 267,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Run",
+        "durationMs": 733,
+        "rotationBones": 21,
+        "translationBones": 21
+      },
+      {
+        "name": "Walk",
+        "durationMs": 1000,
+        "rotationBones": 21,
+        "translationBones": 21
+      }
+    ],
+    "skeletons": [
+      {
+        "name": "AetherRunnerSkeleton",
+        "bones": 21
+      }
+    ],
+    "triangles": 3122,
+    "primitives": 8,
+    "textures": 0,
+    "maxTextureSize": 0,
+    "maxBoneInfluences": 4,
+    "bounds": {
+      "min": [
+        -1.1013520956039429,
+        -0.004170656204223633,
+        -0.2883055508136749
+      ],
+      "max": [
+        0.947677493095398,
+        2.368640184402466,
+        0.3391706347465515
+      ],
+      "width": 2.049029588699341,
+      "height": 2.3728108406066895,
+      "depth": 0.6274761855602264
+    }
+  },
+  {
+    "assetId": "aether-sentinel",
+    "file": "web/public/assets/action3d/enemies/aether-sentinel.glb",
+    "bytes": 248724,
+    "sha256": "sha256:7b22039bb11e85fbfa6231a765c681519cc9941b294db7f36edcecf0939014f5",
+    "generator": "Khronos glTF Blender I/O v5.2.39",
+    "nodes": [
+      "socket.lock.target",
+      "head",
+      "hand.L",
+      "lower_arm.L",
+      "upper_arm.L",
+      "socket.blade.root",
+      "socket.blade.tip",
+      "hand.R",
+      "lower_arm.R",
+      "upper_arm.R",
+      "socket.core",
+      "socket.hit.center",
+      "chest",
+      "foot.L",
+      "lower_leg.L",
+      "upper_leg.L",
+      "foot.R",
+      "lower_leg.R",
+      "upper_leg.R",
+      "hips",
+      "root",
+      "AetherSentinelMesh",
+      "AetherSentinelSkeleton",
+      "AetherSentinelRoot"
+    ],
+    "meshNodes": [
+      "AetherSentinelMesh"
+    ],
+    "materials": [
+      "Sentinel.Stone",
+      "Sentinel.Iron",
+      "Sentinel.StoneDark",
+      "Sentinel.Brass",
+      "Sentinel.Core"
+    ],
+    "clips": [
+      {
+        "name": "SentinelAttack",
+        "durationMs": 600,
+        "rotationBones": 16,
+        "translationBones": 16
+      },
+      {
+        "name": "SentinelDefeat",
+        "durationMs": 1200,
+        "rotationBones": 16,
+        "translationBones": 16
+      },
+      {
+        "name": "SentinelIdle",
+        "durationMs": 2000,
+        "rotationBones": 16,
+        "translationBones": 16
+      },
+      {
+        "name": "SentinelRecover",
+        "durationMs": 533,
+        "rotationBones": 16,
+        "translationBones": 16
+      },
+      {
+        "name": "SentinelStagger",
+        "durationMs": 400,
+        "rotationBones": 16,
+        "translationBones": 16
+      },
+      {
+        "name": "SentinelWalk",
+        "durationMs": 1200,
+        "rotationBones": 16,
+        "translationBones": 16
+      },
+      {
+        "name": "SentinelWindup",
+        "durationMs": 467,
+        "rotationBones": 16,
+        "translationBones": 16
+      }
+    ],
+    "skeletons": [
+      {
+        "name": "AetherSentinelSkeleton",
+        "bones": 16
+      }
+    ],
+    "triangles": 1836,
+    "primitives": 5,
+    "textures": 0,
+    "maxTextureSize": 0,
+    "maxBoneInfluences": 4,
+    "bounds": {
+      "min": [
+        -1.2031840085983276,
+        0.0156552791595459,
+        -0.36000001430511475
+      ],
+      "max": [
+        1.2781189680099487,
+        2.742377519607544,
+        0.43769371509552
+      ],
+      "width": 2.4813029766082764,
+      "height": 2.726722240447998,
+      "depth": 0.7976937294006348
+    }
+  }
+]

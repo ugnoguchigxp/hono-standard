@@ -4,6 +4,8 @@ import {
 	GAME_CONTENT_VERSION,
 	GAME_STATE_SCHEMA_VERSION,
 	getGameStateInvariantIssues,
+	type BattleState,
+	type CharacterState,
 	type FieldDirection,
 	type GameState,
 } from "./model";
@@ -17,14 +19,57 @@ const gridPointSchema = z
 	.object({ x: nonNegativeInteger, y: nonNegativeInteger })
 	.strict();
 const directionSchema = z.enum(["UP", "DOWN", "LEFT", "RIGHT"]);
-const abilitySchema = z
+const legacyAbilitySchema = z
 	.object({
 		id: z.string().min(1),
 		name: z.string().min(1),
 		powerPercent: z.number().finite(),
 	})
 	.strict();
-const characterSchema = z
+const battleElementSchema = z.enum([
+	"physical",
+	"fire",
+	"lightning",
+	"arcane",
+	"restoration",
+]);
+const statusDefinitionSchema = z
+	.object({
+		id: z.string().min(1),
+		name: z.string().min(1),
+		description: z.string(),
+		polarity: z.enum(["positive", "negative"]),
+		durationTurns: z.number().int().positive(),
+		attackPercent: z.number().finite(),
+		defensePercent: z.number().finite(),
+		speedPercent: z.number().finite(),
+		damagePercentMaxHp: z.number().finite().nonnegative(),
+	})
+	.strict();
+const statusStateSchema = statusDefinitionSchema.extend({
+	turnsRemaining: z.number().int().positive(),
+});
+const abilitySchema = z
+	.object({
+		id: z.string().min(1),
+		name: z.string().min(1),
+		description: z.string(),
+		kind: z.enum(["damage", "heal", "status"]),
+		target: z.enum([
+			"enemy-single",
+			"enemy-all",
+			"ally-single",
+			"ally-all",
+			"self",
+		]),
+		powerPercent: z.number().finite().nonnegative(),
+		mpCost: z.number().int().nonnegative(),
+		element: battleElementSchema,
+		statusEffect: statusDefinitionSchema.optional(),
+		statusChance: z.number().min(0).max(1).optional(),
+	})
+	.strict();
+const legacyCharacterSchema = z
 	.object({
 		id: z.string().min(1),
 		name: z.string().min(1),
@@ -34,22 +79,87 @@ const characterSchema = z
 		attack: z.number().finite(),
 		defense: z.number().finite(),
 		speed: z.number().finite(),
+		ability: legacyAbilitySchema,
+	})
+	.strict();
+const characterSchema = z
+	.object({
+		id: z.string().min(1),
+		name: z.string().min(1),
+		level: z.number().int().positive().max(50),
+		experience: nonNegativeInteger,
+		hp: nonNegativeInteger,
+		maxHp: z.number().int().positive(),
+		mp: nonNegativeInteger,
+		maxMp: nonNegativeInteger,
+		attack: z.number().finite().positive(),
+		defense: z.number().finite().nonnegative(),
+		speed: z.number().finite().positive(),
 		ability: abilitySchema,
+		abilities: z.array(abilitySchema).min(1).max(32),
 	})
 	.strict();
 const combatantSchema = characterSchema.extend({
 	side: z.enum(["party", "enemy"]),
 	actionGauge: z.number().finite().nonnegative(),
 	defending: z.boolean(),
+	statuses: z.array(statusStateSchema).max(16),
+	elementMultipliers: z.partialRecord(
+		battleElementSchema,
+		z.number().positive(),
+	),
+	aiPattern: z.array(z.string().min(1)).max(16),
+	turnsTaken: nonNegativeInteger,
 });
+const battleItemSchema = z
+	.object({
+		id: z.string().min(1),
+		name: z.string().min(1),
+		description: z.string(),
+		effect: z.enum([
+			"restore-hp",
+			"restore-mp",
+			"revive",
+			"cure-status",
+			"none",
+		]),
+		power: nonNegativeInteger,
+		statusIds: z.array(z.string().min(1)).max(16),
+		target: z.enum(["ally-single", "ally-all"]),
+		count: nonNegativeInteger,
+	})
+	.strict();
 const battleSchema = z
+	.object({
+		id: z.string().min(1),
+		phase: z.enum([
+			"running",
+			"awaiting-command",
+			"victory",
+			"defeat",
+			"escaped",
+		]),
+		elapsedMs: z.number().finite().nonnegative(),
+		activeActorId: z.string().min(1).nullable(),
+		party: z.array(combatantSchema).min(1).max(8),
+		enemies: z.array(combatantSchema).max(16),
+		items: z.array(battleItemSchema).max(64),
+		canEscape: z.boolean(),
+	})
+	.strict();
+const legacyCombatantSchema = legacyCharacterSchema.extend({
+	side: z.enum(["party", "enemy"]),
+	actionGauge: z.number().finite().nonnegative(),
+	defending: z.boolean(),
+});
+const legacyBattleSchema = z
 	.object({
 		id: z.string().min(1),
 		phase: z.enum(["running", "awaiting-command", "victory", "defeat"]),
 		elapsedMs: z.number().finite().nonnegative(),
 		activeActorId: z.string().min(1).nullable(),
-		party: z.array(combatantSchema).min(1).max(8),
-		enemies: z.array(combatantSchema).max(16),
+		party: z.array(legacyCombatantSchema).min(1).max(8),
+		enemies: z.array(legacyCombatantSchema).max(16),
 	})
 	.strict();
 const legacyCurrentMapSchema = z
@@ -73,9 +183,28 @@ const fieldSchema = z
 		stepsSinceEncounter: nonNegativeInteger.max(1_000_000).default(0),
 	})
 	.strict();
+const equipmentLoadoutSchema = z
+	.object({
+		weapon: z.string().min(1).nullable(),
+		armor: z.string().min(1).nullable(),
+		"off-hand": z.string().min(1).nullable(),
+		relic: z.string().min(1).nullable(),
+	})
+	.strict();
+const inventorySchema = z.record(z.string().min(1), nonNegativeInteger);
 const partySchema = z
 	.object({ members: z.array(characterSchema).min(1).max(8) })
+	.extend({
+		inventory: inventorySchema,
+		equipmentInventory: inventorySchema,
+		equipment: z.record(z.string().min(1), equipmentLoadoutSchema),
+	})
 	.strict();
+const legacyPartySchema = z
+	.object({ members: z.array(legacyCharacterSchema).min(1).max(8) })
+	.strict();
+const migratablePartySchema = z.union([partySchema, legacyPartySchema]);
+const migratableBattleSchema = z.union([battleSchema, legacyBattleSchema]);
 const storySchema = z
 	.object({
 		chapter: z.string().min(1),
@@ -146,6 +275,22 @@ export const gameStateSchema: z.ZodType<GameState> = z
 		}
 	});
 
+const legacyGameStateV4Schema = z
+	.object({
+		schemaVersion: z.literal(4),
+		contentVersion: z.string().min(1),
+		revision: nonNegativeInteger,
+		rng: rngSchema,
+		mode: z.enum(["field", "event", "battle"]),
+		location: locationSchema,
+		field: fieldSchema,
+		event: activeEventSchema.nullable(),
+		party: migratablePartySchema,
+		story: storySchema,
+		battle: migratableBattleSchema.nullable(),
+	})
+	.strict();
+
 const legacyGameStateV3Schema = z
 	.object({
 		schemaVersion: z.literal(3),
@@ -155,9 +300,9 @@ const legacyGameStateV3Schema = z
 		mode: z.enum(["field", "event", "battle"]),
 		location: locationSchema,
 		field: fieldSchema,
-		party: partySchema,
+		party: migratablePartySchema,
 		story: storySchema,
-		battle: battleSchema.nullable(),
+		battle: migratableBattleSchema.nullable(),
 	})
 	.strict();
 
@@ -175,9 +320,9 @@ const legacyGameStateV2Schema = z
 			})
 			.strict(),
 		currentMap: legacyCurrentMapSchema,
-		party: partySchema,
+		party: migratablePartySchema,
 		story: storySchema,
-		battle: battleSchema.nullable(),
+		battle: migratableBattleSchema.nullable(),
 	})
 	.strict();
 
@@ -186,9 +331,9 @@ const legacyGameStateV1Schema = z
 		schemaVersion: z.literal(1),
 		mode: z.enum(["field", "event", "battle"]),
 		currentMap: legacyCurrentMapSchema,
-		party: partySchema,
+		party: migratablePartySchema,
 		story: storySchema,
-		battle: battleSchema.nullable(),
+		battle: migratableBattleSchema.nullable(),
 	})
 	.strict();
 
@@ -272,21 +417,171 @@ const migrateLegacyLocation = (
 	return null;
 };
 
-const migrateV3ToV4 = (
-	state: z.infer<typeof legacyGameStateV3Schema>,
+type LegacyCharacter = z.infer<typeof legacyCharacterSchema>;
+type LegacyBattle = z.infer<typeof legacyBattleSchema>;
+type MigratableCharacter = LegacyCharacter | CharacterState;
+type MigratableBattle = LegacyBattle | BattleState;
+
+const legacyEquipment: Record<
+	string,
+	{
+		weapon: string | null;
+		armor: string | null;
+		"off-hand": string | null;
+		relic: string | null;
+	}
+> = {
+	mira: {
+		weapon: "rune-blade",
+		armor: "dawn-mail",
+		"off-hand": "signal-guard",
+		relic: null,
+	},
+	sol: {
+		weapon: "steel-spear",
+		armor: "knight-plate",
+		"off-hand": "guard-shield",
+		relic: "red-plume",
+	},
+	lune: {
+		weapon: "echo-staff",
+		armor: "sage-robe",
+		"off-hand": "crystal-tome",
+		relic: "moon-charm",
+	},
+};
+
+const legacyMaxMp: Record<string, number> = { mira: 18, sol: 14, lune: 42 };
+
+const migrateLegacyAbility = (ability: LegacyCharacter["ability"]) => ({
+	...ability,
+	description: ability.name,
+	kind: "damage" as const,
+	target: "enemy-single" as const,
+	mpCost: 0,
+	element: "physical" as const,
+});
+
+const migrateLegacyCharacter = (
+	character: MigratableCharacter,
+): CharacterState => {
+	if ("abilities" in character) {
+		return {
+			...character,
+			ability: { ...character.ability },
+			abilities: character.abilities.map((ability) => ({ ...ability })),
+		};
+	}
+	const ability = migrateLegacyAbility(character.ability);
+	const maxMp = legacyMaxMp[character.id] ?? 0;
+	return {
+		...character,
+		experience: character.level <= 1 ? 0 : 100 * (character.level - 1) ** 2,
+		mp: maxMp,
+		maxMp,
+		ability,
+		abilities: [ability],
+	};
+};
+
+const migrateLegacyBattle = (
+	battle: MigratableBattle | null,
+	inventory: Record<string, number>,
+): BattleState | null => {
+	if (battle && "items" in battle) return structuredClone(battle);
+	return battle
+		? {
+				...battle,
+				party: battle.party.map((member) => ({
+					...migrateLegacyCharacter(member),
+					side: member.side,
+					actionGauge: member.actionGauge,
+					defending: member.defending,
+					statuses: [],
+					elementMultipliers: {},
+					aiPattern: [],
+					turnsTaken: 0,
+				})),
+				enemies: battle.enemies.map((enemy) => ({
+					...migrateLegacyCharacter(enemy),
+					side: enemy.side,
+					actionGauge: enemy.actionGauge,
+					defending: enemy.defending,
+					statuses: [],
+					elementMultipliers: {},
+					aiPattern: [enemy.ability.id],
+					turnsTaken: 0,
+				})),
+				items: Object.entries(inventory).flatMap(([id, count]) =>
+					id === "potion"
+						? [
+								{
+									id,
+									name: "Potion",
+									description: "Restores 50 HP to one ally.",
+									effect: "restore-hp" as const,
+									power: 50,
+									statusIds: [],
+									target: "ally-single" as const,
+									count,
+								},
+							]
+						: [],
+				),
+				canEscape: battle.id !== "signal-ruins-encounter",
+			}
+		: null;
+};
+
+const migrateV4ToV5 = (
+	state: z.infer<typeof legacyGameStateV4Schema>,
 ): GameState => {
-	const resumesBattle = state.mode === "battle" && state.battle !== null;
+	const inventory = {
+		potion: 5,
+		ether: 3,
+		antidote: 3,
+		"phoenix-feather": 1,
+		"echo-shard": 1,
+	};
 	return gameStateSchema.parse({
 		...state,
 		schemaVersion: GAME_STATE_SCHEMA_VERSION,
+		party: {
+			members: state.party.members.map(migrateLegacyCharacter),
+			inventory,
+			equipmentInventory: { "tempered-blade": 1, "swift-band": 1 },
+			equipment: Object.fromEntries(
+				state.party.members.map((member) => [
+					member.id,
+					legacyEquipment[member.id] ?? {
+						weapon: null,
+						armor: null,
+						"off-hand": null,
+						relic: null,
+					},
+				]),
+			),
+		},
+		battle: migrateLegacyBattle(state.battle, inventory),
+	});
+};
+
+const migrateV3ToV5 = (
+	state: z.infer<typeof legacyGameStateV3Schema>,
+): GameState => {
+	const resumesBattle = state.mode === "battle" && state.battle !== null;
+	const v4 = legacyGameStateV4Schema.parse({
+		...state,
+		schemaVersion: 4,
 		contentVersion: state.contentVersion,
 		mode: resumesBattle ? "battle" : "field",
 		event: null,
 		battle: resumesBattle ? state.battle : null,
 	});
+	return migrateV4ToV5(v4);
 };
 
-const migrateV2ToV4 = (
+const migrateV2ToV5 = (
 	state: z.infer<typeof legacyGameStateV2Schema>,
 ): GameState | null => {
 	const migratedLocation = migrateLegacyLocation(
@@ -318,10 +613,10 @@ const migrateV2ToV4 = (
 		story: state.story,
 		battle: state.battle,
 	});
-	return migrateV3ToV4(v3);
+	return migrateV3ToV5(v3);
 };
 
-const migrateV1ToV4 = (
+const migrateV1ToV5 = (
 	state: z.infer<typeof legacyGameStateV1Schema>,
 ): GameState | null => {
 	const migratedLocation = migrateLegacyLocation(
@@ -329,7 +624,7 @@ const migrateV1ToV4 = (
 		state.currentMap.checkpoint,
 	);
 	if (!migratedLocation) return null;
-	return migrateV2ToV4(
+	return migrateV2ToV5(
 		legacyGameStateV2Schema.parse({
 			schemaVersion: 2,
 			contentVersion: "signal-ruins-1",
@@ -399,6 +694,23 @@ export function decodeGameSave(serialized: string): GameSaveDecodeResult {
 				message: "Save data does not match the current schema.",
 			};
 		}
+		if (stateVersion === 4) {
+			const parsed = legacyGameStateV4Schema.safeParse(value.state);
+			if (!parsed.success) {
+				return {
+					status: "corrupt",
+					message: "Version 4 save data is corrupt.",
+				};
+			}
+			return {
+				status: "ready",
+				save: currentSaveSchema.parse({
+					...envelope.data,
+					state: migrateV4ToV5(parsed.data),
+				}),
+				migrated: true,
+			};
+		}
 		if (stateVersion === 3) {
 			const parsed = legacyGameStateV3Schema.safeParse(value.state);
 			if (!parsed.success) {
@@ -411,7 +723,7 @@ export function decodeGameSave(serialized: string): GameSaveDecodeResult {
 				status: "ready",
 				save: currentSaveSchema.parse({
 					...envelope.data,
-					state: migrateV3ToV4(parsed.data),
+					state: migrateV3ToV5(parsed.data),
 				}),
 				migrated: true,
 			};
@@ -431,7 +743,7 @@ export function decodeGameSave(serialized: string): GameSaveDecodeResult {
 					message: "Version 2 save data is corrupt.",
 				};
 			}
-			const migrated = migrateV2ToV4(parsed.data);
+			const migrated = migrateV2ToV5(parsed.data);
 			if (!migrated) {
 				return {
 					status: "unsupported",
@@ -476,7 +788,7 @@ export function decodeGameSave(serialized: string): GameSaveDecodeResult {
 				message: "Legacy save data is incomplete or corrupt.",
 			};
 		}
-		const migrated = migrateV1ToV4(parsed.data.state);
+		const migrated = migrateV1ToV5(parsed.data.state);
 		if (!migrated) {
 			return {
 				status: "unsupported",

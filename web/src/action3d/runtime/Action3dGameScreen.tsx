@@ -1,3 +1,8 @@
+import type {
+	Action3dEvent,
+	Action3dSession,
+	Action3dState,
+} from "@shared/action3d";
 import { Link } from "@tanstack/react-router";
 import {
 	CirclePause,
@@ -6,13 +11,10 @@ import {
 	DoorOpen,
 	RotateCcw,
 	Swords,
+	Volume2,
+	VolumeX,
 } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import type {
-	Action3dEvent,
-	Action3dSession,
-	Action3dState,
-} from "@shared/action3d";
 import { useBrowserGameRuntime } from "../../game-platform";
 import { LazyAction3dRuntime } from "./LazyAction3dRuntime";
 import type { Action3dRuntimeError, Action3dRuntimeSnapshot } from "./types";
@@ -33,7 +35,7 @@ export function Action3dGameScreen({
 	const hostRef = useRef<HTMLDivElement>(null);
 	const [snapshot, setSnapshot] = useState<Action3dRuntimeSnapshot>({
 		state: session.getState(),
-		stats: { fps: 0, activeMeshes: 0, drawCalls: 0 },
+		stats: { fps: 0, frameTimeMs: 0, activeMeshes: 0, drawCalls: 0 },
 		pointerLocked: false,
 	});
 	const [runtimeError, setRuntimeError] = useState<Action3dRuntimeError | null>(
@@ -44,6 +46,13 @@ export function Action3dGameScreen({
 	const [lastEvent, setLastEvent] = useState(
 		"Reach the sentinels beyond the south gate.",
 	);
+	const [muted, setMuted] = useState(false);
+	const mutedRef = useRef(false);
+	const isMuted = useCallback(() => mutedRef.current, []);
+	const toggleMuted = () => {
+		mutedRef.current = !mutedRef.current;
+		setMuted(mutedRef.current);
+	};
 	const onEvent = useCallback((event: Action3dEvent) => {
 		if (event.type === "enemy-hit")
 			setLastEvent(`Hit ${event.enemyId} for ${event.damage}.`);
@@ -63,21 +72,24 @@ export function Action3dGameScreen({
 				onSnapshot: setSnapshot,
 				onEvent,
 				onCheckpoint: onAutosave,
+				isMuted,
 				onWarning: setWarning,
 				onError: setRuntimeError,
 			}),
-		[onAutosave, onEvent, runtimeAttempt, session],
+		[isMuted, onAutosave, onEvent, runtimeAttempt, session],
 	);
+	const onStartError = useCallback((error: unknown) => {
+		setRuntimeError({
+			code: "startup",
+			message:
+				error instanceof Error ? error.message : "Action3D could not start.",
+			recoverable: true,
+		});
+	}, []);
 	useBrowserGameRuntime({
 		hostRef,
 		createRuntime,
-		onStartError: (error) =>
-			setRuntimeError({
-				code: "startup",
-				message:
-					error instanceof Error ? error.message : "Action3D could not start.",
-				recoverable: true,
-			}),
+		onStartError,
 	});
 	const paused = snapshot.state.phase === "paused";
 	const togglePause = () => {
@@ -94,6 +106,9 @@ export function Action3dGameScreen({
 	const activeEnemies = snapshot.state.enemies.filter(
 		(enemy) => enemy.state !== "defeated",
 	);
+	const lockOnTarget = snapshot.state.enemies.find(
+		(enemy) => enemy.id === snapshot.state.player.lockOnEnemyId,
+	);
 	return (
 		<main
 			className="action3d-game"
@@ -101,6 +116,12 @@ export function Action3dGameScreen({
 			data-action3d-revision={snapshot.state.revision}
 			data-action3d-player-x={snapshot.state.player.position.x.toFixed(2)}
 			data-action3d-player-z={snapshot.state.player.position.z.toFixed(2)}
+			data-action3d-player-hp={snapshot.state.player.hp}
+			data-action3d-enemies={activeEnemies.length}
+			data-action3d-fps={snapshot.stats.fps}
+			data-action3d-frame-ms={snapshot.stats.frameTimeMs}
+			data-action3d-draw-calls={snapshot.stats.drawCalls}
+			data-action3d-active-meshes={snapshot.stats.activeMeshes}
 		>
 			<div className="action3d-game-bar">
 				<button type="button" onClick={onExit}>
@@ -108,6 +129,10 @@ export function Action3dGameScreen({
 					Field Lab
 				</button>
 				<span>{saveStatus}</span>
+				<button type="button" onClick={toggleMuted} aria-pressed={muted}>
+					{muted ? <VolumeX className="icon" /> : <Volume2 className="icon" />}
+					{muted ? "Sound off" : "Sound on"}
+				</button>
 				<button
 					type="button"
 					onClick={togglePause}
@@ -151,17 +176,20 @@ export function Action3dGameScreen({
 				<div className="action3d-objective">
 					<Crosshair className="icon" />
 					<span>
-						{activeEnemies.length
-							? `Sentinels remaining · ${activeEnemies.length}`
-							: "North beacon secured"}
+						{lockOnTarget
+							? `Locked · ${lockOnTarget.id} · ${lockOnTarget.hp}/${lockOnTarget.maxHp} HP`
+							: activeEnemies.length
+								? `Sentinels remaining · ${activeEnemies.length}`
+								: "North beacon secured"}
 					</span>
 				</div>
 				<div className="action3d-event" aria-live="polite">
 					{lastEvent}
 				</div>
 				<output className="action3d-stats" aria-label="Runtime performance">
-					{snapshot.stats.fps} FPS · {snapshot.stats.drawCalls} draws ·{" "}
-					{snapshot.stats.activeMeshes} meshes
+					{snapshot.stats.fps} FPS · {snapshot.stats.frameTimeMs} ms ·{" "}
+					{snapshot.stats.drawCalls} draws · {snapshot.stats.activeMeshes}{" "}
+					meshes
 				</output>
 				{!snapshot.pointerLocked && snapshot.state.phase === "playing" && (
 					<div className="action3d-pointer-hint">
@@ -220,7 +248,7 @@ export function Action3dGameScreen({
 				<strong>Controls</strong>
 				<span>
 					WASD / left stick · Mouse · Space jump · Shift sprint · Ctrl / B dodge
-					· Click / X attack · E / R3 lock-on
+					· Click / X attack · E / R3 lock-on · P / Start pause
 				</span>
 				<Link to="/">Home</Link>
 			</div>

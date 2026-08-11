@@ -1,23 +1,384 @@
 {
-  "manifestVersion": 1,
-  "contentVersion": "action3d-field-lab-1",
-  "entryPoint": {
-    "worldId": "aether-courtyard",
-    "spawnId": "south-gate"
-  },
-  "documents": {
-    "worlds": ["worlds/aether-courtyard.json"]
-  },
-  "assets": [
-    {
-      "id": "field-runner",
-      "type": "model",
-      "url": "/assets/action3d/models/action3d-avatar.glb",
-      "bytes": 39712,
-      "license": "Project-owned · MIT",
-      "source": {
-        "label": "Generated from scripts/generate-action3d-assets.ts"
-      }
-    }
-  ]
+	"manifestVersion": 2,
+	"contentVersion": "action3d-field-lab-1",
+	"entryPoint": {
+		"worldId": "aether-courtyard",
+		"spawnId": "south-gate"
+	},
+	"documents": {
+		"worlds": ["worlds/aether-courtyard.json"]
+	},
+	"assets": [
+		{
+			"id": "aether-runner",
+			"type": "model",
+			"url": "/assets/action3d/characters/aether-runner.glb",
+			"bytes": 441108,
+			"sha256": "sha256:f7bb5e113b195d461e1d607a99c5dd212c3d8bc6439991435b208224298de60f",
+			"license": "Project-owned · MIT",
+			"source": {
+				"label": "art/action3d/player/aether-runner.blend",
+				"revision": "a2-geometry-quality-pass-v2"
+			},
+			"exportedBy": {
+				"tool": "Blender glTF 2.0",
+				"version": "5.2.39"
+			},
+			"model": {
+				"role": "player",
+				"maturity": "blockout",
+				"rootNode": "AetherRunnerRoot",
+				"skeletonRoot": "AetherRunnerSkeleton",
+				"meshNodes": ["AetherRunnerMesh"],
+				"clips": [
+					{
+						"id": "idle",
+						"name": "Idle",
+						"loop": true,
+						"durationMs": {
+							"min": 1800,
+							"max": 2400
+						}
+					},
+					{
+						"id": "walk",
+						"name": "Walk",
+						"loop": true,
+						"durationMs": {
+							"min": 900,
+							"max": 1200
+						}
+					},
+					{
+						"id": "run",
+						"name": "Run",
+						"loop": true,
+						"durationMs": {
+							"min": 650,
+							"max": 850
+						}
+					},
+					{
+						"id": "jump-start",
+						"name": "JumpStart",
+						"loop": false,
+						"durationMs": {
+							"min": 180,
+							"max": 300
+						}
+					},
+					{
+						"id": "jump-loop",
+						"name": "JumpLoop",
+						"loop": true,
+						"durationMs": {
+							"min": 400,
+							"max": 800
+						}
+					},
+					{
+						"id": "land",
+						"name": "Land",
+						"loop": false,
+						"durationMs": {
+							"min": 160,
+							"max": 280
+						}
+					},
+					{
+						"id": "dodge",
+						"name": "Dodge",
+						"loop": false,
+						"durationMs": {
+							"min": 380,
+							"max": 500
+						}
+					},
+					{
+						"id": "hit",
+						"name": "Hit",
+						"loop": false,
+						"durationMs": {
+							"min": 220,
+							"max": 360
+						}
+					},
+					{
+						"id": "defeat",
+						"name": "Defeat",
+						"loop": false,
+						"durationMs": {
+							"min": 800,
+							"max": 1300
+						}
+					},
+					{
+						"id": "attack-1",
+						"name": "Attack1",
+						"loop": false,
+						"durationMs": {
+							"min": 500,
+							"max": 700
+						}
+					},
+					{
+						"id": "attack-2",
+						"name": "Attack2",
+						"loop": false,
+						"durationMs": {
+							"min": 550,
+							"max": 750
+						}
+					},
+					{
+						"id": "attack-3",
+						"name": "Attack3",
+						"loop": false,
+						"durationMs": {
+							"min": 750,
+							"max": 1000
+						}
+					}
+				],
+				"sockets": [
+					{
+						"id": "socket.weapon.right",
+						"node": "socket.weapon.right"
+					},
+					{
+						"id": "socket.hit.center",
+						"node": "socket.hit.center"
+					},
+					{
+						"id": "socket.vfx.feet",
+						"node": "socket.vfx.feet"
+					},
+					{
+						"id": "socket.blade.root",
+						"node": "socket.blade.root"
+					},
+					{
+						"id": "socket.blade.tip",
+						"node": "socket.blade.tip"
+					}
+				],
+				"materials": [
+					{
+						"id": "body",
+						"name": "Runner.Body"
+					},
+					{
+						"id": "cloth",
+						"name": "Runner.Cloth"
+					},
+					{
+						"id": "ivory",
+						"name": "Runner.Ivory"
+					},
+					{
+						"id": "energy",
+						"name": "Runner.Energy"
+					},
+					{
+						"id": "hair",
+						"name": "Runner.Hair"
+					},
+					{
+						"id": "skin",
+						"name": "Runner.Skin"
+					},
+					{
+						"id": "metal",
+						"name": "Runner.Metal"
+					},
+					{
+						"id": "weapon",
+						"name": "Runner.Metal"
+					},
+					{
+						"id": "leather",
+						"name": "Runner.Leather"
+					}
+				],
+				"transform": {
+					"upAxis": "Y",
+					"forwardAxis": "Z",
+					"unitMeters": 1,
+					"groundOffset": 0,
+					"boundsMeters": {
+						"width": 2.048,
+						"height": 2.497,
+						"depth": 0.618
+					}
+				},
+				"budget": {
+					"maxTransferBytes": 2000000,
+					"maxTriangles": 50000,
+					"maxPrimitives": 64,
+					"maxMaterials": 8,
+					"maxTextures": 8,
+					"maxTextureSize": 2048,
+					"maxBones": 70,
+					"maxBoneInfluences": 4
+				}
+			}
+		},
+		{
+			"id": "aether-sentinel",
+			"type": "model",
+			"url": "/assets/action3d/enemies/aether-sentinel.glb",
+			"bytes": 248724,
+			"sha256": "sha256:7b22039bb11e85fbfa6231a765c681519cc9941b294db7f36edcecf0939014f5",
+			"license": "Project-owned · MIT",
+			"source": {
+				"label": "art/action3d/enemies/aether-sentinel.blend",
+				"revision": "a2-geometry-quality-pass-v2"
+			},
+			"exportedBy": {
+				"tool": "Blender glTF 2.0",
+				"version": "5.2.39"
+			},
+			"model": {
+				"role": "enemy",
+				"maturity": "blockout",
+				"rootNode": "AetherSentinelRoot",
+				"skeletonRoot": "AetherSentinelSkeleton",
+				"meshNodes": ["AetherSentinelMesh"],
+				"clips": [
+					{
+						"id": "idle",
+						"name": "SentinelIdle",
+						"loop": true,
+						"durationMs": {
+							"min": 1800,
+							"max": 2400
+						}
+					},
+					{
+						"id": "chase",
+						"name": "SentinelWalk",
+						"loop": true,
+						"durationMs": {
+							"min": 900,
+							"max": 1400
+						}
+					},
+					{
+						"id": "windup",
+						"name": "SentinelWindup",
+						"loop": false,
+						"durationMs": {
+							"min": 400,
+							"max": 520
+						}
+					},
+					{
+						"id": "attack",
+						"name": "SentinelAttack",
+						"loop": false,
+						"durationMs": {
+							"min": 520,
+							"max": 700
+						}
+					},
+					{
+						"id": "recover",
+						"name": "SentinelRecover",
+						"loop": false,
+						"durationMs": {
+							"min": 450,
+							"max": 650
+						}
+					},
+					{
+						"id": "stagger",
+						"name": "SentinelStagger",
+						"loop": false,
+						"durationMs": {
+							"min": 320,
+							"max": 480
+						}
+					},
+					{
+						"id": "defeated",
+						"name": "SentinelDefeat",
+						"loop": false,
+						"durationMs": {
+							"min": 1000,
+							"max": 1400
+						}
+					}
+				],
+				"sockets": [
+					{
+						"id": "socket.hit.center",
+						"node": "socket.hit.center"
+					},
+					{
+						"id": "socket.core",
+						"node": "socket.core"
+					},
+					{
+						"id": "socket.lock.target",
+						"node": "socket.lock.target"
+					},
+					{
+						"id": "socket.blade.root",
+						"node": "socket.blade.root"
+					},
+					{
+						"id": "socket.blade.tip",
+						"node": "socket.blade.tip"
+					}
+				],
+				"materials": [
+					{
+						"id": "stone",
+						"name": "Sentinel.Stone"
+					},
+					{
+						"id": "stone-dark",
+						"name": "Sentinel.StoneDark"
+					},
+					{
+						"id": "iron",
+						"name": "Sentinel.Iron"
+					},
+					{
+						"id": "brass",
+						"name": "Sentinel.Brass"
+					},
+					{
+						"id": "core",
+						"name": "Sentinel.Core"
+					},
+					{
+						"id": "weapon",
+						"name": "Sentinel.Iron"
+					}
+				],
+				"transform": {
+					"upAxis": "Y",
+					"forwardAxis": "Z",
+					"unitMeters": 1,
+					"groundOffset": 0,
+					"boundsMeters": {
+						"width": 2.481,
+						"height": 2.747,
+						"depth": 0.797
+					}
+				},
+				"budget": {
+					"maxTransferBytes": 1500000,
+					"maxTriangles": 35000,
+					"maxPrimitives": 64,
+					"maxMaterials": 8,
+					"maxTextures": 8,
+					"maxTextureSize": 2048,
+					"maxBones": 60,
+					"maxBoneInfluences": 4
+				}
+			}
+		}
+	]
 }

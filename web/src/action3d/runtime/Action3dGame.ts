@@ -1,24 +1,32 @@
-import "@babylonjs/loaders/glTF";
+import "@babylonjs/loaders/glTF/2.0/glTFLoader";
+import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
+import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
+import { ImportMeshAsync } from "@babylonjs/core/Loading/sceneLoader";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { ImportMeshAsync } from "@babylonjs/core/Loading/sceneLoader";
 import { Scene } from "@babylonjs/core/scene";
-import type { AnimationGroup } from "@babylonjs/core/Animations/animationGroup";
 import {
-	createAction3dCheckpointState,
+	type Action3dEvent,
 	type Action3dState,
+	createAction3dCheckpointState,
 } from "@shared/action3d";
 import type {
 	BrowserGameRuntime,
 	BrowserGameViewport,
 } from "../../game-platform";
+import {
+	type Action3dAnimationController,
+	createAction3dAnimationController,
+} from "../presentation/animation/Action3dAnimationController";
+import { createBabylonAnimationHandle } from "../presentation/animation/createBabylonAnimationHandle";
+import { getEnemyDefeatPresentation } from "../presentation/combat/EnemyDefeatPresentation";
 import { Action3dInputController } from "./Action3dInputController";
 import type { Action3dRuntimeOptions } from "./types";
 
@@ -35,6 +43,33 @@ const createMaterial = (
 	return material;
 };
 
+const cameraCollisionRatio = (
+	from: { x: number; z: number },
+	to: { x: number; z: number },
+	bounds: { minX: number; maxX: number; minZ: number; maxZ: number },
+) => {
+	const padding = 0.35;
+	const dx = to.x - from.x;
+	const dz = to.z - from.z;
+	let near = 0;
+	let far = 1;
+	for (const [origin, delta, min, max] of [
+		[from.x, dx, bounds.minX - padding, bounds.maxX + padding],
+		[from.z, dz, bounds.minZ - padding, bounds.maxZ + padding],
+	] as const) {
+		if (Math.abs(delta) < 0.000_01) {
+			if (origin < min || origin > max) return null;
+			continue;
+		}
+		const first = (min - origin) / delta;
+		const second = (max - origin) / delta;
+		near = Math.max(near, Math.min(first, second));
+		far = Math.min(far, Math.max(first, second));
+		if (near > far) return null;
+	}
+	return near >= 0 && near <= 1 ? near : null;
+};
+
 export class Action3dGame implements BrowserGameRuntime {
 	private engine: Engine | null = null;
 	private scene: Scene | null = null;
@@ -42,15 +77,33 @@ export class Action3dGame implements BrowserGameRuntime {
 	private input: Action3dInputController | null = null;
 	private playerRoot: TransformNode | null = null;
 	private camera: FreeCamera | null = null;
+	private attackEffect: Mesh | null = null;
+	private resizeObserver: ResizeObserver | null = null;
 	private readonly enemyRoots = new Map<string, TransformNode>();
-	private animationGroups: AnimationGroup[] = [];
-	private activeAnimation = "";
+	private readonly enemyFallbackMeshes = new Map<string, Mesh[]>();
+	private readonly enemyAnimationControllers = new Map<
+		string,
+		Action3dAnimationController
+	>();
+	private readonly enemyDefeatElapsedMs = new Map<string, number>();
+	private animationController: Action3dAnimationController | null = null;
+	private playerModelAssetId = "";
+	private playerGroundOffset = 0;
 	private lastSnapshotAt = 0;
 	private lastPhase = "";
 	private pointerLocked = false;
 	private victorySaved = false;
 	private disposed = false;
 	private hiddenPaused = false;
+	private cameraShakeMs = 0;
+	private audioContext: AudioContext | null = null;
+	private lowFpsSamples = 0;
+	private qualityReduced = false;
+	private lastDrawCallTotal = 0;
+	private lastDrawSampleAt = 0;
+	private readonly reduceMotion = window.matchMedia(
+		"(prefers-reduced-motion: reduce)",
+	).matches;
 	constructor(private readonly options: Action3dRuntimeOptions) {}
 
 	async start(host: HTMLElement, signal: AbortSignal): Promise<void> {
@@ -90,6 +143,12 @@ export class Action3dGame implements BrowserGameRuntime {
 			);
 			if (this.engine.webGLVersion < 2)
 				throw new Error("Action3D requires WebGL2.");
+			// Reserve GPU time for four simultaneously skinned characters. The CSS
+			// canvas remains full-size while browser compositing resolves the modest
+			// internal render scale at the gameplay camera distance.
+			this.engine.setHardwareScalingLevel(
+				1.2 / Math.min(window.devicePixelRatio || 1, 1.5),
+			);
 			this.scene = new Scene(this.engine);
 			this.scene.clearColor = new Color4(0.025, 0.06, 0.1, 1);
 			this.scene.fogMode = Scene.FOGMODE_EXP2;
@@ -99,9 +158,14 @@ export class Action3dGame implements BrowserGameRuntime {
 				this.pointerLocked = locked;
 			});
 			this.buildWorld(this.scene);
-			await this.buildPlayer(this.scene);
+			await Promise.all([
+				this.buildPlayer(this.scene),
+				this.buildEnemies(this.scene),
+			]);
 			if (signal.aborted || this.disposed) return;
 			this.engine.runRenderLoop(this.renderFrame);
+			this.resizeObserver = new ResizeObserver(this.onResize);
+			this.resizeObserver.observe(host);
 			this.onResize();
 		} catch (error) {
 			if (!signal.aborted)
@@ -137,6 +201,35 @@ export class Action3dGame implements BrowserGameRuntime {
 			scene,
 		);
 		ground.material = groundMaterial;
+		for (const surface of world.surfaces) {
+			const width = surface.bounds.maxX - surface.bounds.minX;
+			const depth = surface.bounds.maxZ - surface.bounds.minZ;
+			const mesh = MeshBuilder.CreateGround(
+				`${surface.id}-surface`,
+				{ width, height: depth, subdivisions: 1, updatable: true },
+				scene,
+			);
+			const positions = mesh.getVerticesData(VertexBuffer.PositionKind);
+			if (positions) {
+				for (let index = 0; index < positions.length; index += 3) {
+					const local =
+						surface.axis === "x" ? positions[index] : positions[index + 2];
+					const span = surface.axis === "x" ? width : depth;
+					const progress = Math.min(1, Math.max(0, local / span + 0.5));
+					positions[index + 1] =
+						surface.fromHeight +
+						(surface.toHeight - surface.fromHeight) * progress +
+						0.01;
+				}
+				mesh.updateVerticesData(VertexBuffer.PositionKind, positions);
+			}
+			mesh.position.set(
+				(surface.bounds.minX + surface.bounds.maxX) / 2,
+				0,
+				(surface.bounds.minZ + surface.bounds.maxZ) / 2,
+			);
+			mesh.material = groundMaterial;
+		}
 		const ruinMaterial = createMaterial(
 			scene,
 			"Ruins",
@@ -276,9 +369,37 @@ export class Action3dGame implements BrowserGameRuntime {
 			eye.parent = root;
 			eye.position.set(0, 1.15, 0.65);
 			eye.material = crystalMaterial;
+			this.enemyFallbackMeshes.set(enemy.id, [body, eye]);
 			this.enemyRoots.set(enemy.id, root);
 		}
 		this.playerRoot = new TransformNode("PlayerVisualRoot", scene);
+		const attackMaterial = createMaterial(
+			scene,
+			"PlayerAttackTrail",
+			new Color3(0.18, 0.9, 0.94),
+			new Color3(0.08, 0.72, 0.78),
+		);
+		attackMaterial.alpha = 0.72;
+		attackMaterial.disableLighting = true;
+		attackMaterial.backFaceCulling = false;
+		const attackPath = Array.from({ length: 15 }, (_, index) => {
+			const progress = index / 14;
+			const lift = Math.sin(progress * Math.PI);
+			return new Vector3(
+				(progress - 0.5) * 2.64,
+				lift * 0.28,
+				0.72 + lift * 0.12,
+			);
+		});
+		this.attackEffect = MeshBuilder.CreateTube(
+			"PlayerAttackArc",
+			{ path: attackPath, radius: 0.045, tessellation: 7 },
+			scene,
+		);
+		this.attackEffect.parent = this.playerRoot;
+		this.attackEffect.position.y = 0.72;
+		this.attackEffect.material = attackMaterial;
+		this.attackEffect.setEnabled(false);
 		this.camera = new FreeCamera(
 			"ThirdPersonCamera",
 			new Vector3(0, 4, -8),
@@ -301,6 +422,42 @@ export class Action3dGame implements BrowserGameRuntime {
 		sun.intensity = 1.1;
 	}
 
+	private async buildEnemies(scene: Scene): Promise<void> {
+		const state = this.options.session.getState();
+		const world = this.options.session.content.getWorld(state.location.worldId);
+		const asset = this.options.session.content.getAsset(
+			world.enemyModelAssetId,
+		);
+		if (asset.type !== "model")
+			throw new Error(`Action3D asset '${asset.id}' is not a model.`);
+		await Promise.all(
+			state.enemies.map(async (enemy) => {
+				const root = this.enemyRoots.get(enemy.id);
+				if (!root) return;
+				try {
+					const result = await ImportMeshAsync(asset.url, scene);
+					for (const mesh of result.meshes)
+						if (!mesh.parent) mesh.parent = root;
+					root.scaling.setAll(asset.model.transform.unitMeters);
+					for (const fallback of this.enemyFallbackMeshes.get(enemy.id) ?? [])
+						fallback.setEnabled(false);
+					const controller = createAction3dAnimationController(
+						asset,
+						result.animationGroups.map(createBabylonAnimationHandle),
+					);
+					controller.select("idle");
+					this.enemyAnimationControllers.set(enemy.id, controller);
+				} catch {
+					this.options.onWarning({
+						code: "asset-load",
+						message: `The ${enemy.id} model could not load; its diagnostic fallback is active.`,
+						recoverable: true,
+					});
+				}
+			}),
+		);
+	}
+
 	private async buildPlayer(scene: Scene): Promise<void> {
 		if (!this.playerRoot) return;
 		const state = this.options.session.getState();
@@ -308,12 +465,19 @@ export class Action3dGame implements BrowserGameRuntime {
 		const asset = this.options.session.content.getAsset(
 			world.playerModelAssetId,
 		);
+		if (asset.type !== "model")
+			throw new Error(`Action3D asset '${asset.id}' is not a model.`);
 		try {
 			const result = await ImportMeshAsync(asset.url, scene);
 			for (const mesh of result.meshes)
 				if (!mesh.parent) mesh.parent = this.playerRoot;
-			this.animationGroups = result.animationGroups;
-			this.playerRoot.scaling.setAll(0.78);
+			this.animationController = createAction3dAnimationController(
+				asset,
+				result.animationGroups.map(createBabylonAnimationHandle),
+			);
+			this.playerModelAssetId = asset.id;
+			this.playerGroundOffset = asset.model.transform.groundOffset;
+			this.playerRoot.scaling.setAll(asset.model.transform.unitMeters);
 		} catch {
 			const material = createMaterial(
 				scene,
@@ -347,11 +511,36 @@ export class Action3dGame implements BrowserGameRuntime {
 		)
 			return;
 		const input = this.input.read();
-		const result = this.options.session.advance(
-			Math.min(100, this.engine.getDeltaTime()),
-			input,
+		const preStepState = this.options.session.getState();
+		const lockTarget = preStepState.enemies.find(
+			(enemy) => enemy.id === preStepState.player.lockOnEnemyId,
 		);
-		for (const event of result.events) this.options.onEvent(event);
+		if (lockTarget) {
+			const targetYaw = Math.atan2(
+				lockTarget.position.x - preStepState.player.position.x,
+				lockTarget.position.z - preStepState.player.position.z,
+			);
+			const delta = Math.atan2(
+				Math.sin(targetYaw - this.input.cameraYaw),
+				Math.cos(targetYaw - this.input.cameraYaw),
+			);
+			this.input.cameraYaw += delta * 0.08;
+			input.cameraYaw = this.input.cameraYaw;
+		}
+		if (input.pause) {
+			const paused = this.options.session.getState().phase === "paused";
+			this.options.session.setPaused(!paused);
+			if (!paused && document.pointerLockElement === this.canvas)
+				void document.exitPointerLock();
+		}
+		const deltaMs = Math.min(100, this.engine.getDeltaTime());
+		const result = this.options.session.advance(deltaMs, input);
+		for (const event of result.events) {
+			this.options.onEvent(event);
+			this.playEventSound(event.type);
+			if (event.type === "enemy-hit") this.cameraShakeMs = 130;
+			if (event.type === "player-hit") this.cameraShakeMs = 220;
+		}
 		if (
 			!this.victorySaved &&
 			result.events.some((event) => event.type === "victory")
@@ -364,7 +553,13 @@ export class Action3dGame implements BrowserGameRuntime {
 				),
 			);
 		}
-		this.syncVisuals(result.state, input.cameraYaw, this.input.cameraPitch);
+		this.syncVisuals(
+			result.state,
+			input.cameraYaw,
+			this.input.cameraPitch,
+			deltaMs,
+		);
+		this.cameraShakeMs = Math.max(0, this.cameraShakeMs - deltaMs);
 		this.scene.render();
 		const now = performance.now();
 		if (
@@ -373,13 +568,29 @@ export class Action3dGame implements BrowserGameRuntime {
 		) {
 			this.lastSnapshotAt = now;
 			this.lastPhase = result.state.phase;
+			const fps = Math.round(this.engine.getFps());
+			const drawCallTotal = this.engine._drawCalls.current;
+			const estimatedFrames = Math.max(
+				1,
+				((now - this.lastDrawSampleAt) * Math.max(1, fps)) / 1000,
+			);
+			const drawCalls =
+				this.lastDrawSampleAt === 0 || drawCallTotal < this.lastDrawCallTotal
+					? this.scene.getActiveMeshes().length
+					: Math.round(
+							(drawCallTotal - this.lastDrawCallTotal) / estimatedFrames,
+						);
+			this.lastDrawCallTotal = drawCallTotal;
+			this.lastDrawSampleAt = now;
+			this.updateAdaptiveQuality(fps);
 			this.options.onSnapshot({
 				state: result.state,
 				pointerLocked: this.pointerLocked,
 				stats: {
-					fps: Math.round(this.engine.getFps()),
+					fps,
+					frameTimeMs: Math.round(this.engine.getDeltaTime() * 10) / 10,
 					activeMeshes: this.scene.getActiveMeshes().length,
-					drawCalls: this.engine._drawCalls.current,
+					drawCalls,
 				},
 			});
 		}
@@ -389,45 +600,90 @@ export class Action3dGame implements BrowserGameRuntime {
 		state: Action3dState,
 		cameraYaw: number,
 		cameraPitch: number,
+		deltaMs: number,
 	) {
 		if (!this.playerRoot || !this.camera) return;
 		this.playerRoot.position.set(
 			state.player.position.x,
-			state.player.position.y,
+			state.player.position.y + this.playerGroundOffset,
 			state.player.position.z,
 		);
 		this.playerRoot.rotation.y = state.player.yaw;
-		for (const enemy of state.enemies) {
+		let settledEnemyCount = 0;
+		for (const [enemyIndex, enemy] of state.enemies.entries()) {
 			const root = this.enemyRoots.get(enemy.id);
 			if (!root) continue;
 			root.position.set(enemy.position.x, enemy.position.y, enemy.position.z);
-			root.rotation.y = enemy.yaw;
-			root.setEnabled(enemy.state !== "defeated");
-			root.scaling.y = enemy.state === "windup" ? 1.22 : 1;
+			if (enemy.state === "defeated") {
+				const elapsedMs =
+					(this.enemyDefeatElapsedMs.get(enemy.id) ?? 0) + deltaMs;
+				this.enemyDefeatElapsedMs.set(enemy.id, elapsedMs);
+				const defeat = getEnemyDefeatPresentation(elapsedMs, enemyIndex);
+				root.rotation.set(0, enemy.yaw, defeat.rotationZ);
+				if (defeat.settled) settledEnemyCount += 1;
+			} else {
+				this.enemyDefeatElapsedMs.delete(enemy.id);
+				root.rotation.set(0, enemy.yaw, 0);
+			}
+			const controller = this.enemyAnimationControllers.get(enemy.id);
+			if (controller) {
+				const animationId =
+					enemy.state === "windup" && enemy.stateElapsedMs >= 330
+						? "attack"
+						: enemy.state;
+				controller.select(animationId);
+				controller.update(deltaMs);
+				root.setEnabled(true);
+			} else {
+				root.setEnabled(true);
+				root.scaling.y = enemy.state === "windup" ? 1.22 : 1;
+			}
 		}
-		const animationName =
-			state.player.locomotion === "run"
-				? "Run"
-				: state.player.locomotion === "walk"
-					? "Walk"
-					: state.player.locomotion === "jump" ||
-							state.player.locomotion === "fall"
-						? "Jump"
-						: state.player.locomotion === "dodge"
-							? "Dodge"
-							: state.player.locomotion === "attack"
-								? "Attack"
-								: "Idle";
-		if (this.activeAnimation !== animationName) {
-			for (const group of this.animationGroups) group.stop();
-			this.animationGroups
-				.find((group) => group.name === animationName)
-				?.play(
-					animationName === "Idle" ||
-						animationName === "Walk" ||
-						animationName === "Run",
+		this.canvas?.setAttribute(
+			"data-action3d-defeated-settled",
+			String(settledEnemyCount),
+		);
+		const animationId =
+			state.phase === "defeat"
+				? "defeat"
+				: state.player.locomotion === "run"
+					? "run"
+					: state.player.locomotion === "walk"
+						? "walk"
+						: state.player.locomotion === "jump" ||
+								state.player.locomotion === "fall"
+							? "jump-loop"
+							: state.player.locomotion === "dodge"
+								? "dodge"
+								: state.player.locomotion === "attack"
+									? `attack-${state.player.attackComboIndex + 1}`
+									: "idle";
+		const clip = this.playerModelAssetId
+			? this.options.session.content.getModelClip(
+					this.playerModelAssetId,
+					animationId,
+				)
+			: null;
+		if (clip) this.animationController?.select(animationId);
+		this.animationController?.update(deltaMs);
+		if (this.attackEffect) {
+			const attackActive =
+				state.player.attackElapsedMs !== null &&
+				state.player.attackElapsedMs >= 90 &&
+				state.player.attackElapsedMs <= 330;
+			this.attackEffect.setEnabled(attackActive);
+			if (attackActive) {
+				const progress = (state.player.attackElapsedMs ?? 0) / 330;
+				const combo = state.player.attackComboIndex;
+				const comboTilt = [-0.38, 0.4, Math.PI / 2][combo] ?? 0;
+				this.attackEffect.scaling.set(
+					0.82 + progress * 0.22,
+					0.88 + progress * 0.16,
+					1,
 				);
-			this.activeAnimation = animationName;
+				this.attackEffect.rotation.z =
+					comboTilt + (progress - 0.5) * (combo === 2 ? 0.12 : 0.24);
+			}
 		}
 		const target = new Vector3(
 			state.player.position.x,
@@ -435,16 +691,87 @@ export class Action3dGame implements BrowserGameRuntime {
 			state.player.position.z,
 		);
 		const horizontal = Math.cos(cameraPitch) * 6.5;
-		const desired = new Vector3(
+		let desired = new Vector3(
 			target.x - Math.sin(cameraYaw) * horizontal,
 			target.y + 2.2 - Math.sin(cameraPitch) * 4,
 			target.z - Math.cos(cameraYaw) * horizontal,
 		);
+		const world = this.options.session.content.getWorld(state.location.worldId);
+		desired.x = Math.min(
+			world.bounds.maxX - 0.2,
+			Math.max(world.bounds.minX + 0.2, desired.x),
+		);
+		desired.z = Math.min(
+			world.bounds.maxZ - 0.2,
+			Math.max(world.bounds.minZ + 0.2, desired.z),
+		);
+		let collisionRatio = 1;
+		for (const collider of world.colliders) {
+			const ratio = cameraCollisionRatio(target, desired, collider.bounds);
+			if (ratio !== null) collisionRatio = Math.min(collisionRatio, ratio);
+		}
+		if (collisionRatio < 1)
+			desired = Vector3.Lerp(
+				target,
+				desired,
+				Math.max(0.08, collisionRatio - 0.04),
+			);
+		if (this.cameraShakeMs > 0 && !this.reduceMotion) {
+			const strength = (this.cameraShakeMs / 220) * 0.09;
+			desired.x += (Math.random() - 0.5) * strength;
+			desired.y += (Math.random() - 0.5) * strength;
+		}
 		this.camera.position = Vector3.Lerp(this.camera.position, desired, 0.16);
 		this.camera.setTarget(target);
 	}
 
 	private onResize = () => this.engine?.resize();
+	private updateAdaptiveQuality(fps: number) {
+		if (this.qualityReduced) return;
+		this.lowFpsSamples = fps > 0 && fps < 28 ? this.lowFpsSamples + 1 : 0;
+		if (this.lowFpsSamples < 20 || !this.engine) return;
+		this.qualityReduced = true;
+		this.engine.setHardwareScalingLevel(
+			Math.max(1, this.engine.getHardwareScalingLevel() * 1.35),
+		);
+		this.options.onWarning({
+			code: "low-performance",
+			message: "Rendering resolution was reduced to keep the field responsive.",
+			recoverable: true,
+		});
+	}
+	private playEventSound(type: Action3dEvent["type"]) {
+		if (this.options.isMuted() || typeof AudioContext === "undefined") return;
+		try {
+			this.audioContext ??= new AudioContext();
+			if (this.audioContext.state === "suspended")
+				void this.audioContext.resume();
+			const oscillator = this.audioContext.createOscillator();
+			const gain = this.audioContext.createGain();
+			const frequency =
+				type === "enemy-hit"
+					? 210
+					: type === "player-hit"
+						? 92
+						: type === "enemy-defeated"
+							? 340
+							: type === "victory"
+								? 520
+								: 72;
+			oscillator.type = type === "victory" ? "sine" : "triangle";
+			oscillator.frequency.value = frequency;
+			gain.gain.setValueAtTime(0.045, this.audioContext.currentTime);
+			gain.gain.exponentialRampToValueAtTime(
+				0.000_1,
+				this.audioContext.currentTime + 0.12,
+			);
+			oscillator.connect(gain).connect(this.audioContext.destination);
+			oscillator.start();
+			oscillator.stop(this.audioContext.currentTime + 0.12);
+		} catch {
+			// Audio feedback is optional and never changes the simulation result.
+		}
+	}
 	private onContextLost = (event: Event) => {
 		event.preventDefault();
 		this.engine?.stopRenderLoop(this.renderFrame);
@@ -477,6 +804,8 @@ export class Action3dGame implements BrowserGameRuntime {
 	dispose(): void {
 		if (this.disposed) return;
 		this.disposed = true;
+		this.resizeObserver?.disconnect();
+		this.resizeObserver = null;
 		window.removeEventListener("resize", this.onResize);
 		document.removeEventListener("visibilitychange", this.onVisibilityChange);
 		this.canvas?.removeEventListener("webglcontextlost", this.onContextLost);
@@ -485,12 +814,20 @@ export class Action3dGame implements BrowserGameRuntime {
 			this.onContextRestored,
 		);
 		this.input?.dispose();
+		this.animationController?.dispose();
+		this.animationController = null;
+		for (const controller of this.enemyAnimationControllers.values())
+			controller.dispose();
+		this.enemyAnimationControllers.clear();
+		this.enemyDefeatElapsedMs.clear();
+		if (this.audioContext) void this.audioContext.close();
+		this.audioContext = null;
 		this.engine?.stopRenderLoop(this.renderFrame);
 		this.scene?.dispose();
 		this.engine?.dispose();
 		this.canvas?.remove();
 		this.enemyRoots.clear();
-		this.animationGroups = [];
+		this.enemyFallbackMeshes.clear();
 		this.input = null;
 		this.scene = null;
 		this.engine = null;

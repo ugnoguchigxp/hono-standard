@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import {
@@ -40,6 +41,12 @@ export function validateAction3dContentDirectory(
 		assetSize: (url) => {
 			const assetPath = path.join(publicRoot, url.slice(1));
 			return existsSync(assetPath) ? statSync(assetPath).size : undefined;
+		},
+		assetHash: (url) => {
+			const assetPath = path.join(publicRoot, url.slice(1));
+			return existsSync(assetPath)
+				? `sha256:${createHash("sha256").update(readFileSync(assetPath)).digest("hex")}`
+				: undefined;
 		},
 	});
 }

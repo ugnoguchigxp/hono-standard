@@ -40,6 +40,7 @@
 		{
 			"id": "signal-checkpoint",
 			"type": "checkpoint.reach",
+			"mapId": "signal-ruins",
 			"checkpointId": "signal-core",
 			"nextNodeId": "signal-event-end"
 		},

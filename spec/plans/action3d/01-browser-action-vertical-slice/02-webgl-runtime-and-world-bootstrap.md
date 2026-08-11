@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A1 |
-| 状態 | Planned |
+| 状態 | Implemented |
 | 主対象 | `web/src/action3d/runtime`、`web/src/action3d/Action3dScreen.tsx` |
 | 依存 | Delivery A1-1完了、`BrowserGameRuntime` contract |
 

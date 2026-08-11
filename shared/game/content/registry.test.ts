@@ -56,6 +56,13 @@ describe("game content registry", () => {
 		expect(registry.getEvent("relay-camp-council").nodes.length).toBeGreaterThan(2);
 		expect(registry.getAsset("relay-camp-field").type).toBe("image");
 		expect(registry.getActor("mira").displayName).toBe("Mira");
+		expect(registry.getStatusEffect("valor").polarity).toBe("positive");
+		expect(registry.getAbility("mend").kind).toBe("heal");
+		expect(registry.getCharacter("mira").job).toBe("HERO");
+		expect(registry.getItem("potion").effect).toBe("restore-hp");
+		expect(registry.getEquipment("rune-blade").slot).toBe("weapon");
+		expect(registry.getEnemy("ash-wisp").level).toBe(1);
+		expect(registry.getEncounter("signal-ruins-roamers").boss).toBe(false);
 		expect(registry.hasEncounter("signal-ruins-encounter")).toBe(true);
 		expect(registry.hasEncounter("signal-ruins-roamers")).toBe(true);
 		expect(registry.hasEncounter("missing-encounter")).toBe(false);
@@ -92,6 +99,15 @@ describe("game content registry", () => {
 		expect(() => registry.getAsset("constructor")).toThrow("Unknown asset");
 		expect(() => registry.getActor("missing")).toThrow("Unknown actor");
 		expect(() => registry.getActor("constructor")).toThrow("Unknown actor");
+		expect(() => registry.getStatusEffect("missing")).toThrow(
+			"Unknown status effect",
+		);
+		expect(() => registry.getAbility("missing")).toThrow("Unknown ability");
+		expect(() => registry.getCharacter("missing")).toThrow("Unknown character");
+		expect(() => registry.getItem("missing")).toThrow("Unknown item");
+		expect(() => registry.getEquipment("missing")).toThrow("Unknown equipment");
+		expect(() => registry.getEnemy("missing")).toThrow("Unknown enemy");
+		expect(() => registry.getEncounter("missing")).toThrow("Unknown encounter");
 		expect(() => {
 			(registry.mapsById["relay-camp"] as { displayName: string }).displayName =
 				"Changed";
@@ -133,7 +149,10 @@ describe("game content registry", () => {
 		const manifest = bundle.manifest as ContentManifestV1;
 		manifest.assets.push({ ...manifest.assets[0] });
 		manifest.actors.push({ ...manifest.actors[0] });
-		manifest.encounterIds.push(manifest.encounterIds[0]);
+		manifest.encounterIds.push(
+			"signal-ruins-encounter",
+			"signal-ruins-encounter",
+		);
 		manifest.entryPoint.mapId = "missing-map";
 		const map = bundle.maps[0].data as {
 			id: string;
@@ -194,6 +213,38 @@ describe("game content registry", () => {
 		expect(issues.some(({ message }) => message.includes("exceeds map bounds"))).toBe(
 			true,
 		);
+	});
+
+	it("rejects entrances, checkpoints, and triggers on collision geometry", () => {
+		const bundle = cloneBundle();
+		const map = bundle.maps[0].data as {
+			entrances: Array<{ position: { x: number; y: number } }>;
+			checkpoints: Array<{ position: { x: number; y: number } }>;
+			triggers: Array<{ position: { x: number; y: number } }>;
+		};
+		map.entrances[0].position = { x: 2, y: 18 };
+		map.checkpoints[0].position = { x: 13, y: 12 };
+		map.triggers[0].position = { x: 27, y: 10 };
+
+		const issues = captureIssues(bundle);
+		expect(
+			issues.some(
+				(issue) =>
+					issue.code === "placement" && issue.message.includes("Entrance"),
+			),
+		).toBe(true);
+		expect(
+			issues.some(
+				(issue) =>
+					issue.code === "placement" && issue.message.includes("Checkpoint"),
+			),
+		).toBe(true);
+		expect(
+			issues.some(
+				(issue) =>
+					issue.code === "placement" && issue.message.includes("Trigger"),
+			),
+		).toBe(true);
 	});
 
 	it("reports graph, actor, encounter, and asset-file failures", () => {
@@ -302,7 +353,8 @@ describe("game content registry", () => {
 			({ type }) => type === "checkpoint.reach",
 		);
 		if (!checkpointNode) throw new Error("Expected checkpoint node fixture.");
-		checkpointNode.checkpointId = "missing-checkpoint";
+		checkpointNode.mapId = "relay-camp";
+		checkpointNode.checkpointId = "signal-core";
 
 		const reaction = bundle.events[2].data as {
 			nodes: Array<Record<string, any>>;
@@ -320,11 +372,134 @@ describe("game content registry", () => {
 			issues.some(({ message }) => message.includes("not present in the event")),
 		).toBe(true);
 		expect(
-			issues.some(({ message }) => message.includes("missing checkpoint")),
+			issues.some(({ message }) => message.includes("missing map checkpoint")),
 		).toBe(true);
 		expect(
 			issues.some(({ message }) => message.includes("no fallback transition")),
 		).toBe(true);
+	});
+
+	it("validates bundle ownership, entry placement, and loaded document identity", () => {
+		const missingEntryBundle = cloneBundle();
+		(missingEntryBundle.manifest as ContentManifestV1).entryBundleId = "missing";
+		expect(
+			captureIssues(missingEntryBundle).some(({ message }) =>
+				message.includes("does not exist"),
+			),
+		).toBe(true);
+
+		const wrongEntryBundle = cloneBundle();
+		(wrongEntryBundle.manifest as ContentManifestV1).entryBundleId = "relay-camp";
+		expect(
+			captureIssues(wrongEntryBundle).some(({ message }) =>
+				message.includes("does not contain entry map"),
+			),
+		).toBe(true);
+
+		const ownership = cloneBundle();
+		const ownershipManifest = ownership.manifest as ContentManifestV1;
+		ownershipManifest.bundles[1].maps.push({
+			...ownershipManifest.bundles[0].maps[0],
+		});
+		ownershipManifest.bundles[1].maps.push({
+			id: "extra-map",
+			path: "maps/extra-map.json",
+		});
+		const ownershipIssues = captureIssues(ownership);
+		expect(
+			ownershipIssues.some(({ message }) => message.includes("exactly one bundle")),
+		).toBe(true);
+		expect(
+			ownershipIssues.some(({ message }) =>
+				message.includes("not declared in the manifest document list"),
+			),
+		).toBe(true);
+
+		const identity = cloneBundle();
+		(identity.maps[0].data as { id: string }).id = "wrong-map-id";
+		(identity.events[0].data as { id: string }).id = "wrong-event-id";
+		const identityIssues = captureIssues(identity);
+		expect(
+			identityIssues.filter(({ message }) => message.includes("bundled ID")),
+		).toHaveLength(2);
+	});
+
+	it("aggregates missing progression and encounter references", () => {
+		const bundle = cloneBundle();
+		const manifest = bundle.manifest as ContentManifestV1;
+		manifest.abilities[0].statusEffectId = "missing-status";
+		manifest.characters[0].id = "missing-actor";
+		manifest.characters[0].abilityUnlocks[0].abilityId = "missing-ability";
+		manifest.characters[0].initialEquipment.weapon = "missing-equipment";
+		manifest.items[0].statusIds = ["missing-status"];
+		manifest.equipment[0].actorIds = ["missing-actor"];
+		manifest.enemies[0].abilityIds = ["missing-ability"];
+		manifest.enemies[0].aiPattern = ["missing-ability"];
+		manifest.encounters[0].enemyIds = ["missing-enemy"];
+		manifest.encounters[0].rewards.items[0].itemId = "missing-item";
+
+		const messages = captureIssues(bundle).map(({ message }) => message);
+		expect(messages.some((message) => message.includes("missing status effect"))).toBe(
+			true,
+		);
+		expect(messages.some((message) => message.includes("no matching actor"))).toBe(
+			true,
+		);
+		expect(messages.some((message) => message.includes("missing ability"))).toBe(
+			true,
+		);
+		expect(messages.some((message) => message.includes("missing equipment"))).toBe(
+			true,
+		);
+		expect(messages.some((message) => message.includes("missing enemy"))).toBe(
+			true,
+		);
+		expect(messages.some((message) => message.includes("reward item"))).toBe(true);
+	});
+
+	it("validates existing map targets with missing entrances and checkpoints", () => {
+		const bundle = cloneBundle();
+		const manifest = bundle.manifest as ContentManifestV1;
+		manifest.entryPoint.entranceId = "missing-entry";
+		const map = bundle.maps[0].data as {
+			triggers: Array<Record<string, any>>;
+		};
+		map.triggers.push({
+			id: "bad-existing-map",
+			kind: "map",
+			position: { x: 3, y: 3 },
+			targetId: "relay-camp",
+			targetEntranceId: "missing-entry",
+		});
+		const event = bundle.events[0].data as { nodes: Array<Record<string, any>> };
+		event.nodes.push(
+			{
+				id: "bad-map-node",
+				type: "map.enter",
+				mapId: "relay-camp",
+				entranceId: "missing-entry",
+			},
+			{
+				id: "bad-checkpoint-node",
+				type: "checkpoint.reach",
+				mapId: "signal-ruins",
+				checkpointId: "missing-checkpoint",
+				nextNodeId: event.nodes[0].id,
+			},
+		);
+		const messages = captureIssues(bundle).map(({ message }) => message);
+		expect(messages.some((message) => message.includes("Entry entrance"))).toBe(
+			true,
+		);
+		expect(messages.some((message) => message.includes("missing entrance"))).toBe(
+			true,
+		);
+		expect(
+			messages.some((message) => message.includes("missing map entrance")),
+		).toBe(true);
+		expect(messages.some((message) => message.includes("missing map checkpoint"))).toBe(
+			true,
+		);
 	});
 
 	it("evaluates the complete condition vocabulary", () => {

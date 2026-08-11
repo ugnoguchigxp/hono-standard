@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Stage | Stage 2: Data-driven World |
-| 状態 | Planned |
+| 状態 | Complete |
 | 主対象 | `shared/game/content`、`web/public/game-content`、`scripts` |
 | 依存 | Stage 1完了済み |
 

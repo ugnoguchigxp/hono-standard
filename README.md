@@ -135,6 +135,9 @@ bun run verify:e2e
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
 | `GET` | `/api/auth/me` | 現在の login user |
 | `GET` | `/api/protected/profile` | `requireAuth` を通る protected API sample |
+| `GET` | `/api/games/echoes-at-dawn/saves/autosave` | 認証userの2D RPG autosave取得 |
+| `PUT` | `/api/games/echoes-at-dawn/saves/autosave` | revision・idempotency付きautosave更新 |
+| `DELETE` | `/api/games/echoes-at-dawn/saves/autosave` | 認証userのautosave削除 |
 
 access token の有効期間は 15 分、refresh token は 3 日です。`/api/auth/me` を含む認証済み request で frontend client が 401 を受けると、`/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。同時に複数の request が 401 になった場合は、同じ refresh request を共有します。
 
@@ -156,7 +159,7 @@ API request / response の共有 schema は `shared/schemas/` に置きます。
 
 ログイン後に `/game` を開くと、オリジナルの16-bit群像劇JRPGを想定した最初の縦切りを確認できます。
 
-最初にNew Gameを選ぶと初期checkpointがbrowserへ保存されます。Signal Ruinsの戦闘を終えると到達地点が自動保存され、同じログインuserで再度開いたときはContinueから再開できます。saveは現時点ではbrowser localStorage内でuserごとに分離され、破損または非対応versionは開始画面で明示されます。
+最初にNew Gameを選ぶと初期checkpointが認証userのserver saveへ保存されます。Signal Ruinsの戦闘を終えると到達地点が自動保存され、同じlogin userなら別browserからもContinueで再開できます。旧localStorage saveはserver slotが空の場合に一度だけ自動移行します。通信断時はbrowser backupと未送信queueを保持し、復旧後に同じidempotency keyで再送します。serverはuser ownershipとrevisionを検証し、破損・非対応version・古いclientの競合を明示的に拒否します。
 
 ```text
 FieldScene
@@ -167,7 +170,7 @@ FieldScene
 → FieldScene
 ```
 
-フィールドは矢印キーまたはWASDで移動し、Z、Space、Enterで決定します。X、Escape、MでFF風のfield menuを開き、現在能力を表示するStatus、初期装備を確認するEquipment、所持品を確認するItemsを切り替えられます。メニューは閲覧専用で、GameSessionのmodeやsave dataには影響しません。一定歩数の安全区間後にはseed付き乱数による徘徊enemyとのrandom encounterが発生し、開始地点近くの回復の泉ではparty全員のHPとencounter歩数をresetできます。戦闘では3人のparty memberが時間経過で行動可能になり、Attack、固有Ability、Defendを選択できます。現在はwait型で、party memberのcommand選択中はlogical battle timeが進みません。味方は敵側を向いた横向きspriteで画面右側に縦並びし、攻撃時は前進、武器またはactor固有のAbility effect、被弾flash、damage number、帰還までを描画します。Signal Ruinsのstory戦は大型専用sprite、boss banner、専用HP gaugeを備えたSignal Warden戦です。
+フィールドは矢印キーまたはWASDで移動し、Z、Space、Enterで決定します。X、Escape、MでFF風のfield menuを開き、StatusでLevel・HP/MP・EXP・Ability、Equipmentで装備交換、Itemsで所持品の確認と使用ができます。一定歩数の安全区間後にはseed付き乱数による複数enemyとのrandom encounterが発生し、開始地点近くの回復の泉ではparty全員のHP/MPとencounter歩数をresetできます。戦闘はwait型で、Attack、複数Ability、Items、Defend、Escapeと対象を選択します。属性弱点・耐性、buff/debuff、継続damage、敵AI patternがあり、party memberのcommand選択中はlogical battle timeが進みません。味方は敵側を向いた横向きspriteで画面右側に縦並びし、攻撃時は前進、武器または属性・支援effect、被弾flash、damage/heal表示、帰還までを描画します。Signal Ruinsのstory戦は大型専用sprite、boss banner、専用HP gaugeを備え、逃走できないSignal Warden戦です。勝利時のEXP、Level、Ability習得、item rewardと、消費item・装備状態はGame Stateに残りcheckpoint saveへ保存されます。
 
 移動、壁判定、party追従、時間ゲージ、damage、defend、勝敗は `shared/game/` のpure TypeScriptです。一つの`GameSession`がField、Event、Battleを通して正規stateを所有し、SceneはCommandを送って描画用snapshotを受け取ります。Phaserは描画、入力、scene transitionだけを担当し、React StrictModeで再mountされた場合も古いPhaser instanceとsubscriptionを破棄します。
 

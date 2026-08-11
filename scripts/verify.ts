@@ -9,8 +9,16 @@ const steps: VerifyStep[] = [
 		command: ["bun", "run", "validate:action3d-content"],
 	},
 	{
+		label: "action3d-models",
+		command: ["bun", "run", "validate:action3d-models"],
+	},
+	{
 		label: "game-content",
 		command: ["bun", "run", "validate:game-content"],
+	},
+	{
+		label: "battle-balance",
+		command: ["bun", "run", "validate:battle-balance"],
 	},
 	{
 		label: "domain-boundaries",

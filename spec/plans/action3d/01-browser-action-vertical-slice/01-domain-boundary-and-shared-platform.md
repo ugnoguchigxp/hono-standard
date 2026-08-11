@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A1 |
-| 状態 | Implemented / Gate pending |
+| 状態 | Implemented |
 | 主対象 | `shared/action3d`、`shared/game-platform`、`web/src/action3d`、`web/src/game-platform`、router、scripts |
 | 依存 | 既存2D `/game`、auth route、GameScreen lifecycle |
 
@@ -99,8 +99,5 @@ build artifactとbrowser network logで、Homeと`/game`にAction3D chunkが混�
 - Phaserのmount、AbortSignal、disposeを`BrowserGameRuntime` contractへ接続し、StrictModeとstart failureをtestした。
 - 2D/Action3D/shared platform間の禁止importをTypeScript ASTで検証する`validate:domain-boundaries`を追加した。
 - 2D save keyは共有game IDを使うようにしたが、実際のkey文字列とsave codecは変更していない。
-- 273 unit test、coverage threshold、typecheck、lint、production buildが成功した。
-- production buildでAction3D viewは3.66 kB、gzip 1.10 kBの独立chunkとして出力された。
-- public navigationとAction3D login/redirect/previewのPlaywright 2件が成功した。
-- repository全体のformat gateは、このDeliveryで変更していない`BattleScene.ts`の既存整形差分で停止した。
-- repository全体のE2E 5件中、Action3Dを含む4件は成功した。既存2DのSignal Warden自動戦闘はcommand budget超過が再現しており、2D変更を保全するため本Deliveryでは修正していない。
+- 最終的なtest、coverage、typecheck、lint、format、build、E2E結果は[A1 Implementation Evidence](A1-implementation-evidence.md)へ統合した。
+- production buildでAction3D viewとBabylon runtimeは二段階の独立chunkとなり、network E2EでHome/launcher/2Dとの分離を固定した。

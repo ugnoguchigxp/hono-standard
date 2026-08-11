@@ -11,6 +11,15 @@ import {
 	GAME_TEXT_RESOLUTION,
 } from "../display";
 import { InputManager } from "../input/InputManager";
+import {
+	type EventPresentationStep,
+	getEventPresentationSteps,
+} from "../presentation/event-presentation";
+import type { GameAudioManager } from "../audio/GameAudioManager";
+import {
+	gameSettingsStore,
+	getTextCharacterDelay,
+} from "../settings/GameSettingsStore";
 
 const slotX: Record<ActiveEventState["actors"][number]["slot"], number> = {
 	left: 40,
@@ -28,9 +37,19 @@ export class EventScene extends Phaser.Scene {
 	private dialogueText?: Phaser.GameObjects.Text;
 	private choicesText?: Phaser.GameObjects.Text;
 	private helpText?: Phaser.GameObjects.Text;
+	private presenting = false;
+	private typing = false;
+	private fullDialogue = "";
+	private renderedDialogueKey = "";
+	private dialogueTimer?: Phaser.Time.TimerEvent;
+	private shuttingDown = false;
 	private readonly actorSprites = new Map<string, Phaser.GameObjects.Image>();
+	private readonly actorExpressions = new Map<string, string>();
 
-	constructor(private readonly gameSession: GameSession) {
+	constructor(
+		private readonly gameSession: GameSession,
+		private readonly audioManager: GameAudioManager,
+	) {
 		super("event");
 	}
 
@@ -39,10 +58,26 @@ export class EventScene extends Phaser.Scene {
 		if (!active) throw new Error("EventScene requires an active event.");
 		const definition = this.gameSession.content.getEvent(active.eventId);
 		this.choiceIndex = 0;
+		this.presenting = false;
+		this.typing = false;
+		this.fullDialogue = "";
+		this.renderedDialogueKey = "";
+		this.dialogueTimer = undefined;
+		this.shuttingDown = false;
 		this.actorSprites.clear();
+		this.actorExpressions.clear();
 		this.inputManager = new InputManager(this);
 		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+			this.shuttingDown = true;
+			this.presenting = false;
+			this.typing = false;
+			this.dialogueTimer?.remove();
+			this.dialogueTimer = undefined;
 			this.inputManager?.destroy();
+			this.time.removeAllEvents();
+			this.tweens.killAll();
+			this.actorSprites.clear();
+			this.actorExpressions.clear();
 		});
 		this.configureCamera();
 
@@ -52,6 +87,7 @@ export class EventScene extends Phaser.Scene {
 			.setDepth(0);
 		this.add.rectangle(160, 96, 320, 192, 0x050916, 0.58).setDepth(1);
 		for (const actorState of active.actors) {
+			this.actorExpressions.set(actorState.actorId, actorState.expression);
 			const actor = this.gameSession.content.getActor(actorState.actorId);
 			const sprite = this.add
 				.image(slotX[actorState.slot], ACTOR_BASELINE_Y, actor.textureKey)
@@ -121,6 +157,20 @@ export class EventScene extends Phaser.Scene {
 
 	update(): void {
 		if (!this.inputManager) return;
+		this.inputManager.update();
+		if (
+			this.inputManager.justPressed("UP") ||
+			this.inputManager.justPressed("DOWN")
+		) {
+			this.audioManager.playSe("se-ui-navigate");
+		} else if (this.inputManager.justPressed("CONFIRM")) {
+			this.audioManager.playSe("se-ui-confirm");
+		}
+		if (this.presenting) return;
+		if (this.typing) {
+			if (this.inputManager.justPressed("CONFIRM")) this.finishTyping();
+			return;
+		}
 		const active = this.gameSession.snapshot().event;
 		if (!active) return;
 		if (active.status === "awaiting-choice") {
@@ -153,8 +203,25 @@ export class EventScene extends Phaser.Scene {
 	}
 
 	private handleTransition(transition: GameSessionTransition): void {
+		const steps = getEventPresentationSteps(transition.events);
+		if (steps.length > 0) {
+			this.presenting = true;
+			this.helpText?.setText("");
+			this.playPresentationSteps(steps, 0, () =>
+				this.completeTransition(transition),
+			);
+			return;
+		}
+		this.completeTransition(transition);
+	}
+
+	private completeTransition(transition: GameSessionTransition): void {
+		if (this.shuttingDown) return;
+		this.presenting = false;
 		if (transition.state.mode === "battle") {
-			this.cameras.main.flash(160, 230, 214, 168);
+			if (!gameSettingsStore.getSnapshot().reducedMotion) {
+				this.cameras.main.flash(160, 230, 214, 168);
+			}
 			this.scene.start("battle");
 			return;
 		}
@@ -166,6 +233,71 @@ export class EventScene extends Phaser.Scene {
 			this.choiceIndex = 0;
 			this.renderEvent(transition.state.event);
 		}
+	}
+
+	private playPresentationSteps(
+		steps: readonly EventPresentationStep[],
+		index: number,
+		onComplete: () => void,
+	): void {
+		if (this.shuttingDown) return;
+		const step = steps[index];
+		if (!step) {
+			onComplete();
+			return;
+		}
+		const next = () => this.playPresentationSteps(steps, index + 1, onComplete);
+		if (gameSettingsStore.getSnapshot().reducedMotion) {
+			if (step.type === "actor.move") {
+				this.actorSprites
+					.get(step.actorId)
+					?.setPosition(slotX[step.slot], ACTOR_BASELINE_Y)
+					.setVisible(step.slot !== "hidden");
+			} else if (step.type === "actor.expression") {
+				this.actorExpressions.set(step.actorId, step.expression);
+			}
+			next();
+			return;
+		}
+		if (step.type === "wait") {
+			this.time.delayedCall(step.durationMs, next);
+			return;
+		}
+		const sprite = this.actorSprites.get(step.actorId);
+		if (step.type === "actor.move") {
+			if (!sprite) {
+				next();
+				return;
+			}
+			if (step.slot !== "hidden") sprite.setVisible(true);
+			this.tweens.add({
+				targets: sprite,
+				x: slotX[step.slot],
+				duration: 180,
+				ease: "Quad.easeInOut",
+				onComplete: () => {
+					sprite.setVisible(step.slot !== "hidden");
+					next();
+				},
+			});
+			return;
+		}
+		this.actorExpressions.set(step.actorId, step.expression);
+		if (!sprite?.visible) {
+			next();
+			return;
+		}
+		sprite.setTint(0xf2cf7a);
+		this.tweens.add({
+			targets: sprite,
+			alpha: { from: 0.72, to: 1 },
+			duration: 90,
+			yoyo: true,
+			onComplete: () => {
+				sprite.clearTint().setAlpha(1);
+				next();
+			},
+		});
 	}
 
 	private renderEvent(active: ActiveEventState): void {
@@ -180,8 +312,21 @@ export class EventScene extends Phaser.Scene {
 		const speaker = active.visibleLine
 			? this.gameSession.content.getActor(active.visibleLine.speakerId)
 			: null;
-		this.speakerText?.setText(speaker?.displayName.toUpperCase() ?? "");
-		this.dialogueText?.setText(active.visibleLine?.text ?? "");
+		const speakerExpression = active.visibleLine
+			? (this.actorExpressions.get(active.visibleLine.speakerId) ??
+				active.actors.find(
+					(actor) => actor.actorId === active.visibleLine?.speakerId,
+				)?.expression)
+			: null;
+		this.speakerText?.setText(
+			speaker
+				? `${speaker.displayName.toUpperCase()}${speakerExpression ? ` · ${speakerExpression.toUpperCase()}` : ""}`
+				: "",
+		);
+		this.renderDialogue(
+			active.visibleLine?.text ?? "",
+			`${active.eventId}:${active.nodeId}`,
+		);
 		if (active.status === "awaiting-choice") {
 			this.choicesText?.setText(
 				active.choices
@@ -196,6 +341,39 @@ export class EventScene extends Phaser.Scene {
 			this.choicesText?.setText("");
 			this.helpText?.setText("Z / ENTER  CONTINUE");
 		}
+	}
+
+	private renderDialogue(value: string, key: string): void {
+		if (key === this.renderedDialogueKey) return;
+		this.renderedDialogueKey = key;
+		this.dialogueTimer?.remove();
+		this.fullDialogue = value;
+		const delay = getTextCharacterDelay(
+			gameSettingsStore.getSnapshot().textSpeed,
+		);
+		if (delay === 0 || value.length === 0) {
+			this.typing = false;
+			this.dialogueText?.setText(value);
+			return;
+		}
+		this.typing = true;
+		let characterIndex = 0;
+		this.dialogueText?.setText("");
+		this.dialogueTimer = this.time.addEvent({
+			delay,
+			repeat: value.length - 1,
+			callback: () => {
+				characterIndex += 1;
+				this.dialogueText?.setText(value.slice(0, characterIndex));
+				if (characterIndex >= value.length) this.typing = false;
+			},
+		});
+	}
+
+	private finishTyping(): void {
+		this.dialogueTimer?.remove();
+		this.typing = false;
+		this.dialogueText?.setText(this.fullDialogue);
 	}
 
 	private configureCamera(): void {

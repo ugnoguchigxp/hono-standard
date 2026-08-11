@@ -5,4 +5,10 @@ export type AssetLoadError = {
 	message: string;
 };
 
-export type GameRuntimeError = AssetLoadError;
+export type ContentRuntimeError = {
+	code: "content";
+	retryable: boolean;
+	message: string;
+};
+
+export type GameRuntimeError = AssetLoadError | ContentRuntimeError;

@@ -1,22 +1,23 @@
+import {
+	ACTION3D_GAME_ID,
+	type Action3dContentRegistry,
+	Action3dSession,
+	type Action3dState,
+	createAction3dCheckpointState,
+	createInitialAction3dState,
+} from "@shared/action3d";
 import { Link } from "@tanstack/react-router";
 import { Box, Gamepad2, Orbit, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-	ACTION3D_GAME_ID,
-	Action3dSession,
-	createAction3dCheckpointState,
-	createInitialAction3dState,
-	type Action3dContentRegistry,
-	type Action3dState,
-} from "@shared/action3d";
-import {
 	Action3dContentLoadError,
 	Action3dContentLoader,
+	type Action3dContentProgress,
 } from "./content/Action3dContentLoader";
 import { Action3dGameScreen } from "./runtime/Action3dGameScreen";
 import {
-	LocalAction3dSaveRepository,
 	type LocalAction3dLoadResult,
+	LocalAction3dSaveRepository,
 } from "./save/LocalAction3dSaveRepository";
 
 type ContentState =
@@ -53,12 +54,18 @@ export function Action3dLauncher({
 	const [session, setSession] = useState<Action3dSession | null>(null);
 	const [checkpoint, setCheckpoint] = useState<Action3dState | null>(null);
 	const [saveStatus, setSaveStatus] = useState<string | null>(null);
+	const [loadProgress, setLoadProgress] = useState<Action3dContentProgress>({
+		loaded: 0,
+		total: 1,
+		label: "Manifest",
+	});
 
 	useEffect(() => {
 		const controller = new AbortController();
 		if (attempt) contentLoader.reset();
+		setLoadProgress({ loaded: 0, total: 1, label: "Manifest" });
 		setContent({ status: "loading" });
-		void contentLoader.load(controller.signal).then(
+		void contentLoader.load(controller.signal, setLoadProgress).then(
 			(registry) => {
 				if (!controller.signal.aborted)
 					setContent({ status: "ready", registry });
@@ -90,15 +97,11 @@ export function Action3dLauncher({
 	const startNew = useCallback(() => {
 		if (content.status !== "ready") return;
 		const state = createInitialAction3dState(content.registry);
-		const result = repository.save(
-			createAction3dCheckpointState(state, content.registry),
-		);
 		setSaveStatus(
-			result.ok ? "Initial Action3D checkpoint saved." : result.message,
+			"New Action3D session started · existing checkpoint preserved.",
 		);
-		if (result.ok) setLoadResult({ status: "ready", save: result.save });
 		begin(state, content.registry);
-	}, [begin, content, repository]);
+	}, [begin, content]);
 	const continueGame = useCallback(() => {
 		if (content.status !== "ready" || loadResult.status !== "ready") return;
 		if (
@@ -153,7 +156,10 @@ export function Action3dLauncher({
 				{content.status === "loading" && (
 					<div className="action3d-status" role="status">
 						<Box className="icon" />
-						<span>Loading world contract…</span>
+						<span>
+							Loading world contract · {loadProgress.loaded}/
+							{loadProgress.total} · {loadProgress.label}
+						</span>
 					</div>
 				)}
 				{content.status === "failed" && (

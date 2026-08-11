@@ -20,7 +20,7 @@ export type EventOperation =
 	  }
 	| { type: "battle.start"; encounterId: string }
 	| { type: "map.enter"; mapId: string; entranceId: string }
-	| { type: "checkpoint.reach"; checkpointId: string }
+	| { type: "checkpoint.reach"; mapId: string; checkpointId: string }
 	| { type: "event.complete" };
 
 export type EventEngineTransition = {
@@ -274,6 +274,7 @@ export function advanceEvent(
 			case "checkpoint.reach":
 				operations.push({
 					type: "checkpoint.reach",
+					mapId: node.mapId,
 					checkpointId: node.checkpointId,
 				});
 				active.nodeId = node.nextNodeId;

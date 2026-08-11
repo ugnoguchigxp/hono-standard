@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A1 |
-| 状態 | Planned |
+| 状態 | Implemented |
 | 主対象 | `shared/action3d`、`web/src/action3d/input`、`web/src/action3d/runtime/babylon` |
 | 依存 | Delivery A1-2完了、fixed clock、runtime diagnostics |
 

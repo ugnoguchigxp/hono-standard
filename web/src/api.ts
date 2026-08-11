@@ -13,6 +13,14 @@ import type {
 	LogoutResponse,
 } from "@shared/schemas/auth.schema";
 import type { ProtectedProfileResponse } from "@shared/schemas/protected.schema";
+import type {
+	DeleteGameSaveResponse,
+	GetGameSaveResponse,
+	PutGameSaveRequest,
+	PutGameSaveResponse,
+} from "@shared/schemas/game-save.schema";
+import { AUTOSAVE_SLOT_ID } from "@shared/game";
+import { GAME_IDS } from "@shared/game-platform";
 
 export type AuthUser = AuthSessionUser;
 export type LoginParams = LoginInput & {
@@ -121,9 +129,65 @@ const client = hc<AppType>("/api", {
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
 	if (!response.ok) {
-		throw new Error(await parseErrorMessage(response));
+		throw new ApiRequestError(
+			response.status,
+			await parseErrorMessage(response),
+		);
 	}
 	return (await response.json()) as T;
+}
+
+export class ApiRequestError extends Error {
+	constructor(
+		readonly status: number,
+		message: string,
+	) {
+		super(message);
+		this.name = "ApiRequestError";
+	}
+}
+
+const gameSavePath = `/api/games/${GAME_IDS.rpg2d}/saves/${AUTOSAVE_SLOT_ID}`;
+
+export async function fetchRpgGameSave(
+	expectedOwner: string,
+	signal?: AbortSignal,
+): Promise<GetGameSaveResponse> {
+	return parseJsonResponse<GetGameSaveResponse>(
+		await customFetch(gameSavePath, {
+			headers: { "X-Game-Save-Owner": expectedOwner },
+			signal,
+		}),
+	);
+}
+
+export async function putRpgGameSave(
+	request: PutGameSaveRequest,
+	expectedOwner: string,
+	signal?: AbortSignal,
+): Promise<PutGameSaveResponse> {
+	return parseJsonResponse<PutGameSaveResponse>(
+		await customFetch(gameSavePath, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Game-Save-Owner": expectedOwner,
+			},
+			body: JSON.stringify(request),
+			signal,
+		}),
+	);
+}
+
+export async function deleteRpgGameSave(
+	expectedOwner: string,
+): Promise<DeleteGameSaveResponse> {
+	return parseJsonResponse<DeleteGameSaveResponse>(
+		await customFetch(gameSavePath, {
+			method: "DELETE",
+			headers: { "X-Game-Save-Owner": expectedOwner },
+		}),
+	);
 }
 
 export async function login(params: LoginParams): Promise<LoginResponse> {

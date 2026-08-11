@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Stage | Stage 2: Data-driven World |
-| 状態 | Planned |
+| 状態 | Complete |
 | 主対象 | game content、original asset、Field/Event E2E、旧経路削除 |
 | 依存 | Delivery 1–4 |
 

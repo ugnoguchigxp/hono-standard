@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { validateGameContentDirectory } from "../../scripts/validate-game-content";
-import { createFieldStateAt, moveFieldParty } from "./field-engine";
+import {
+	createFieldStateAt,
+	FieldPlacementError,
+	moveFieldParty,
+} from "./field-engine";
 
 const registry = validateGameContentDirectory();
 const signalRuins = registry.getMap("signal-ruins");
@@ -32,6 +36,51 @@ describe("field engine", () => {
 		]);
 	});
 
+	it("finds a distinct walkable formation when the straight trail is blocked", () => {
+		const blocked = new Set(["0,1", "1,2"]);
+		const state = createFieldStateAt(
+			{ x: 0, y: 2 },
+			"RIGHT",
+			4,
+			(point) =>
+				point.x >= 0 &&
+				point.x < 3 &&
+				point.y >= 0 &&
+				point.y < 4 &&
+				!blocked.has(`${point.x},${point.y}`),
+		);
+
+		expect(new Set(state.partyPositions.map(({ x, y }) => `${x},${y}`)).size).toBe(
+			4,
+		);
+		expect(
+			state.partyPositions.every(
+				(point) =>
+					point.x >= 0 &&
+					point.x < 3 &&
+					point.y >= 0 &&
+					point.y < 4 &&
+					!blocked.has(`${point.x},${point.y}`),
+			),
+		).toBe(true);
+	});
+
+	it("rejects entrances that cannot hold the requested party", () => {
+		for (const partySize of [0, 9, 1.5]) {
+			expect(() =>
+				createFieldStateAt({ x: 0, y: 0 }, "RIGHT", partySize),
+			).toThrow("Party size must be between");
+		}
+		expect(() =>
+			createFieldStateAt({ x: 0, y: 0 }, "RIGHT", 1, () => false),
+		).toThrow("leader position");
+		expect(() =>
+			createFieldStateAt({ x: 0, y: 0 }, "RIGHT", 2, (point) =>
+				point.x === 0 && point.y === 0,
+			),
+		).toThrow(FieldPlacementError);
+	});
+
 	it("moves the leader and makes the party follow without mutating input", () => {
 		const state = createFieldStateAt({ x: 5, y: 18 }, "RIGHT");
 		const transition = move(state, "UP");
@@ -46,6 +95,23 @@ describe("field engine", () => {
 			],
 			facing: "UP",
 		});
+	});
+
+	it("keeps every party position unique when the leader reverses into the formation", () => {
+		const state = createFieldStateAt({ x: 26, y: 17 }, "RIGHT");
+		const transition = move(state, "LEFT");
+
+		expect(transition.moved).toBe(true);
+		expect(transition.state.partyPositions).toEqual([
+			{ x: 25, y: 17 },
+			{ x: 26, y: 17 },
+			{ x: 24, y: 17 },
+		]);
+		expect(
+			new Set(
+				transition.state.partyPositions.map(({ x, y }) => `${x},${y}`),
+			).size,
+		).toBe(transition.state.partyPositions.length);
 	});
 
 	it("blocks map boundaries and content collision regions", () => {

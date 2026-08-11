@@ -1,13 +1,14 @@
-import { StrictMode } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import {
 	createDemoEncounterProvider,
 	createInitialGameState,
 	GameSession,
 } from "@shared/game";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { validateGameContentDirectory } from "../../../scripts/validate-game-content";
 import { GameScreen } from "./GameScreen";
+import { gameSettingsStore } from "./settings/GameSettingsStore";
 
 const registry = validateGameContentDirectory();
 const createSession = (sessionId: string) =>
@@ -33,6 +34,43 @@ vi.mock("./PhaserGameLoader", () => ({
 }));
 
 describe("GameScreen", () => {
+	it("opens the persistent interface settings and applies screen options", async () => {
+		gameSettingsStore.reset();
+		const session = createSession("settings-session");
+		const view = render(
+			<GameScreen session={session} onExit={() => undefined} />,
+		);
+
+		const settingsButton = screen.getByRole("button", { name: "Settings" });
+		settingsButton.focus();
+		fireEvent.click(settingsButton);
+		const dialog = screen.getByRole("dialog", { name: "Game settings" });
+		expect(dialog).toBeVisible();
+		expect(dialog.closest(".game-frame")).not.toBeNull();
+		expect(
+			screen.getByRole("button", { name: "Close settings" }),
+		).toHaveFocus();
+		fireEvent.change(screen.getByLabelText("Screen scale"), {
+			target: { value: "2" },
+		});
+		fireEvent.click(screen.getByLabelText("High contrast"));
+		expect(
+			screen.getByRole("region", { name: "Signal Ruins" }),
+		).toHaveAttribute("data-screen-scale", "2");
+		expect(
+			screen.getByRole("region", { name: "Signal Ruins" }),
+		).toHaveAttribute("data-high-contrast", "true");
+		fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+		expect(
+			screen.getByRole("button", { name: "Restore defaults" }),
+		).toHaveFocus();
+		fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
+		expect(screen.queryByRole("dialog", { name: "Game settings" })).toBeNull();
+		expect(settingsButton).toHaveFocus();
+		view.unmount();
+		gameSettingsStore.reset();
+	});
+
 	it("mounts Phaser into its host and destroys every instance on cleanup", async () => {
 		mocks.instances.length = 0;
 		mocks.createPhaserGame.mockClear();
@@ -40,11 +78,7 @@ describe("GameScreen", () => {
 		const session = createSession("test-session");
 		const view = render(
 			<StrictMode>
-				<GameScreen
-					session={session}
-					registry={registry}
-					onExit={() => undefined}
-				/>
+				<GameScreen session={session} onExit={() => undefined} />
 			</StrictMode>,
 		);
 
@@ -58,7 +92,7 @@ describe("GameScreen", () => {
 			expect(mocks.createPhaserGame).toHaveBeenCalledWith(
 				screen.getByTestId("game-canvas-host"),
 				session,
-				registry,
+				expect.anything(),
 				expect.any(Function),
 			),
 		);
@@ -77,7 +111,6 @@ describe("GameScreen", () => {
 		const view = render(
 			<GameScreen
 				session={session}
-				registry={registry}
 				onAutosave={onAutosave}
 				onExit={() => undefined}
 			/>,
@@ -111,9 +144,7 @@ describe("GameScreen", () => {
 		mocks.createPhaserGame.mockClear();
 		const session = createSession("asset-error");
 		const onExit = vi.fn();
-		render(
-			<GameScreen session={session} registry={registry} onExit={onExit} />,
-		);
+		render(<GameScreen session={session} onExit={onExit} />);
 		await waitFor(() => expect(mocks.createPhaserGame).toHaveBeenCalledOnce());
 		const onRuntimeError = mocks.createPhaserGame.mock.calls[0][3] as (error: {
 			code: "asset";
@@ -144,16 +175,35 @@ describe("GameScreen", () => {
 			new Error("runtime unavailable"),
 		);
 		const session = createSession("runtime-start-error");
-		render(
-			<GameScreen
-				session={session}
-				registry={registry}
-				onExit={() => undefined}
-			/>,
-		);
+		render(<GameScreen session={session} onExit={() => undefined} />);
 
 		expect(await screen.findByRole("alert")).toHaveTextContent(
 			"The game runtime could not be loaded.",
 		);
+	});
+
+	it("does not offer an endless retry for a non-retryable content error", async () => {
+		mocks.createPhaserGame.mockClear();
+		const session = createSession("invalid-content-error");
+		render(<GameScreen session={session} onExit={() => undefined} />);
+		await waitFor(() => expect(mocks.createPhaserGame).toHaveBeenCalledOnce());
+		const onRuntimeError = mocks.createPhaserGame.mock.calls[0][3] as (error: {
+			code: "content";
+			retryable: boolean;
+			message: string;
+		}) => void;
+		onRuntimeError({
+			code: "content",
+			retryable: false,
+			message: "The downloaded world is invalid.",
+		});
+
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"The downloaded world is invalid.",
+		);
+		expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+		expect(
+			screen.getByRole("button", { name: "Back to launcher" }),
+		).toHaveFocus();
 	});
 });

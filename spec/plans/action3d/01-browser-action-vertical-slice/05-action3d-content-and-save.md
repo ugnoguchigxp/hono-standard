@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A1 |
-| 状態 | Planned |
+| 状態 | Implemented |
 | 主対象 | `shared/action3d/content`、`shared/action3d/save`、`web/public/action3d-content`、`web/src/action3d`、scripts |
 | 依存 | Delivery A1-4完了、playable test arena |
 

@@ -30,6 +30,7 @@ export type Action3dInput = {
 	dodge: boolean;
 	attack: boolean;
 	lockOn: boolean;
+	pause: boolean;
 };
 
 export const EMPTY_ACTION3D_INPUT: Readonly<Action3dInput> = Object.freeze({
@@ -41,6 +42,7 @@ export const EMPTY_ACTION3D_INPUT: Readonly<Action3dInput> = Object.freeze({
 	dodge: false,
 	attack: false,
 	lockOn: false,
+	pause: false,
 });
 
 export type Action3dPlayerState = {
@@ -54,6 +56,8 @@ export type Action3dPlayerState = {
 	grounded: boolean;
 	locomotion: PlayerLocomotion;
 	attackElapsedMs: number | null;
+	attackComboIndex: number;
+	attackQueued: boolean;
 	attackHitEnemyIds: string[];
 	dodgeElapsedMs: number | null;
 	dodgeCooldownMs: number;

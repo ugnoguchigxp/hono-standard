@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+	deleteRpgGameSave,
 	fetchMe,
 	fetchProtectedProfile,
+	fetchRpgGameSave,
 	login,
 	logout,
+	putRpgGameSave,
 	UNAUTHORIZED_EVENT_NAME,
 } from "./api";
 
@@ -75,6 +78,52 @@ describe("web API client", () => {
 		await expect(fetchProtectedProfile()).resolves.toEqual(profile);
 	});
 
+	it("loads, writes, and deletes an owner-bound RPG checkpoint", async () => {
+		const fetchMock = vi.fn(
+			async (_input: RequestInfo | URL, init?: RequestInit) => {
+				switch (init?.method ?? "GET") {
+					case "PUT":
+						return Response.json({
+							save: { revision: 1 },
+							idempotent: false,
+						});
+					case "DELETE":
+						return Response.json({ deleted: true });
+					default:
+						return Response.json({ save: null });
+				}
+			},
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		await expect(fetchRpgGameSave(user.email)).resolves.toEqual({ save: null });
+		await expect(
+			putRpgGameSave(
+				{
+					save: {} as never,
+					expectedRevision: null,
+					idempotencyKey: "b2b2b2b2-b2b2-42b2-b2b2-b2b2b2b2b2b2",
+				},
+				user.email,
+			),
+		).resolves.toMatchObject({ save: { revision: 1 }, idempotent: false });
+		await expect(deleteRpgGameSave(user.email)).resolves.toEqual({
+			deleted: true,
+		});
+
+		for (const [input, init] of fetchMock.mock.calls) {
+			expect(getRequestPath(input)).toBe(
+				"/api/games/echoes-at-dawn/saves/autosave",
+			);
+			expect(new Headers(init?.headers).get("X-Game-Save-Owner")).toBe(
+				user.email,
+			);
+		}
+		expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toMatchObject(
+			{ expectedRevision: null },
+		);
+	});
+
 	it("uses an API error message when a JSON request fails", async () => {
 		vi.stubGlobal(
 			"fetch",
@@ -83,9 +132,18 @@ describe("web API client", () => {
 			),
 		);
 
-		await expect(
-			login({ email: user.email, password: "invalid-password" }),
-		).rejects.toThrow("Invalid credentials");
+		const failure = login({
+			email: user.email,
+			password: "invalid-password",
+		});
+		await expect(failure).rejects.toThrow("Invalid credentials");
+		await expect(failure).rejects.toEqual(
+			expect.objectContaining({
+				name: "ApiRequestError",
+				status: 400,
+				message: "Invalid credentials",
+			}),
+		);
 	});
 
 	it("falls back to the HTTP status when an error is not JSON", async () => {

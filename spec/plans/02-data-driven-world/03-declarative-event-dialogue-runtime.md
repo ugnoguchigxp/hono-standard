@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Stage | Stage 2: Data-driven World |
-| 状態 | Planned |
+| 状態 | Complete |
 | 主対象 | `shared/game/event`、`shared/game/game-session.ts`、`web/src/game/scenes/EventScene.ts` |
 | 依存 | Delivery 1、Delivery 2のtrigger event contract |
 

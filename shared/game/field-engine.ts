@@ -7,6 +7,12 @@ import type {
 	StoryState,
 } from "./model";
 
+export {
+	createFieldStateAt,
+	FieldPlacementError,
+	MAX_FIELD_PARTY_SIZE,
+} from "./field-placement";
+
 export type FieldTransition = {
 	state: FieldState;
 	moved: boolean;
@@ -26,23 +32,6 @@ const copyFieldState = (state: FieldState): FieldState => ({
 	pendingTriggerId: state.pendingTriggerId,
 	stepsSinceEncounter: state.stepsSinceEncounter,
 });
-
-export function createFieldStateAt(
-	position: GridPoint,
-	facing: FieldDirection,
-	partySize = 3,
-): FieldState {
-	const offset = directionOffsets[facing];
-	return {
-		partyPositions: Array.from({ length: partySize }, (_, index) => ({
-			x: Math.max(0, position.x - offset.x * index),
-			y: Math.max(0, position.y - offset.y * index),
-		})),
-		facing,
-		pendingTriggerId: null,
-		stepsSinceEncounter: 0,
-	};
-}
 
 export function moveFieldParty(
 	state: FieldState,
@@ -75,7 +64,16 @@ export function moveFieldParty(
 				evaluateContentCondition(candidate.condition, story),
 		) ?? null;
 	const next = copyFieldState(state);
-	next.partyPositions = [nextLeader, ...next.partyPositions.slice(0, -1)];
+	const partyPositions = [nextLeader];
+	const occupiedPositions = new Set([`${nextLeader.x},${nextLeader.y}`]);
+	for (const position of next.partyPositions) {
+		if (partyPositions.length >= next.partyPositions.length) break;
+		const key = `${position.x},${position.y}`;
+		if (occupiedPositions.has(key)) continue;
+		partyPositions.push(position);
+		occupiedPositions.add(key);
+	}
+	next.partyPositions = partyPositions;
 	next.facing = direction;
 	next.pendingTriggerId = trigger?.id ?? null;
 	return { state: next, moved: true, trigger };

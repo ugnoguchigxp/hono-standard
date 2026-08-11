@@ -47,7 +47,11 @@ describe("event engine", () => {
 		expect(resumed.event).toBeNull();
 		expect(resumed.operations).toEqual([
 			{ type: "flag.set", flagId: "signal-ruins-cleared", value: true },
-			{ type: "checkpoint.reach", checkpointId: "signal-core" },
+			{
+				type: "checkpoint.reach",
+				mapId: "signal-ruins",
+				checkpointId: "signal-core",
+			},
 			{ type: "event.complete" },
 		]);
 	});
@@ -83,7 +87,11 @@ describe("event engine", () => {
 				flagId: "relay-council-complete",
 				value: true,
 			},
-			{ type: "checkpoint.reach", checkpointId: "relay-center" },
+			{
+				type: "checkpoint.reach",
+				mapId: "relay-camp",
+				checkpointId: "relay-center",
+			},
 			{ type: "event.complete" },
 		]);
 		expect(selected.events[0]).toMatchObject({
@@ -194,6 +202,9 @@ describe("event engine", () => {
 		).toThrow(EventRuntimeError);
 		const started = advanceEvent(definition, null, story(), { type: "start" });
 		expect(() =>
+			advanceEvent(definition, started.event, story(), { type: "start" }),
+		).toThrow("already active");
+		expect(() =>
 			advanceEvent(definition, started.event, story(), {
 				type: "choose",
 				choiceId: "hidden",
@@ -234,6 +245,17 @@ describe("event engine", () => {
 		expect(() =>
 			advanceEvent(missingActor, null, story(), { type: "start" }),
 		).toThrow("not present");
+
+		const missingEntry = eventDefinitionSchema.parse({
+			id: "missing-entry",
+			title: "Missing entry",
+			presentation: { backgroundAssetId: "asset", actors: [] },
+			entryNodeId: "absent",
+			nodes: [{ id: "end", type: "end" }],
+		});
+		expect(() =>
+			advanceEvent(missingEntry, null, story(), { type: "start" }),
+		).toThrow("has no node");
 
 		const terminalSkip = eventDefinitionSchema.parse({
 			id: "terminal-skip",

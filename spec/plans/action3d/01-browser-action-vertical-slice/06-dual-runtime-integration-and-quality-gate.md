@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A1 |
-| 状態 | Planned |
+| 状態 | Implemented / Repository gate pending |
 | 主対象 | router、launcher UI、E2E、performance/visual evidence、delivery docs |
 | 依存 | Delivery A1-1〜A1-5完了 |
 

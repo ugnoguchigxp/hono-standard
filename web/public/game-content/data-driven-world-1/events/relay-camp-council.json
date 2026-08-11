@@ -80,6 +80,7 @@
 		{
 			"id": "relay-checkpoint",
 			"type": "checkpoint.reach",
+			"mapId": "relay-camp",
 			"checkpointId": "relay-center",
 			"nextNodeId": "council-end"
 		},

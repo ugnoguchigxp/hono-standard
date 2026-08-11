@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A1 |
-| 状態 | Planned |
+| 状態 | Implemented |
 | 主対象 | `shared/action3d/combat`、`web/src/action3d/runtime/babylon` |
 | 依存 | Delivery A1-3完了、controller、camera、static world query |
 

@@ -1,9 +1,9 @@
 import {
-	action3dManifestSchema,
-	action3dWorldSchema,
 	type Action3dAsset,
 	type Action3dManifest,
 	type Action3dWorld,
+	action3dManifestSchema,
+	action3dWorldSchema,
 } from "./schema";
 
 export type Action3dContentIssue = {
@@ -31,6 +31,7 @@ export type RawAction3dBundle = {
 	worlds: RawAction3dDocument[];
 	assetExists?: (url: string) => boolean;
 	assetSize?: (url: string) => number | undefined;
+	assetHash?: (url: string) => string | undefined;
 };
 const deepFreeze = <T>(value: T): T => {
 	if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -100,6 +101,30 @@ export class Action3dContentRegistry {
 		if (!asset) throw new Error(`Unknown Action3D asset '${id}'.`);
 		return asset;
 	}
+	getModelClip(assetId: string, clipId: string) {
+		const asset = this.getAsset(assetId);
+		if (asset.type !== "model")
+			throw new Error(`Action3D asset '${assetId}' is not a model.`);
+		const clip = asset.model.clips.find((candidate) => candidate.id === clipId);
+		if (!clip)
+			throw new Error(
+				`Unknown clip '${clipId}' for Action3D model '${assetId}'.`,
+			);
+		return clip;
+	}
+	getModelSocket(assetId: string, socketId: string) {
+		const asset = this.getAsset(assetId);
+		if (asset.type !== "model")
+			throw new Error(`Action3D asset '${assetId}' is not a model.`);
+		const socket = asset.model.sockets.find(
+			(candidate) => candidate.id === socketId,
+		);
+		if (!socket)
+			throw new Error(
+				`Unknown socket '${socketId}' for Action3D model '${assetId}'.`,
+			);
+		return socket;
+	}
 }
 
 export const parseAction3dManifest = (
@@ -155,6 +180,135 @@ export function parseAction3dBundle(
 				code: "asset",
 				message: `Declared ${asset.bytes} bytes but found ${size}.`,
 			});
+		const hash = raw.assetHash?.(asset.url);
+		if (hash !== undefined && hash !== asset.sha256)
+			issues.push({
+				documentPath: manifestPath,
+				dataPath: `$.assets.${asset.id}.sha256`,
+				code: "asset",
+				message: `Declared ${asset.sha256} but found ${hash}.`,
+			});
+		if (asset.type === "model") {
+			duplicates(
+				asset.model.clips,
+				manifestPath,
+				`$.assets.${asset.id}.model.clips`,
+				issues,
+			);
+			duplicates(
+				asset.model.sockets,
+				manifestPath,
+				`$.assets.${asset.id}.model.sockets`,
+				issues,
+			);
+			duplicates(
+				asset.model.materials,
+				manifestPath,
+				`$.assets.${asset.id}.model.materials`,
+				issues,
+			);
+			if (asset.model.maturity !== "diagnostic" && !asset.model.skeletonRoot)
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: `$.assets.${asset.id}.model.skeletonRoot`,
+					code: "asset",
+					message: "Blockout and production models require a skeleton root.",
+				});
+			if (
+				asset.model.role === "player" &&
+				asset.model.maturity !== "diagnostic"
+			) {
+				for (const requiredClip of [
+					"idle",
+					"walk",
+					"run",
+					"jump-start",
+					"jump-loop",
+					"land",
+					"dodge",
+					"hit",
+					"defeat",
+					"attack-1",
+					"attack-2",
+					"attack-3",
+				] as const)
+					if (!asset.model.clips.some((clip) => clip.id === requiredClip))
+						issues.push({
+							documentPath: manifestPath,
+							dataPath: `$.assets.${asset.id}.model.clips`,
+							code: "asset",
+							message: `Player model is missing '${requiredClip}'.`,
+						});
+				for (const requiredSocket of [
+					"socket.weapon.right",
+					"socket.hit.center",
+					"socket.vfx.feet",
+				] as const)
+					if (
+						!asset.model.sockets.some((socket) => socket.id === requiredSocket)
+					)
+						issues.push({
+							documentPath: manifestPath,
+							dataPath: `$.assets.${asset.id}.model.sockets`,
+							code: "asset",
+							message: `Player model is missing '${requiredSocket}'.`,
+						});
+				for (const requiredMaterial of [
+					"body",
+					"skin",
+					"hair",
+					"cloth",
+					"metal",
+					"weapon",
+				] as const)
+					if (
+						!asset.model.materials.some(
+							(material) => material.id === requiredMaterial,
+						)
+					)
+						issues.push({
+							documentPath: manifestPath,
+							dataPath: `$.assets.${asset.id}.model.materials`,
+							code: "asset",
+							message: `Player model is missing '${requiredMaterial}'.`,
+						});
+			}
+			if (
+				asset.model.role === "enemy" &&
+				asset.model.maturity !== "diagnostic"
+			) {
+				for (const requiredClip of [
+					"idle",
+					"chase",
+					"windup",
+					"attack",
+					"recover",
+					"stagger",
+					"defeated",
+				] as const)
+					if (!asset.model.clips.some((clip) => clip.id === requiredClip))
+						issues.push({
+							documentPath: manifestPath,
+							dataPath: `$.assets.${asset.id}.model.clips`,
+							code: "asset",
+							message: `Enemy model is missing '${requiredClip}'.`,
+						});
+				for (const requiredSocket of [
+					"socket.hit.center",
+					"socket.core",
+					"socket.lock.target",
+				] as const)
+					if (
+						!asset.model.sockets.some((socket) => socket.id === requiredSocket)
+					)
+						issues.push({
+							documentPath: manifestPath,
+							dataPath: `$.assets.${asset.id}.model.sockets`,
+							code: "asset",
+							message: `Enemy model is missing '${requiredSocket}'.`,
+						});
+			}
+		}
 	}
 	const worldIds = new Set(worlds.map((world) => world.id));
 	if (!worldIds.has(manifest.entryPoint.worldId))
@@ -170,6 +324,7 @@ export function parseAction3dBundle(
 		duplicates(world.spawnPoints, `${world.id}.json`, "$.spawnPoints", issues);
 		duplicates(world.checkpoints, `${world.id}.json`, "$.checkpoints", issues);
 		duplicates(world.colliders, `${world.id}.json`, "$.colliders", issues);
+		duplicates(world.surfaces, `${world.id}.json`, "$.surfaces", issues);
 		duplicates(world.enemies, `${world.id}.json`, "$.enemies", issues);
 		duplicates(world.landmarks, `${world.id}.json`, "$.landmarks", issues);
 		world.spawnPoints.forEach((spawn) => {
@@ -215,6 +370,18 @@ export function parseAction3dBundle(
 				code: "reference",
 				message: `Unknown model asset '${world.playerModelAssetId}'.`,
 			});
+		if (
+			!manifest.assets.some(
+				(asset) =>
+					asset.id === world.enemyModelAssetId && asset.type === "model",
+			)
+		)
+			issues.push({
+				documentPath: `${world.id}.json`,
+				dataPath: "$.enemyModelAssetId",
+				code: "reference",
+				message: `Unknown model asset '${world.enemyModelAssetId}'.`,
+			});
 		const inside = (x: number, z: number) =>
 			x >= world.bounds.minX &&
 			x <= world.bounds.maxX &&
@@ -245,6 +412,19 @@ export function parseAction3dBundle(
 					dataPath: `$.colliders.${collider.id}.bounds`,
 					code: "bounds",
 					message: `Collider '${collider.id}' has invalid bounds.`,
+				});
+		for (const surface of world.surfaces)
+			if (
+				surface.bounds.minX >= surface.bounds.maxX ||
+				surface.bounds.minZ >= surface.bounds.maxZ ||
+				!inside(surface.bounds.minX, surface.bounds.minZ) ||
+				!inside(surface.bounds.maxX, surface.bounds.maxZ)
+			)
+				issues.push({
+					documentPath: `${world.id}.json`,
+					dataPath: `$.surfaces.${surface.id}.bounds`,
+					code: "bounds",
+					message: `Surface '${surface.id}' has invalid bounds.`,
 				});
 	}
 	if (issues.length) throw new Action3dContentError(issues);

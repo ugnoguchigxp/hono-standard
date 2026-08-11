@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
 	testDir: "tests/e2e",
 	timeout: 30_000,
+	workers: 1,
 	expect: {
 		timeout: 5_000,
 	},
@@ -22,7 +23,7 @@ export default defineConfig({
 	webServer: {
 		command: "bun scripts/e2e-server.ts",
 		url: "http://127.0.0.1:5174",
-		reuseExistingServer: false,
+		reuseExistingServer: process.env.E2E_REUSE_SERVER === "1",
 		timeout: 60_000,
 	},
 });
