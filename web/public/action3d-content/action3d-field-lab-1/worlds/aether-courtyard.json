@@ -56,27 +56,18 @@
 	"enemies": [
 		{
 			"id": "verdant-sentinel",
-			"position": { "x": -4, "y": 0, "z": -1 },
-			"maxHp": 80,
-			"moveSpeed": 2.1,
-			"attackRange": 1.7,
-			"damage": 5
+			"archetypeId": "sentinel-melee",
+			"position": { "x": -4, "y": 0, "z": -1 }
 		},
 		{
 			"id": "amber-sentinel",
-			"position": { "x": 4, "y": 0, "z": 2 },
-			"maxHp": 80,
-			"moveSpeed": 2.2,
-			"attackRange": 1.7,
-			"damage": 5
+			"archetypeId": "sentinel-melee",
+			"position": { "x": 4, "y": 0, "z": 2 }
 		},
 		{
 			"id": "azure-sentinel",
-			"position": { "x": 0, "y": 0, "z": 8 },
-			"maxHp": 80,
-			"moveSpeed": 2.3,
-			"attackRange": 1.8,
-			"damage": 6
+			"archetypeId": "sentinel-ranger",
+			"position": { "x": 0, "y": 0, "z": 8 }
 		}
 	],
 	"landmarks": [
@@ -117,7 +108,16 @@
 			"scale": 1.1
 		}
 	],
+	"exits": [
+		{
+			"id": "north-gate",
+			"bounds": { "minX": -2, "maxX": 2, "minZ": 11.5, "maxZ": 13.5 },
+			"destinationWorldId": "aether-causeway",
+			"destinationSpawnId": "south-approach",
+			"requiresWorldClear": true
+		}
+	],
+	"finalWorld": false,
 	"victoryCheckpointId": "north-beacon",
-	"playerModelAssetId": "aether-runner",
-	"enemyModelAssetId": "aether-sentinel"
+	"playerModelAssetId": "aether-runner"
 }

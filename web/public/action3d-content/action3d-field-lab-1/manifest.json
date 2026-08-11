@@ -1,13 +1,137 @@
 {
-	"manifestVersion": 2,
+	"manifestVersion": 3,
 	"contentVersion": "action3d-field-lab-1",
 	"entryPoint": {
 		"worldId": "aether-courtyard",
 		"spawnId": "south-gate"
 	},
 	"documents": {
-		"worlds": ["worlds/aether-courtyard.json"]
+		"worlds": [
+			{
+				"id": "aether-courtyard",
+				"path": "worlds/aether-courtyard.json"
+			},
+			{
+				"id": "aether-causeway",
+				"path": "worlds/aether-causeway.json"
+			}
+		]
 	},
+	"playerTuning": {
+		"maxHp": 100,
+		"maxStamina": 100,
+		"walkSpeed": 4.2,
+		"runSpeed": 7,
+		"dodgeSpeed": 10,
+		"jumpSpeed": 8.5,
+		"gravity": 24,
+		"acceleration": 42,
+		"deceleration": 55,
+		"staminaSprintPerSecond": 24,
+		"staminaRecoveryPerSecond": 18,
+		"dodgeStaminaCost": 20,
+		"dodgeDurationMs": 400,
+		"dodgeCooldownMs": 800,
+		"dodgeInvulnerableMs": 260,
+		"playerRadius": 0.42,
+		"maxStepHeight": 0.45,
+		"maxSlopeDegrees": 45
+	},
+	"attacks": [
+		{
+			"id": "light-1",
+			"kind": "light",
+			"animationId": "attack-1",
+			"damage": 40,
+			"range": 2.35,
+			"arcRadians": 2.7,
+			"startupMs": 150,
+			"activeMs": 160,
+			"recoveryMs": 210,
+			"queueOpensMs": 220,
+			"staminaCost": 0,
+			"nextAttackId": "light-2"
+		},
+		{
+			"id": "light-2",
+			"kind": "light",
+			"animationId": "attack-2",
+			"damage": 45,
+			"range": 2.35,
+			"arcRadians": 2.7,
+			"startupMs": 150,
+			"activeMs": 160,
+			"recoveryMs": 210,
+			"queueOpensMs": 220,
+			"staminaCost": 0,
+			"nextAttackId": "light-3"
+		},
+		{
+			"id": "light-3",
+			"kind": "light",
+			"animationId": "attack-3",
+			"damage": 50,
+			"range": 2.35,
+			"arcRadians": 2.7,
+			"startupMs": 150,
+			"activeMs": 160,
+			"recoveryMs": 210,
+			"queueOpensMs": 220,
+			"staminaCost": 0,
+			"nextAttackId": null
+		},
+		{
+			"id": "heavy-slash",
+			"kind": "heavy",
+			"animationId": "attack-3",
+			"damage": 80,
+			"range": 2.8,
+			"arcRadians": 2.2,
+			"startupMs": 360,
+			"activeMs": 180,
+			"recoveryMs": 460,
+			"queueOpensMs": 1000,
+			"staminaCost": 35,
+			"nextAttackId": null
+		}
+	],
+	"enemyArchetypes": [
+		{
+			"id": "sentinel-melee",
+			"behavior": "melee",
+			"modelAssetId": "aether-sentinel",
+			"maxHp": 80,
+			"moveSpeed": 2.2,
+			"perceptionRange": 15,
+			"preferredRange": 1.36,
+			"attack": {
+				"damage": 5,
+				"range": 1.7,
+				"windupMs": 440,
+				"recoveryMs": 600,
+				"cooldownMs": 650
+			}
+		},
+		{
+			"id": "sentinel-ranger",
+			"behavior": "ranged",
+			"modelAssetId": "aether-sentinel",
+			"maxHp": 70,
+			"moveSpeed": 1.8,
+			"perceptionRange": 18,
+			"preferredRange": 8,
+			"attack": {
+				"damage": 8,
+				"range": 12,
+				"windupMs": 700,
+				"recoveryMs": 500,
+				"cooldownMs": 900,
+				"projectileSpeed": 8,
+				"projectileRadius": 0.35,
+				"projectileLifetimeMs": 2200
+			}
+		}
+	],
 	"assets": [
 		{
 			"id": "aether-runner",

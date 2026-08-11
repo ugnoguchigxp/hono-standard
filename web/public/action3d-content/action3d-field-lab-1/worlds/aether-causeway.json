@@ -1,0 +1,81 @@
+{
+	"id": "aether-causeway",
+	"displayName": "Aether Causeway",
+	"objective": "Cross the causeway and secure the northern relay.",
+	"bounds": { "minX": -12, "maxX": 12, "minZ": -16, "maxZ": 16 },
+	"spawnPoints": [
+		{
+			"id": "south-approach",
+			"position": { "x": 0, "y": 0, "z": -13 },
+			"yaw": 0,
+			"checkpointId": "causeway-south"
+		}
+	],
+	"checkpoints": [
+		{
+			"id": "causeway-south",
+			"position": { "x": 0, "y": 0, "z": -13 },
+			"yaw": 0
+		},
+		{
+			"id": "north-relay",
+			"position": { "x": 0, "y": 0, "z": 13 },
+			"yaw": 3.141592653589793
+		}
+	],
+	"colliders": [
+		{
+			"id": "west-buttress",
+			"bounds": { "minX": -9, "maxX": -5, "minZ": -1, "maxZ": 4 }
+		},
+		{
+			"id": "east-buttress",
+			"bounds": { "minX": 5, "maxX": 9, "minZ": 3, "maxZ": 8 }
+		}
+	],
+	"surfaces": [
+		{
+			"id": "causeway-rise",
+			"bounds": { "minX": -3, "maxX": 3, "minZ": 7, "maxZ": 12 },
+			"axis": "z",
+			"fromHeight": 0,
+			"toHeight": 1
+		}
+	],
+	"enemies": [
+		{
+			"id": "causeway-guard",
+			"archetypeId": "sentinel-melee",
+			"position": { "x": -2.5, "y": 0, "z": 1 }
+		},
+		{
+			"id": "causeway-ranger",
+			"archetypeId": "sentinel-ranger",
+			"position": { "x": 2.5, "y": 0, "z": 7 }
+		}
+	],
+	"landmarks": [
+		{
+			"id": "causeway-south-crystal",
+			"kind": "crystal",
+			"position": { "x": -3.5, "y": 0, "z": -14 },
+			"scale": 1
+		},
+		{
+			"id": "causeway-west-arch",
+			"kind": "arch",
+			"position": { "x": -8.5, "y": 0, "z": 10 },
+			"scale": 1.1
+		},
+		{
+			"id": "causeway-north-crystal",
+			"kind": "crystal",
+			"position": { "x": 0, "y": 0, "z": 15 },
+			"scale": 1.4
+		}
+	],
+	"exits": [],
+	"finalWorld": true,
+	"victoryCheckpointId": "north-relay",
+	"playerModelAssetId": "aether-runner"
+}
