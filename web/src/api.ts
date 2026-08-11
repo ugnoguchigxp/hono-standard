@@ -45,7 +45,7 @@ const notifyUnauthorized = () => {
 	window.dispatchEvent(new Event(UNAUTHORIZED_EVENT_NAME));
 };
 
-const getRequestPath = (input: RequestInfo | URL): string => {
+export const getRequestPath = (input: RequestInfo | URL): string => {
 	const url =
 		input instanceof Request
 			? input.url

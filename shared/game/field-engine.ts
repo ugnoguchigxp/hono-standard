@@ -1,33 +1,17 @@
-import type { FieldDirection, FieldState, GridPoint } from "./model";
-
-export const FIELD_MAP_WIDTH = 20;
-export const FIELD_MAP_HEIGHT = 12;
-export const FIELD_EVENT_TILE = { x: 14, y: 5 } as const;
+import type { MapDefinitionV1, MapTriggerV1 } from "./content";
+import { evaluateContentCondition } from "./content";
+import type {
+	FieldDirection,
+	FieldState,
+	GridPoint,
+	StoryState,
+} from "./model";
 
 export type FieldTransition = {
 	state: FieldState;
 	moved: boolean;
-	eventTriggered: boolean;
+	trigger: MapTriggerV1 | null;
 };
-
-const wallTiles = new Set([
-	...Array.from({ length: FIELD_MAP_WIDTH }, (_, x) => `${x},0`),
-	...Array.from(
-		{ length: FIELD_MAP_WIDTH },
-		(_, x) => `${x},${FIELD_MAP_HEIGHT - 1}`,
-	),
-	...Array.from({ length: FIELD_MAP_HEIGHT - 2 }, (_, y) => `0,${y + 1}`),
-	...Array.from(
-		{ length: FIELD_MAP_HEIGHT - 2 },
-		(_, y) => `${FIELD_MAP_WIDTH - 1},${y + 1}`,
-	),
-	"8,3",
-	"8,4",
-	"8,5",
-	"11,6",
-	"11,7",
-	"11,8",
-]);
 
 const directionOffsets: Record<FieldDirection, GridPoint> = {
 	UP: { x: 0, y: -1 },
@@ -36,54 +20,63 @@ const directionOffsets: Record<FieldDirection, GridPoint> = {
 	RIGHT: { x: 1, y: 0 },
 };
 
-export function createInitialFieldState(): FieldState {
-	return {
-		partyPositions: [
-			{ x: 3, y: 6 },
-			{ x: 2, y: 6 },
-			{ x: 1, y: 6 },
-		],
-		eventTriggered: false,
-	};
-}
+const copyFieldState = (state: FieldState): FieldState => ({
+	partyPositions: state.partyPositions.map((position) => ({ ...position })),
+	facing: state.facing,
+	pendingTriggerId: state.pendingTriggerId,
+	stepsSinceEncounter: state.stepsSinceEncounter,
+});
 
-export function createFieldStateAt(checkpoint: GridPoint): FieldState {
+export function createFieldStateAt(
+	position: GridPoint,
+	facing: FieldDirection,
+	partySize = 3,
+): FieldState {
+	const offset = directionOffsets[facing];
 	return {
-		partyPositions: [
-			{ ...checkpoint },
-			{ x: Math.max(0, checkpoint.x - 1), y: checkpoint.y },
-			{ x: Math.max(0, checkpoint.x - 2), y: checkpoint.y },
-		],
-		eventTriggered: false,
+		partyPositions: Array.from({ length: partySize }, (_, index) => ({
+			x: Math.max(0, position.x - offset.x * index),
+			y: Math.max(0, position.y - offset.y * index),
+		})),
+		facing,
+		pendingTriggerId: null,
+		stepsSinceEncounter: 0,
 	};
-}
-
-export function isFieldWall(point: GridPoint): boolean {
-	return wallTiles.has(`${point.x},${point.y}`);
 }
 
 export function moveFieldParty(
 	state: FieldState,
 	direction: FieldDirection,
+	map: MapDefinitionV1,
+	story: Pick<StoryState, "flags" | "relationships">,
+	isCollision: (point: GridPoint) => boolean,
 ): FieldTransition {
-	if (state.eventTriggered) {
-		return { state, moved: false, eventTriggered: false };
+	if (state.pendingTriggerId) {
+		return { state, moved: false, trigger: null };
 	}
 	const leader = state.partyPositions[0];
 	const offset = directionOffsets[direction];
 	const nextLeader = { x: leader.x + offset.x, y: leader.y + offset.y };
-	if (isFieldWall(nextLeader)) {
-		return { state, moved: false, eventTriggered: false };
+	if (
+		nextLeader.x < 0 ||
+		nextLeader.y < 0 ||
+		nextLeader.x >= map.width ||
+		nextLeader.y >= map.height ||
+		isCollision(nextLeader)
+	) {
+		return { state, moved: false, trigger: null };
 	}
 
-	const eventTriggered =
-		nextLeader.x === FIELD_EVENT_TILE.x && nextLeader.y === FIELD_EVENT_TILE.y;
-	return {
-		state: {
-			partyPositions: [nextLeader, ...state.partyPositions.slice(0, -1)],
-			eventTriggered,
-		},
-		moved: true,
-		eventTriggered,
-	};
+	const trigger =
+		map.triggers.find(
+			(candidate) =>
+				candidate.position.x === nextLeader.x &&
+				candidate.position.y === nextLeader.y &&
+				evaluateContentCondition(candidate.condition, story),
+		) ?? null;
+	const next = copyFieldState(state);
+	next.partyPositions = [nextLeader, ...next.partyPositions.slice(0, -1)];
+	next.facing = direction;
+	next.pendingTriggerId = trigger?.id ?? null;
+	return { state: next, moved: true, trigger };
 }

@@ -1,86 +1,207 @@
+import type {
+	ActiveEventState,
+	GameSession,
+	GameSessionTransition,
+} from "@shared/game";
 import Phaser from "phaser";
 import {
-	createSignalRuinsEncounterState,
-	type GameSession,
-} from "@shared/game";
+	GAME_LOGICAL_HEIGHT,
+	GAME_LOGICAL_WIDTH,
+	GAME_RENDER_SCALE,
+	GAME_TEXT_RESOLUTION,
+} from "../display";
 import { InputManager } from "../input/InputManager";
 
-const dialogue = [
-	"Mira: The signal is coming from beneath the stone.",
-	"Lune: Something heard us. Stay close.",
-];
+const slotX: Record<ActiveEventState["actors"][number]["slot"], number> = {
+	left: 40,
+	center: 160,
+	right: 280,
+	hidden: -40,
+};
+const ACTOR_BASELINE_Y = 148;
+const ACTOR_SCALE = 0.78;
 
 export class EventScene extends Phaser.Scene {
 	private inputManager?: InputManager;
-	private dialogueIndex = 0;
+	private choiceIndex = 0;
+	private speakerText?: Phaser.GameObjects.Text;
 	private dialogueText?: Phaser.GameObjects.Text;
+	private choicesText?: Phaser.GameObjects.Text;
+	private helpText?: Phaser.GameObjects.Text;
+	private readonly actorSprites = new Map<string, Phaser.GameObjects.Image>();
 
 	constructor(private readonly gameSession: GameSession) {
 		super("event");
 	}
 
 	create(): void {
-		this.dialogueIndex = 0;
+		const active = this.gameSession.snapshot().event;
+		if (!active) throw new Error("EventScene requires an active event.");
+		const definition = this.gameSession.content.getEvent(active.eventId);
+		this.choiceIndex = 0;
+		this.actorSprites.clear();
 		this.inputManager = new InputManager(this);
 		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
 			this.inputManager?.destroy();
 		});
-
-		this.add.image(160, 96, "signal-ruins-field").setTint(0x6a7690).setDepth(0);
-		this.add.rectangle(160, 96, 320, 192, 0x050916, 0.58).setDepth(1);
-		this.add.image(40, 116, "field-mira").setScale(2).setDepth(3);
-		this.add.image(280, 116, "field-lune").setScale(2).setDepth(3);
+		this.configureCamera();
 
 		this.add
-			.rectangle(160, 108, 272, 84, 0x0a1324, 0.96)
+			.image(160, 96, definition.presentation.backgroundAssetId)
+			.setTint(0x6a7690)
+			.setDepth(0);
+		this.add.rectangle(160, 96, 320, 192, 0x050916, 0.58).setDepth(1);
+		for (const actorState of active.actors) {
+			const actor = this.gameSession.content.getActor(actorState.actorId);
+			const sprite = this.add
+				.image(slotX[actorState.slot], ACTOR_BASELINE_Y, actor.textureKey)
+				.setOrigin(0.5, 1)
+				.setScale(ACTOR_SCALE)
+				.setVisible(actorState.slot !== "hidden")
+				.setDepth(3);
+			this.actorSprites.set(actorState.actorId, sprite);
+		}
+
+		this.add
+			.rectangle(160, 108, 284, 116, 0x0a1324, 0.96)
 			.setStrokeStyle(1, 0xa88147)
 			.setDepth(2);
+		this.add.rectangle(160, 110, 276, 1, 0x41516b, 0.48).setDepth(3);
 		this.add
-			.text(28, 72, "THE DORMANT SIGNAL", {
-				fontFamily: "monospace",
-				fontSize: "9px",
+			.text(22, 54, definition.title.toUpperCase(), {
+				fontFamily: '"Trebuchet MS", Arial, sans-serif',
+				fontSize: "8px",
+				fontStyle: "bold",
 				color: "#f2cf7a",
+				resolution: GAME_TEXT_RESOLUTION,
 				shadow: { color: "#050916", offsetX: 1, offsetY: 1, fill: true },
 			})
 			.setDepth(4);
+		this.speakerText = this.add
+			.text(22, 73, "", {
+				fontFamily: '"Trebuchet MS", Arial, sans-serif',
+				fontSize: "7px",
+				fontStyle: "bold",
+				color: "#72d7c0",
+				resolution: GAME_TEXT_RESOLUTION,
+			})
+			.setDepth(4);
 		this.dialogueText = this.add
-			.text(28, 101, dialogue[0], {
-				fontFamily: "monospace",
+			.text(22, 86, "", {
+				fontFamily: '"Trebuchet MS", Arial, sans-serif',
 				fontSize: "8px",
 				color: "#f6edd4",
+				resolution: GAME_TEXT_RESOLUTION,
+				wordWrap: { width: 276 },
+				lineSpacing: 2,
+			})
+			.setDepth(4);
+		this.choicesText = this.add
+			.text(28, 115, "", {
+				fontFamily: '"Trebuchet MS", Arial, sans-serif',
+				fontSize: "7px",
+				fontStyle: "bold",
+				color: "#e4bd68",
+				resolution: GAME_TEXT_RESOLUTION,
 				wordWrap: { width: 264 },
 				lineSpacing: 2,
 			})
 			.setDepth(4);
-		this.add
-			.text(28, 138, "Z / ENTER  CONTINUE", {
-				fontFamily: "monospace",
+		this.helpText = this.add
+			.text(22, 153, "", {
+				fontFamily: '"Trebuchet MS", Arial, sans-serif',
 				fontSize: "6px",
+				fontStyle: "bold",
 				color: "#8fb7bd",
+				resolution: GAME_TEXT_RESOLUTION,
 			})
 			.setDepth(4);
-		this.add.triangle(288, 139, 0, 0, 5, 0, 2.5, 3, 0xe4bd68).setDepth(4);
+		this.renderEvent(active);
 	}
 
 	update(): void {
-		if (!this.inputManager?.justPressed("CONFIRM")) return;
-		this.dialogueIndex += 1;
-		if (this.dialogueIndex < dialogue.length) {
-			this.dialogueText?.setText(dialogue[this.dialogueIndex]);
+		if (!this.inputManager) return;
+		const active = this.gameSession.snapshot().event;
+		if (!active) return;
+		if (active.status === "awaiting-choice") {
+			if (this.inputManager.justPressed("UP")) {
+				this.choiceIndex =
+					(this.choiceIndex + active.choices.length - 1) %
+					active.choices.length;
+				this.renderEvent(active);
+			}
+			if (this.inputManager.justPressed("DOWN")) {
+				this.choiceIndex = (this.choiceIndex + 1) % active.choices.length;
+				this.renderEvent(active);
+			}
+			if (!this.inputManager.justPressed("CONFIRM")) return;
+			const choice = active.choices[this.choiceIndex];
+			if (!choice) return;
+			this.handleTransition(
+				this.gameSession.dispatch({
+					type: "event.choose",
+					choiceId: choice.id,
+				}),
+			);
 			return;
 		}
-		this.cameras.main.flash(160, 230, 214, 168);
-		this.gameSession.dispatch({
-			type: "story.flag.set",
-			flagId: "signal-contacted",
-			value: true,
-		});
-		this.gameSession.dispatch({
-			type: "battle.start",
-			battle: createSignalRuinsEncounterState(
-				this.gameSession.snapshot().party.members,
-			),
-		});
-		this.scene.start("battle");
+		if (this.inputManager.justPressed("CONFIRM")) {
+			this.handleTransition(
+				this.gameSession.dispatch({ type: "event.advance" }),
+			);
+		}
+	}
+
+	private handleTransition(transition: GameSessionTransition): void {
+		if (transition.state.mode === "battle") {
+			this.cameras.main.flash(160, 230, 214, 168);
+			this.scene.start("battle");
+			return;
+		}
+		if (transition.state.mode === "field") {
+			this.scene.start("field");
+			return;
+		}
+		if (transition.state.event) {
+			this.choiceIndex = 0;
+			this.renderEvent(transition.state.event);
+		}
+	}
+
+	private renderEvent(active: ActiveEventState): void {
+		for (const actor of active.actors) {
+			this.actorSprites
+				.get(actor.actorId)
+				?.setPosition(slotX[actor.slot], ACTOR_BASELINE_Y)
+				.setVisible(
+					actor.slot !== "hidden" && active.status !== "awaiting-choice",
+				);
+		}
+		const speaker = active.visibleLine
+			? this.gameSession.content.getActor(active.visibleLine.speakerId)
+			: null;
+		this.speakerText?.setText(speaker?.displayName.toUpperCase() ?? "");
+		this.dialogueText?.setText(active.visibleLine?.text ?? "");
+		if (active.status === "awaiting-choice") {
+			this.choicesText?.setText(
+				active.choices
+					.map(
+						(choice, index) =>
+							`${index === this.choiceIndex ? ">" : " "} ${choice.text}`,
+					)
+					.join("\n"),
+			);
+			this.helpText?.setText("UP / DOWN  CHOOSE     Z / ENTER  CONFIRM");
+		} else {
+			this.choicesText?.setText("");
+			this.helpText?.setText("Z / ENTER  CONTINUE");
+		}
+	}
+
+	private configureCamera(): void {
+		this.cameras.main
+			.setZoom(GAME_RENDER_SCALE)
+			.setBounds(0, 0, GAME_LOGICAL_WIDTH, GAME_LOGICAL_HEIGHT)
+			.setRoundPixels(true);
 	}
 }

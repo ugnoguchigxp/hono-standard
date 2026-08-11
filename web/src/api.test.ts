@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchMe, fetchProtectedProfile } from "./api";
+import {
+	fetchMe,
+	fetchProtectedProfile,
+	getRequestPath as getApiRequestPath,
+} from "./api";
 
 const getRequestPath = (input: RequestInfo | URL): string => {
 	if (input instanceof Request) return new URL(input.url).pathname;
@@ -11,6 +15,15 @@ afterEach(() => {
 });
 
 describe("auth api", () => {
+	it("normalizes Request, URL, and string request paths", () => {
+		expect(getApiRequestPath(new Request("https://example.com/api/request"))).toBe(
+			"/api/request",
+		);
+		expect(getApiRequestPath(new URL("https://example.com/api/url"))).toBe(
+			"/api/url",
+		);
+		expect(getApiRequestPath("/api/string")).toBe("/api/string");
+	});
 	it("refreshes an expired access token before retrying /auth/me", async () => {
 		const user = {
 			id: "a1a1a1a1-a1a1-41a1-a1a1-a1a1a1a1a1a1",

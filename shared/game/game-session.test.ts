@@ -1,223 +1,586 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { validateGameContentDirectory } from "../../scripts/validate-game-content";
 import {
 	createDemoBattleState,
+	createDemoEncounterProvider,
 	createInitialGameState,
 	createSignalRuinsEncounterState,
 } from "./demo-state";
+import { createFieldStateAt } from "./field-engine";
 import { GameSession, GameSessionError } from "./game-session";
-import { GAME_CONTENT_VERSION, GAME_STATE_SCHEMA_VERSION } from "./model";
+import { GAME_STATE_SCHEMA_VERSION } from "./model";
 
-const createSession = () =>
+const registry = validateGameContentDirectory();
+const createState = (rngSeed = 42) =>
+	createInitialGameState({ registry, rngSeed });
+const createSession = (sessionId = "session-1") =>
 	new GameSession({
-		sessionId: "session-1",
-		initialState: createInitialGameState({ rngSeed: 42 }),
+		sessionId,
+		initialState: createState(),
+		registry,
+		encounterProvider: createDemoEncounterProvider(),
 	});
+const createLineEvent = () => ({
+	eventId: "signal-ruins-contact",
+	nodeId: "mira-signal-line",
+	status: "awaiting-confirm" as const,
+	visibleLine: { speakerId: "mira", text: "A saved line." },
+	choices: [],
+	actors: [
+		{ actorId: "mira", slot: "left" as const, expression: "focused" },
+		{ actorId: "lune", slot: "right" as const, expression: "guarded" },
+	],
+});
 
 describe("GameSession", () => {
-	it("owns an isolated serializable snapshot", () => {
-		const initialState = createInitialGameState({ rngSeed: 42 });
+	it("owns an isolated serializable content-compatible snapshot", () => {
+		const initialState = createState();
 		initialState.battle = createDemoBattleState();
+		initialState.mode = "battle";
 		const session = new GameSession({
-			sessionId: "session-1",
+			sessionId: "isolated",
 			initialState,
+			registry,
+			encounterProvider: createDemoEncounterProvider(),
 		});
 
 		initialState.party.members[0].hp = 1;
-		initialState.rng.state = 99;
 		initialState.battle.party[0].hp = 1;
-		const firstSnapshot = session.snapshot();
-		firstSnapshot.currentMap.checkpoint.x = 99;
-		firstSnapshot.party.members[0].ability.name = "Changed";
-		firstSnapshot.story.flags.changed = true;
-		if (firstSnapshot.battle) {
-			firstSnapshot.battle.enemies[0].ability.name = "Changed";
-		}
+		const first = session.snapshot();
+		first.location.checkpointId = "changed";
+		first.field.partyPositions[0].x = 99;
+		first.party.members[0].ability.name = "Changed";
+		first.story.flags.changed = true;
+		if (first.battle) first.battle.enemies[0].ability.name = "Changed";
 
-		const secondSnapshot = session.snapshot();
-		expect(secondSnapshot.schemaVersion).toBe(GAME_STATE_SCHEMA_VERSION);
-		expect(secondSnapshot.contentVersion).toBe(GAME_CONTENT_VERSION);
-		expect(secondSnapshot.revision).toBe(0);
-		expect(secondSnapshot.rng).toEqual({ seed: 42, state: 42, draws: 0 });
-		expect(secondSnapshot.currentMap.checkpoint.x).toBe(3);
-		expect(secondSnapshot.party.members[0]).toMatchObject({
-			hp: 72,
-			ability: { name: "Arc Slash" },
-		});
-		expect(secondSnapshot.story.flags).toEqual({});
-		expect(secondSnapshot.battle?.party[0].hp).toBe(72);
-		expect(secondSnapshot.battle?.enemies[0].ability.name).toBe("Ember");
-		expect(JSON.parse(JSON.stringify(secondSnapshot))).toEqual(secondSnapshot);
+		const second = session.snapshot();
+		expect(second.schemaVersion).toBe(GAME_STATE_SCHEMA_VERSION);
+		expect(second.contentVersion).toBe(registry.contentVersion);
+		expect(second.rng).toEqual({ seed: 42, state: 42, draws: 0 });
+		expect(second.location.checkpointId).toBe("signal-entry");
+		expect(second.field.partyPositions[0]).toEqual({ x: 8, y: 18 });
+		expect(second.party.members[0].ability.name).toBe("Arc Slash");
+		expect(second.story.flags).toEqual({});
+		expect(second.battle?.enemies[0].ability.name).toBe("Ember");
+		expect(JSON.parse(JSON.stringify(second))).toEqual(second);
 	});
 
-	it("changes modes through commands and ignores no-ops", () => {
-		const session = createSession();
-		const changed = session.dispatch({ type: "mode.enter", mode: "event" });
+	it("validates the content references in initial state", () => {
+		const incompatible = createState();
+		incompatible.contentVersion = "other-world";
+		expect(
+			() =>
+				new GameSession({
+					sessionId: "bad-version",
+					initialState: incompatible,
+					registry,
+					encounterProvider: createDemoEncounterProvider(),
+				}),
+		).toThrow("incompatible");
 
-		expect(changed.state.mode).toBe("event");
-		expect(changed.state.revision).toBe(1);
-		expect(changed.events).toEqual([
-			{
-				sessionId: "session-1",
-				sequence: 1,
-				stateRevision: 1,
-				event: {
-					type: "mode.changed",
-					previousMode: "field",
-					mode: "event",
-				},
+		for (const mutate of [
+			(state: ReturnType<typeof createState>) => {
+				state.location.mapId = "missing-map";
 			},
-		]);
-
-		const noOp = session.dispatch({ type: "mode.enter", mode: "event" });
-		expect(noOp.events).toEqual([]);
-		expect(noOp.state.revision).toBe(1);
-		expect(session.sequence).toBe(1);
+			(state: ReturnType<typeof createState>) => {
+				state.location.entranceId = "missing-entrance";
+			},
+			(state: ReturnType<typeof createState>) => {
+				state.location.checkpointId = "missing-checkpoint";
+			},
+			(state: ReturnType<typeof createState>) => {
+				state.event = {
+					eventId: "missing-event",
+					nodeId: "node",
+					status: "running",
+					visibleLine: null,
+					choices: [],
+					actors: [],
+				};
+			},
+		]) {
+			const state = createState();
+			mutate(state);
+			expect(
+				() =>
+					new GameSession({
+						sessionId: "bad-reference",
+						initialState: state,
+						registry,
+						encounterProvider: createDemoEncounterProvider(),
+					}),
+			).toThrow(GameSessionError);
+		}
+		expect(
+			() =>
+				new GameSession({
+					sessionId: " ",
+					initialState: createState(),
+					registry,
+					encounterProvider: createDemoEncounterProvider(),
+				}),
+		).toThrow("must not be empty");
 	});
 
-	it("records checkpoints without sharing command references", () => {
-		const session = createSession();
-		const checkpoint = { x: 7, y: 8 };
-		const changed = session.dispatch({
-			type: "checkpoint.reached",
-			mapId: "lower-signal-ruins",
-			checkpoint,
-		});
-		checkpoint.x = 99;
-
-		expect(changed.events[0].event).toEqual({
-			type: "checkpoint.reached",
-			previousMapId: "signal-ruins",
-			previousCheckpoint: { x: 3, y: 6 },
-			mapId: "lower-signal-ruins",
-			checkpoint: { x: 7, y: 8 },
-		});
-		expect(session.snapshot().currentMap).toEqual({
-			id: "lower-signal-ruins",
-			checkpoint: { x: 7, y: 8 },
-		});
-
+	it.each<[
+		string,
+		(state: ReturnType<typeof createState>) => void,
+	]>([
+		[
+			"party position count",
+			(state) => {
+				state.field.partyPositions.pop();
+			},
+		],
+		["fractional x position", (state) => (state.field.partyPositions[0].x = 1.5)],
+		["fractional y position", (state) => (state.field.partyPositions[0].y = 1.5)],
+		["negative x position", (state) => (state.field.partyPositions[0].x = -1)],
+		["negative y position", (state) => (state.field.partyPositions[0].y = -1)],
+		["overflowing x position", (state) => (state.field.partyPositions[0].x = 40)],
+		["overflowing y position", (state) => (state.field.partyPositions[0].y = 24)],
+		["negative encounter steps", (state) => (state.field.stepsSinceEncounter = -1)],
+		[
+			"collision position",
+			(state) => (state.field.partyPositions[0] = { x: 18, y: 10 }),
+		],
+		["unknown party actor", (state) => (state.party.members[0].id = "nova")],
+		[
+			"unknown pending trigger",
+			(state) => (state.field.pendingTriggerId = "missing-trigger"),
+		],
+		[
+			"pending trigger at a wrong x coordinate",
+			(state) => (state.field.pendingTriggerId = "dormant-signal"),
+		],
+		[
+			"pending trigger at a wrong y coordinate",
+			(state) => {
+				state.field.pendingTriggerId = "dormant-signal";
+				state.field.partyPositions = [
+					{ x: 31, y: 5 },
+					{ x: 30, y: 5 },
+					{ x: 29, y: 5 },
+				];
+			},
+		],
+		[
+			"unknown encounter",
+			(state) => {
+				state.mode = "battle";
+				state.battle = { ...createDemoBattleState(), id: "missing-encounter" };
+			},
+		],
+		[
+			"unknown event",
+			(state) => {
+				state.mode = "event";
+				state.event = { ...createLineEvent(), eventId: "missing-event" };
+			},
+		],
+		[
+			"unknown event node",
+			(state) => {
+				state.mode = "event";
+				state.event = { ...createLineEvent(), nodeId: "missing-node" };
+			},
+		],
+		[
+			"confirm status on a choice node",
+			(state) => {
+				state.mode = "event";
+				state.event = {
+					...createLineEvent(),
+					eventId: "relay-camp-council",
+					nodeId: "choose-relay-plan",
+					actors: [
+						{ actorId: "mira", slot: "left", expression: "resolved" },
+						{ actorId: "sol", slot: "center", expression: "restless" },
+						{ actorId: "lune", slot: "right", expression: "watchful" },
+					],
+				};
+			},
+		],
+		[
+			"choice status on a line node",
+			(state) => {
+				state.mode = "event";
+				state.event = {
+					...createLineEvent(),
+					status: "awaiting-choice",
+					choices: [{ id: "saved-choice", text: "Saved choice" }],
+				};
+			},
+		],
+		[
+			"missing event actor state",
+			(state) => {
+				state.mode = "event";
+				state.event = { ...createLineEvent(), actors: [] };
+			},
+		],
+		[
+			"mismatched event actor state",
+			(state) => {
+				state.mode = "event";
+				state.event = {
+					...createLineEvent(),
+					actors: [
+						{ actorId: "mira", slot: "left", expression: "focused" },
+						{ actorId: "sol", slot: "right", expression: "guarded" },
+					],
+				};
+			},
+		],
+		[
+			"unknown visible speaker",
+			(state) => {
+				state.mode = "event";
+				state.event = {
+					...createLineEvent(),
+					visibleLine: { speakerId: "nova", text: "Unknown speaker" },
+				};
+			},
+		],
+		[
+			"unknown saved choice",
+			(state) => {
+				state.mode = "event";
+				state.event = {
+					eventId: "relay-camp-council",
+					nodeId: "choose-relay-plan",
+					status: "awaiting-choice",
+					visibleLine: { speakerId: "narrator", text: "Choose." },
+					choices: [{ id: "missing-choice", text: "Missing" }],
+					actors: [
+						{ actorId: "mira", slot: "left", expression: "resolved" },
+						{ actorId: "sol", slot: "center", expression: "restless" },
+						{ actorId: "lune", slot: "right", expression: "watchful" },
+					],
+				};
+			},
+		],
+	])("rejects incompatible initial state with %s", (_label, mutate) => {
+		const state = createState();
+		mutate(state);
 		expect(
-			session.dispatch({
-				type: "checkpoint.reached",
-				mapId: "lower-signal-ruins",
-				checkpoint: { x: 7, y: 8 },
-			}),
-		).toMatchObject({ events: [], state: { revision: 1 } });
-
-		expect(
-			session.dispatch({
-				type: "checkpoint.reached",
-				mapId: "lower-signal-ruins",
-				checkpoint: { x: 9, y: 8 },
-			}).state.currentMap.checkpoint,
-		).toEqual({ x: 9, y: 8 });
-		expect(
-			session.dispatch({
-				type: "checkpoint.reached",
-				mapId: "lower-signal-ruins",
-				checkpoint: { x: 9, y: 10 },
-			}).state.currentMap.checkpoint,
-		).toEqual({ x: 9, y: 10 });
+			() =>
+				new GameSession({
+					sessionId: "incompatible-state",
+					initialState: state,
+					registry,
+					encounterProvider: createDemoEncounterProvider(),
+				}),
+		).toThrow(GameSessionError);
 	});
 
-	it("sets story flags and reports their previous value", () => {
+	it("accepts a pending trigger only at the leader position", () => {
+		const state = createState();
+		state.field.pendingTriggerId = "dormant-signal";
+		state.field.partyPositions = [
+			{ x: 31, y: 4 },
+			{ x: 30, y: 4 },
+			{ x: 29, y: 4 },
+		];
+		expect(
+			new GameSession({
+				sessionId: "pending-trigger",
+				initialState: state,
+				registry,
+				encounterProvider: createDemoEncounterProvider(),
+			}).snapshot().field.pendingTriggerId,
+		).toBe("dormant-signal");
+	});
+
+	it("handles story state, relationships, and checkpoints", () => {
 		const session = createSession();
-		const first = session.dispatch({
+		const flag = session.dispatch({
 			type: "story.flag.set",
-			flagId: "signal-awakened",
+			flagId: "signal-contacted",
 			value: true,
 		});
-		expect(first.events[0].event).toEqual({
+		expect(flag.events[0].event).toMatchObject({
 			type: "story.flag.changed",
-			flagId: "signal-awakened",
 			previousValue: null,
-			value: true,
-		});
-
-		const noOp = session.dispatch({
-			type: "story.flag.set",
-			flagId: "signal-awakened",
-			value: true,
-		});
-		expect(noOp.events).toEqual([]);
-
-		const changed = session.dispatch({
-			type: "story.flag.set",
-			flagId: "signal-awakened",
-			value: false,
-		});
-		expect(changed.events[0].event).toMatchObject({
-			previousValue: true,
-			value: false,
-		});
-		expect(changed.state.story.flags["signal-awakened"]).toBe(false);
-	});
-
-	it("moves the field party through the session authority", () => {
-		const session = createSession();
-		const moved = session.dispatch({ type: "field.move", direction: "UP" });
-		expect(moved.state.field.partyPositions).toEqual([
-			{ x: 3, y: 5 },
-			{ x: 3, y: 6 },
-			{ x: 2, y: 6 },
-		]);
-		expect(moved.events[0].event).toEqual({
-			type: "field.moved",
-			partyPositions: moved.state.field.partyPositions,
-			eventTriggered: false,
-		});
-
-		const state = createInitialGameState();
-		state.field.partyPositions[0] = { x: 1, y: 1 };
-		const blockedSession = new GameSession({
-			sessionId: "blocked",
-			initialState: state,
 		});
 		expect(
-			blockedSession.dispatch({ type: "field.move", direction: "UP" }),
-		).toMatchObject({ events: [], state: { revision: 0 } });
-
-		session.dispatch({ type: "mode.enter", mode: "event" });
+			session.dispatch({
+				type: "story.flag.set",
+				flagId: "signal-contacted",
+				value: true,
+			}).events,
+		).toEqual([]);
+		const prototypeNamedFlag = session.dispatch({
+			type: "story.flag.set",
+			flagId: "constructor",
+			value: true,
+		});
+		expect(prototypeNamedFlag.state.story.flags.constructor).toBe(true);
+		expect(Object.hasOwn(prototypeNamedFlag.state.story.flags, "constructor")).toBe(
+			true,
+		);
 		expect(() =>
-			session.dispatch({ type: "field.move", direction: "UP" }),
-		).toThrow("field mode");
+			session.dispatch({
+				type: "story.flag.set",
+				flagId: "__proto__",
+				value: true,
+			}),
+		).toThrow("stable kebab-case ID");
+
+		const relationship = session.dispatch({
+			type: "story.relationship.adjust",
+			relationshipId: "mira:nova",
+			amount: 150,
+		});
+		expect(relationship.state.story.relationships["mira:nova"]).toBe(100);
+		expect(relationship.events[0].event).toMatchObject({
+			type: "story.relationship.changed",
+			previousValue: 0,
+			value: 100,
+		});
+		expect(
+			session.dispatch({
+				type: "story.relationship.adjust",
+				relationshipId: "mira:nova",
+				amount: 1,
+			}).events,
+		).toEqual([]);
+		expect(
+			session.dispatch({
+				type: "story.relationship.adjust",
+				relationshipId: "mira:nova",
+				amount: 0,
+			}).events,
+		).toEqual([]);
+
+		const checkpoint = session.dispatch({
+			type: "checkpoint.reached",
+			checkpointId: "signal-core",
+		});
+		expect(checkpoint.state.location.checkpointId).toBe("signal-core");
+		expect(checkpoint.events[0].event).toEqual({
+			type: "checkpoint.reached",
+			mapId: "signal-ruins",
+			previousCheckpointId: "signal-entry",
+			checkpointId: "signal-core",
+		});
+		expect(
+			session.dispatch({
+				type: "checkpoint.reached",
+				checkpointId: "signal-core",
+			}).events[0]?.event,
+		).toEqual({
+			type: "checkpoint.reached",
+			mapId: "signal-ruins",
+			previousCheckpointId: "signal-core",
+			checkpointId: "signal-core",
+		});
+		expect(() =>
+			session.dispatch({
+				type: "checkpoint.reached",
+				checkpointId: "missing",
+			}),
+		).toThrow("has no checkpoint");
 	});
 
-	it("does not retrigger the completed Signal Ruins event", () => {
-		const state = createInitialGameState();
-		state.story.flags["signal-ruins-cleared"] = true;
-		state.field.partyPositions[0] = { x: 13, y: 5 };
+	it("resolves field event triggers through dialogue, battle, and checkpoint atomically", () => {
+		const state = createState();
+		state.field = createFieldStateAt({ x: 30, y: 4 }, "RIGHT");
 		const session = new GameSession({
-			sessionId: "cleared",
+			sessionId: "story-flow",
 			initialState: state,
+			registry,
+			encounterProvider: createDemoEncounterProvider(),
 		});
 		const moved = session.dispatch({ type: "field.move", direction: "RIGHT" });
-		expect(moved.state.field.eventTriggered).toBe(false);
-		expect(moved.events[0].event).toMatchObject({
-			type: "field.moved",
-			eventTriggered: false,
+		expect(moved.events.map(({ event }) => event.type)).toEqual([
+			"field.moved",
+			"field.triggered",
+		]);
+		expect(moved.state.field.pendingTriggerId).toBe("dormant-signal");
+		expect(session.dispatch({ type: "field.move", direction: "LEFT" }).events).toEqual(
+			[],
+		);
+
+		const started = session.dispatch({ type: "field.trigger.resolve" });
+		expect(started.state.mode).toBe("event");
+		expect(started.state.field.pendingTriggerId).toBeNull();
+		expect(started.state.event?.visibleLine?.speakerId).toBe("mira");
+		session.dispatch({ type: "event.advance" });
+		const battleStarted = session.dispatch({ type: "event.advance" });
+		expect(battleStarted.state.mode).toBe("battle");
+		expect(battleStarted.state.event?.nodeId).toBe("mark-ruins-cleared");
+
+		const won = battleStarted.state.battle;
+		if (!won) throw new Error("Expected battle state.");
+		won.phase = "victory";
+		won.party[0].hp = 61;
+		session.dispatch({ type: "battle.start", battle: won });
+		const completed = session.dispatch({ type: "battle.complete" });
+		expect(completed.state).toMatchObject({
+			mode: "field",
+			location: { checkpointId: "signal-core" },
+			story: { flags: { "signal-ruins-cleared": true } },
+			battle: null,
+			event: null,
+		});
+		expect(completed.state.party.members[0].hp).toBe(61);
+		expect(completed.events.map(({ event }) => event.type)).toEqual([
+			"battle.completed",
+			"mode.changed",
+			"story.flag.changed",
+			"checkpoint.reached",
+			"event.completed",
+			"mode.changed",
+		]);
+	});
+
+	it("starts deterministic random encounters only after the safe-step window", () => {
+		const session = createSession("random-encounter");
+		for (let step = 1; step <= 14; step += 1) {
+			const moved = session.dispatch({ type: "field.move", direction: "RIGHT" });
+			expect(moved.state.mode).toBe("field");
+			expect(moved.state.field.stepsSinceEncounter).toBe(step);
+		}
+
+		const encountered = session.dispatch({
+			type: "field.move",
+			direction: "RIGHT",
+		});
+		expect(encountered.state).toMatchObject({
+			mode: "battle",
+			field: { stepsSinceEncounter: 0 },
+			battle: { id: "signal-ruins-roamers" },
+			rng: { seed: 42, draws: 2 },
+		});
+		expect(encountered.events.map(({ event }) => event.type)).toEqual([
+			"field.moved",
+			"field.random-encounter",
+			"mode.changed",
+			"battle.started",
+		]);
+	});
+
+	it("fully restores the party at the spring and resets encounter steps", () => {
+		const state = createState();
+		state.party.members[0].hp = 12;
+		state.party.members[1].hp = 30;
+		state.field = createFieldStateAt({ x: 8, y: 15 }, "UP");
+		state.field.stepsSinceEncounter = 13;
+		const session = new GameSession({
+			sessionId: "restoring-spring",
+			initialState: state,
+			registry,
+			encounterProvider: createDemoEncounterProvider(),
+		});
+
+		const moved = session.dispatch({ type: "field.move", direction: "UP" });
+		expect(moved.state.field).toMatchObject({
+			pendingTriggerId: "restoring-spring",
+			stepsSinceEncounter: 13,
+		});
+		expect(moved.events.at(-1)?.event).toMatchObject({
+			type: "field.triggered",
+			triggerId: "restoring-spring",
+			kind: "recovery",
+		});
+
+		const recovered = session.dispatch({ type: "field.trigger.resolve" });
+		expect(recovered.state.party.members.map(({ hp, maxHp }) => [hp, maxHp])).toEqual(
+			[
+				[72, 72],
+				[58, 58],
+				[64, 64],
+			],
+		);
+		expect(recovered.state.field).toMatchObject({
+			pendingTriggerId: null,
+			stepsSinceEncounter: 0,
+		});
+		expect(recovered.events).toHaveLength(1);
+		expect(recovered.events[0].event).toEqual({
+			type: "party.recovered",
+			triggerId: "restoring-spring",
+			restoredHp: 88,
 		});
 	});
 
-	it("owns battle start, progression, command, and completion", () => {
-		const session = createSession();
+	it("enters the second map and applies a choice plus persistent reaction", () => {
+		const state = createState();
+		state.story.flags["signal-ruins-cleared"] = true;
+		state.field = createFieldStateAt({ x: 33, y: 3 }, "RIGHT");
+		const session = new GameSession({
+			sessionId: "relay-flow",
+			initialState: state,
+			registry,
+			encounterProvider: createDemoEncounterProvider(),
+		});
+		session.dispatch({ type: "field.move", direction: "RIGHT" });
+		const entered = session.dispatch({ type: "field.trigger.resolve" });
+		expect(entered.state).toMatchObject({
+			location: {
+				mapId: "relay-camp",
+				entranceId: "ruins-gate",
+				checkpointId: "relay-gate",
+			},
+		});
+		expect(entered.state.field.partyPositions[0]).toEqual({ x: 2, y: 5 });
+		expect(entered.events.some(({ event }) => event.type === "map.entered")).toBe(
+			true,
+		);
+
+		session.dispatch({ type: "event.start", eventId: "relay-camp-council" });
+		session.dispatch({ type: "event.advance" });
+		const choices = session.dispatch({ type: "event.advance" });
+		expect(choices.state.event?.status).toBe("awaiting-choice");
+		const selected = session.dispatch({
+			type: "event.choose",
+			choiceId: "support-mira",
+		});
+		expect(selected.state).toMatchObject({
+			mode: "field",
+			location: { mapId: "relay-camp", checkpointId: "relay-center" },
+			story: {
+				flags: {
+					"relay-plan-mira": true,
+					"relay-council-complete": true,
+				},
+				relationships: { "mira:sol": 10 },
+			},
+		});
+		const reaction = session.dispatch({
+			type: "event.start",
+			eventId: "relay-camp-reaction",
+		});
+		expect(reaction.state.event?.visibleLine?.speakerId).toBe("mira");
+		session.dispatch({ type: "event.advance" });
+		expect(session.snapshot().mode).toBe("field");
+		session.snapshot().field.partyPositions[0].x = 2;
+		const returnState = session.snapshot();
+		returnState.field = createFieldStateAt({ x: 2, y: 5 }, "LEFT");
+		const returnSession = new GameSession({
+			sessionId: "relay-return",
+			initialState: returnState,
+			registry,
+			encounterProvider: createDemoEncounterProvider(),
+		});
+		returnSession.dispatch({ type: "field.move", direction: "LEFT" });
+		const returned = returnSession.dispatch({ type: "field.trigger.resolve" });
+		expect(returned.state.location).toMatchObject({
+			mapId: "signal-ruins",
+			entranceId: "relay-return",
+		});
+	});
+
+	it("owns battle progression, retry, commands, and standalone completion", () => {
+		const session = createSession("battle-flow");
 		const battle = createDemoBattleState(session.snapshot().party.members);
 		battle.party[0].actionGauge = 1_000;
-		battle.party[0].hp = 61;
+		battle.party[0].hp = 64;
 		battle.enemies[0].hp = 1;
 		battle.enemies[1].hp = 0;
 		battle.phase = "awaiting-command";
 		battle.activeActorId = "mira";
-
-		const started = session.dispatch({ type: "battle.start", battle });
-		expect(started.state.mode).toBe("battle");
-		expect(started.events.map(({ event }) => event.type)).toEqual([
-			"mode.changed",
-			"battle.started",
-		]);
-		battle.party[0].hp = 1;
-		expect(session.snapshot().battle?.party[0].hp).toBe(61);
-
+		session.dispatch({ type: "battle.start", battle });
 		const acted = session.dispatch({
 			type: "battle.command",
 			command: {
@@ -228,200 +591,136 @@ describe("GameSession", () => {
 			},
 		});
 		expect(acted.state.battle?.phase).toBe("victory");
-		expect(
-			acted.events.some(
-				({ event }) =>
-					event.type === "battle.event" &&
-					event.battleEvent.type === "battle.ended",
-			),
-		).toBe(true);
-
 		const completed = session.dispatch({ type: "battle.complete" });
+		expect(completed.state.party.members[0].hp).toBe(64);
 		expect(completed.state.mode).toBe("field");
-		expect(completed.state.battle).toBeNull();
-		expect(completed.state.party.members[0]).toMatchObject({
-			id: "mira",
-			hp: 61,
-		});
-		expect(completed.state.field.eventTriggered).toBe(false);
-		expect(completed.events.map(({ event }) => event.type)).toEqual([
-			"battle.completed",
-			"mode.changed",
-		]);
-	});
 
-	it("ticks active battles and can complete defeat without persisting battle HP", () => {
-		const session = createSession();
-		const battle = createSignalRuinsEncounterState(
+		const partialVictory = createDemoBattleState();
+		partialVictory.phase = "victory";
+		partialVictory.party = partialVictory.party.slice(0, 1);
+		session.dispatch({ type: "battle.start", battle: partialVictory });
+		expect(session.dispatch({ type: "battle.complete" }).state.party.members[1].hp).toBe(
+			58,
+		);
+
+		const running = createSignalRuinsEncounterState(
 			session.snapshot().party.members,
 		);
-		session.dispatch({ type: "battle.start", battle });
-		const restarted = session.dispatch({ type: "battle.start", battle });
-		expect(restarted.events.map(({ event }) => event.type)).toEqual([
-			"battle.started",
-		]);
-		const quietTick = session.dispatch({ type: "battle.tick", deltaMs: 1 });
-		expect(quietTick.events).toEqual([]);
+		session.dispatch({ type: "battle.start", battle: running });
+		expect(() => session.dispatch({ type: "battle.complete" })).toThrow(
+			"ended battle",
+		);
+		expect(session.dispatch({ type: "battle.tick", deltaMs: 1 }).events).toEqual(
+			[],
+		);
 		const ticked = session.dispatch({ type: "battle.tick", deltaMs: 10_000 });
-		expect(ticked.state.battle?.elapsedMs).toBe(10_001);
 		expect(ticked.state.battle?.phase).toBe("awaiting-command");
-		expect(ticked.events[0].event.type).toBe("battle.event");
 
-		const invalidTick = session.dispatch({
-			type: "battle.tick",
-			deltaMs: 0,
-		});
-		expect(invalidTick.events).toEqual([]);
-
-		const defeatedState = createInitialGameState();
 		const defeat = createDemoBattleState();
 		defeat.phase = "defeat";
-		defeat.party[0].hp = 0;
-		defeatedState.mode = "battle";
-		defeatedState.battle = defeat;
-		const defeatedSession = new GameSession({
-			sessionId: "defeat",
-			initialState: defeatedState,
-		});
-		const completed = defeatedSession.dispatch({ type: "battle.complete" });
-		expect(completed.state.party.members[0].hp).toBe(72);
-		expect(completed.events[0].event).toEqual({
-			type: "battle.completed",
-			result: "defeat",
+		session.dispatch({ type: "battle.start", battle: defeat });
+		const retried = session.dispatch({ type: "battle.retry" });
+		expect(retried.state.battle?.phase).toBe("running");
+		expect(retried.events.at(-1)?.event).toEqual({
+			type: "battle.started",
+			battleId: "signal-ruins-encounter",
 		});
 	});
 
-	it("keeps persistent party members missing from a completed encounter", () => {
-		const state = createInitialGameState();
-		const battle = createDemoBattleState();
-		battle.phase = "victory";
-		battle.party = battle.party.slice(0, 1);
-		state.mode = "battle";
-		state.battle = battle;
-		const session = new GameSession({ sessionId: "partial", initialState: state });
-		const completed = session.dispatch({ type: "battle.complete" });
-		expect(completed.state.party.members[1].hp).toBe(58);
-	});
-
-	it("rejects battle operations without a compatible active battle", () => {
-		const session = createSession();
+	it("rejects incompatible commands without partially mutating state", () => {
+		const session = createSession("invalid-commands");
 		expect(() =>
-			session.dispatch({ type: "battle.tick", deltaMs: 1 }),
-		).toThrow("active battle");
+			session.dispatch({ type: "field.trigger.resolve" }),
+		).toThrow("pending field trigger");
+		expect(() => session.dispatch({ type: "event.advance" })).toThrow(
+			"active event",
+		);
+		expect(() =>
+			session.dispatch({ type: "event.start", eventId: "missing-event" }),
+		).toThrow("unknown event");
+		session.dispatch({
+			type: "event.start",
+			eventId: "signal-ruins-contact",
+		});
+		expect(() =>
+			session.dispatch({ type: "field.move", direction: "UP" }),
+		).toThrow("field mode");
+		expect(() =>
+			session.dispatch({
+				type: "battle.start",
+				battle: createDemoBattleState(),
+			}),
+		).toThrow("active event");
+		expect(() => session.dispatch({ type: "battle.tick", deltaMs: 1 })).toThrow(
+			"active battle",
+		);
 		expect(() =>
 			session.dispatch({
 				type: "battle.command",
 				command: { type: "defend", actorId: "mira" },
 			}),
 		).toThrow("active battle");
-		expect(() =>
-			session.dispatch({ type: "battle.complete" }),
-		).toThrow("ended battle");
+		expect(() => session.dispatch({ type: "battle.complete" })).toThrow(
+			"ended battle",
+		);
+		expect(() => session.dispatch({ type: "battle.retry" })).toThrow(
+			"defeated battle",
+		);
 
-		const running = createDemoBattleState();
-		session.dispatch({ type: "battle.start", battle: running });
-		expect(() =>
-			session.dispatch({ type: "battle.complete" }),
-		).toThrow("ended battle");
+		const badProvider = new GameSession({
+			sessionId: "bad-provider",
+			initialState: (() => {
+				const state = createState();
+				state.field = createFieldStateAt({ x: 30, y: 4 }, "RIGHT");
+				return state;
+			})(),
+			registry,
+			encounterProvider: () => ({ ...createDemoBattleState(), id: "wrong" }),
+		});
+		badProvider.dispatch({ type: "field.move", direction: "RIGHT" });
+		badProvider.dispatch({ type: "field.trigger.resolve" });
+		badProvider.dispatch({ type: "event.advance" });
+		const revision = badProvider.revision;
+		expect(() => badProvider.dispatch({ type: "event.advance" })).toThrow(
+			"Encounter provider returned",
+		);
+		expect(badProvider.revision).toBe(revision);
+		expect(badProvider.snapshot().mode).toBe("event");
 	});
 
-	it("publishes semantic transitions until unsubscribed or closed", () => {
-		const session = createSession();
-		const transitions: string[][] = [];
-		const unsubscribe = session.subscribe((transition) => {
-			transitions.push(transition.events.map(({ event }) => event.type));
+	it("publishes lifecycle transitions until unsubscribed or closed", () => {
+		const session = createSession("lifecycle");
+		const listener = vi.fn();
+		const unsubscribe = session.subscribe(listener);
+		session.dispatch({
+			type: "story.flag.set",
+			flagId: "lifecycle-started",
+			value: true,
 		});
-		session.dispatch({ type: "mode.enter", mode: "event" });
-		session.pause();
-		unsubscribe();
-		session.resume();
-		expect(transitions).toEqual([["mode.changed"], ["session.paused"]]);
-
-		let closeEvents = 0;
-		session.subscribe(() => {
-			closeEvents += 1;
-		});
-		session.close();
-		expect(closeEvents).toBe(1);
-	});
-
-	it("tracks lifecycle events without changing state revision", () => {
-		const session = createSession();
 		const paused = session.pause();
 		expect(paused).toMatchObject({
-			sequence: 1,
-			stateRevision: 0,
+			sequence: 2,
+			stateRevision: 1,
 			event: { type: "session.paused" },
 		});
-		expect(session.status).toBe("paused");
 		expect(session.pause()).toBeNull();
-		expect(() =>
-			session.dispatch({ type: "mode.enter", mode: "event" }),
-		).toThrow(GameSessionError);
-
-		const resumed = session.resume();
-		expect(resumed).toMatchObject({
-			sequence: 2,
-			stateRevision: 0,
-			event: { type: "session.resumed" },
-		});
-		expect(session.resume()).toBeNull();
-		session.dispatch({ type: "mode.enter", mode: "event" });
-
-		const closed = session.close();
-		expect(closed).toMatchObject({
-			sequence: 4,
-			stateRevision: 1,
-			event: { type: "session.closed" },
-		});
-		expect(session.close()).toBeNull();
-		expect(session.status).toBe("closed");
-		expect(session.revision).toBe(1);
-		expect(session.sequence).toBe(4);
-		expect(() => session.pause()).toThrow("closed session");
-		expect(() => session.resume()).toThrow("closed session");
-		expect(() =>
-			session.dispatch({ type: "mode.enter", mode: "field" }),
-		).toThrow("current status is closed");
-	});
-
-	it("rejects invalid identifiers and checkpoint coordinates", () => {
-		expect(
-			() =>
-				new GameSession({
-					sessionId: "  ",
-					initialState: createInitialGameState(),
-				}),
-		).toThrow("Session ID");
-
-		const session = createSession();
-		expect(() =>
-			session.dispatch({
-				type: "checkpoint.reached",
-				mapId: "",
-				checkpoint: { x: 0, y: 0 },
-			}),
-		).toThrow("Map ID");
-		expect(() =>
-			session.dispatch({
-				type: "checkpoint.reached",
-				mapId: "map",
-				checkpoint: { x: -1, y: 0 },
-			}),
-		).toThrow("Checkpoint x");
-		expect(() =>
-			session.dispatch({
-				type: "checkpoint.reached",
-				mapId: "map",
-				checkpoint: { x: 0, y: 1.5 },
-			}),
-		).toThrow("Checkpoint y");
 		expect(() =>
 			session.dispatch({
 				type: "story.flag.set",
-				flagId: " ",
+				flagId: "while-paused",
 				value: true,
 			}),
-		).toThrow("Story flag ID");
+		).toThrow(GameSessionError);
+		unsubscribe();
+		expect(session.resume()?.event).toEqual({ type: "session.resumed" });
+		expect(session.resume()).toBeNull();
+		const closeListener = vi.fn();
+		session.subscribe(closeListener);
+		expect(session.close()?.event).toEqual({ type: "session.closed" });
+		expect(closeListener).toHaveBeenCalledOnce();
+		expect(session.close()).toBeNull();
+		expect(() => session.pause()).toThrow("closed session");
+		expect(() => session.resume()).toThrow("closed session");
+		expect(listener).toHaveBeenCalledTimes(2);
 	});
 });

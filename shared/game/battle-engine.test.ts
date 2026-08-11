@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { validateGameContentDirectory } from "../../scripts/validate-game-content";
 import {
 	advanceBattle,
 	applyBattleCommand,
@@ -6,14 +7,18 @@ import {
 } from "./battle-engine";
 import {
 	createDemoBattleState,
+	createDemoEncounterProvider,
 	createInitialGameState,
 	createSignalRuinsEncounterState,
+	createSignalRuinsRoamersState,
 } from "./demo-state";
 import {
 	ACTION_GAUGE_MAX,
 	GAME_CONTENT_VERSION,
 	GAME_STATE_SCHEMA_VERSION,
 } from "./model";
+
+const registry = validateGameContentDirectory();
 
 const readyPartyMember = () => {
 	const state = createDemoBattleState();
@@ -24,9 +29,14 @@ const readyPartyMember = () => {
 };
 
 describe("battle engine", () => {
+	it("rejects unknown demo encounter IDs", () => {
+		expect(() => createDemoEncounterProvider()("missing", [])).toThrow(
+			"Unknown demo encounter",
+		);
+	});
 	it("creates an isolated serializable initial game state", () => {
-		const first = createInitialGameState();
-		const second = createInitialGameState();
+		const first = createInitialGameState({ registry });
+		const second = createInitialGameState({ registry });
 		first.party.members[0].hp = 1;
 
 		expect(second.schemaVersion).toBe(GAME_STATE_SCHEMA_VERSION);
@@ -39,12 +49,25 @@ describe("battle engine", () => {
 	});
 
 	it("stages the Signal Ruins encounter with the persistent party", () => {
-		const game = createInitialGameState();
+		const game = createInitialGameState({ registry });
 		game.party.members[0].hp = 33;
 		const battle = createSignalRuinsEncounterState(game.party.members);
 		expect(battle.party[0]).toMatchObject({ hp: 33, actionGauge: 760 });
 		expect(battle.party[1].actionGauge).toBe(520);
-		expect(battle.enemies.map((enemy) => enemy.actionGauge)).toEqual([420, 180]);
+		expect(battle.enemies).toHaveLength(1);
+		expect(battle.enemies[0]).toMatchObject({
+			id: "signal-warden",
+			hp: 192,
+			maxHp: 192,
+			actionGauge: 360,
+		});
+	});
+
+	it("stages a smaller roaming encounter independently of the boss", () => {
+		const battle = createSignalRuinsRoamersState();
+		expect(battle.id).toBe("signal-ruins-roamers");
+		expect(battle.enemies).toHaveLength(1);
+		expect(battle.enemies[0]).toMatchObject({ id: "ash-wisp", hp: 42 });
 	});
 
 	it("advances gauges without mutating the input state", () => {
@@ -71,6 +94,19 @@ describe("battle engine", () => {
 		expect(advanceBattle(transition.state, 1_000)).toEqual({
 			state: transition.state,
 			events: [],
+		});
+	});
+
+	it("breaks equal-speed ready ties by stable combatant ID", () => {
+		const state = createDemoBattleState();
+		state.party[0].speed = 10;
+		state.party[1].speed = 10;
+		state.party[0].actionGauge = ACTION_GAUGE_MAX - 1;
+		state.party[1].actionGauge = ACTION_GAUGE_MAX - 1;
+		const transition = advanceBattle(state, 100);
+		expect(transition.events[0]).toEqual({
+			type: "gauge.ready",
+			actorId: "mira",
 		});
 	});
 

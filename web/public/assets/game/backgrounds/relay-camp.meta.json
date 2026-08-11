@@ -1,0 +1,9 @@
+{
+	"assetId": "relay-camp-field",
+	"file": "relay-camp-field.png",
+	"createdAt": "2026-08-10",
+	"method": "OpenAI built-in image generation, resized to the game canvas with sips",
+	"sourceReference": "signal-ruins-field.png used only for pixel-art density, palette, and camera angle",
+	"promptSummary": "Original fortified relay camp at blue-hour dusk with stone paving, tents, supplies, a western gate, and readable walkable space; no characters, text, logos, or watermark.",
+	"usage": "Original project game background"
+}

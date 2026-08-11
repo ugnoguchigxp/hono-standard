@@ -1,0 +1,39 @@
+{
+	"id": "relay-camp-reaction",
+	"title": "The Choice Remains",
+	"presentation": {
+		"backgroundAssetId": "relay-camp-field",
+		"actors": [
+			{ "actorId": "mira", "slot": "left", "expression": "quiet" },
+			{ "actorId": "sol", "slot": "right", "expression": "quiet" }
+		]
+	},
+	"entryNodeId": "mira-reaction",
+	"nodes": [
+		{
+			"id": "mira-reaction",
+			"type": "line",
+			"condition": {
+				"type": "flag.equals",
+				"flagId": "relay-plan-mira",
+				"value": true
+			},
+			"speakerId": "mira",
+			"text": "You trusted the slower path. I will make that trust worth the delay.",
+			"nextNodeId": "sol-reaction"
+		},
+		{
+			"id": "sol-reaction",
+			"type": "line",
+			"condition": {
+				"type": "flag.equals",
+				"flagId": "relay-plan-sol",
+				"value": true
+			},
+			"speakerId": "sol",
+			"text": "You heard the urgency too. I will not waste the opening you gave us.",
+			"nextNodeId": "reaction-end"
+		},
+		{ "id": "reaction-end", "type": "end" }
+	]
+}

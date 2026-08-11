@@ -1,0 +1,48 @@
+{
+	"id": "signal-ruins-contact",
+	"title": "The Dormant Signal",
+	"presentation": {
+		"backgroundAssetId": "signal-ruins-field",
+		"actors": [
+			{ "actorId": "mira", "slot": "left", "expression": "focused" },
+			{ "actorId": "lune", "slot": "right", "expression": "guarded" }
+		]
+	},
+	"entryNodeId": "mira-signal-line",
+	"nodes": [
+		{
+			"id": "mira-signal-line",
+			"type": "line",
+			"speakerId": "mira",
+			"text": "The signal is coming from beneath the stone.",
+			"nextNodeId": "lune-warning-line"
+		},
+		{
+			"id": "lune-warning-line",
+			"type": "line",
+			"speakerId": "lune",
+			"text": "Something heard us. Stay close.",
+			"nextNodeId": "signal-battle"
+		},
+		{
+			"id": "signal-battle",
+			"type": "battle.start",
+			"encounterId": "signal-ruins-encounter",
+			"nextNodeId": "mark-ruins-cleared"
+		},
+		{
+			"id": "mark-ruins-cleared",
+			"type": "flag.set",
+			"flagId": "signal-ruins-cleared",
+			"value": true,
+			"nextNodeId": "signal-checkpoint"
+		},
+		{
+			"id": "signal-checkpoint",
+			"type": "checkpoint.reach",
+			"checkpointId": "signal-core",
+			"nextNodeId": "signal-event-end"
+		},
+		{ "id": "signal-event-end", "type": "end" }
+	]
+}

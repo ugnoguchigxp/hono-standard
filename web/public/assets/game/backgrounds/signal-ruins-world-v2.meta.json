@@ -1,0 +1,9 @@
+{
+	"assetId": "signal-ruins-world-v2",
+	"file": "signal-ruins-world-v2.png",
+	"createdAt": "2026-08-11",
+	"method": "OpenAI built-in image generation, retained at native 1619x971 resolution",
+	"sourceReference": "signal-ruins-field.png used only for palette, materials, lighting, and orthographic camera",
+	"promptSummary": "A simple broad L-shaped raised causeway from a lower-left starting plaza to an upper-right signal plaza, surrounded by visibly impassable dark water and cliffs; scaled for 24x32 character sprites with no branches, characters, text, or UI.",
+	"usage": "Original high-resolution scrolling project game background"
+}

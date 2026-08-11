@@ -1,0 +1,78 @@
+{
+	"id": "signal-ruins",
+	"displayName": "Signal Ruins",
+	"objective": "Find the pale signal and survive what answers.",
+	"width": 40,
+	"height": 24,
+	"tileSize": 16,
+	"backgroundAssetId": "signal-ruins-world-v2",
+	"battleBackgroundAssetId": "signal-ruins-battle",
+	"entrances": [
+		{
+			"id": "signal-ruins-entry",
+			"position": { "x": 8, "y": 18 },
+			"facing": "RIGHT",
+			"checkpointId": "signal-entry"
+		},
+		{
+			"id": "relay-return",
+			"position": { "x": 33, "y": 4 },
+			"facing": "LEFT",
+			"checkpointId": "signal-core"
+		}
+	],
+	"checkpoints": [
+		{ "id": "signal-entry", "position": { "x": 8, "y": 18 } },
+		{ "id": "signal-core", "position": { "x": 31, "y": 4 } }
+	],
+	"collisionRegions": [
+		{ "id": "north-edge", "x": 0, "y": 0, "width": 40, "height": 1 },
+		{ "id": "south-edge", "x": 0, "y": 23, "width": 40, "height": 1 },
+		{ "id": "west-edge", "x": 0, "y": 1, "width": 1, "height": 22 },
+		{ "id": "east-edge", "x": 39, "y": 1, "width": 1, "height": 22 },
+		{ "id": "northwest-depths", "x": 1, "y": 1, "width": 27, "height": 10 },
+		{ "id": "west-channel", "x": 1, "y": 11, "width": 2, "height": 10 },
+		{ "id": "middle-depths", "x": 13, "y": 11, "width": 15, "height": 4 },
+		{ "id": "far-east-depths", "x": 36, "y": 1, "width": 3, "height": 20 },
+		{ "id": "south-depths", "x": 1, "y": 21, "width": 38, "height": 2 }
+	],
+	"randomEncounter": {
+		"encounterId": "signal-ruins-roamers",
+		"minimumSteps": 14,
+		"chance": 0.12
+	},
+	"triggers": [
+		{
+			"id": "restoring-spring",
+			"kind": "recovery",
+			"position": { "x": 8, "y": 14 },
+			"targetId": "party",
+			"marker": { "shape": "spring", "color": "#72d7c0", "pulse": true }
+		},
+		{
+			"id": "dormant-signal",
+			"kind": "event",
+			"position": { "x": 31, "y": 4 },
+			"targetId": "signal-ruins-contact",
+			"condition": {
+				"type": "flag.equals",
+				"flagId": "signal-ruins-cleared",
+				"value": false
+			},
+			"marker": { "shape": "circle", "color": "#9ce6d1", "pulse": true }
+		},
+		{
+			"id": "relay-camp-path",
+			"kind": "map",
+			"position": { "x": 34, "y": 3 },
+			"targetId": "relay-camp",
+			"targetEntranceId": "ruins-gate",
+			"condition": {
+				"type": "flag.equals",
+				"flagId": "signal-ruins-cleared",
+				"value": true
+			},
+			"marker": { "shape": "gate", "color": "#e4bd68", "pulse": true }
+		}
+	]
+}

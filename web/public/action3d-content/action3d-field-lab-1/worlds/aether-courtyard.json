@@ -1,0 +1,38 @@
+{
+  "id": "aether-courtyard",
+  "displayName": "Aether Courtyard",
+  "objective": "Defeat the three sentinels and secure the north beacon.",
+  "bounds": { "minX": -18, "maxX": 18, "minZ": -18, "maxZ": 18 },
+  "spawnPoints": [
+    {
+      "id": "south-gate",
+      "position": { "x": 0, "y": 0, "z": -13 },
+      "yaw": 0,
+      "checkpointId": "south-beacon"
+    }
+  ],
+  "checkpoints": [
+    { "id": "south-beacon", "position": { "x": 0, "y": 0, "z": -13 }, "yaw": 0 },
+    { "id": "north-beacon", "position": { "x": 0, "y": 0, "z": 13 }, "yaw": 3.141592653589793 }
+  ],
+  "colliders": [
+    { "id": "west-ruin", "bounds": { "minX": -10, "maxX": -6, "minZ": -3, "maxZ": 3 } },
+    { "id": "east-ruin", "bounds": { "minX": 6, "maxX": 10, "minZ": -3, "maxZ": 3 } },
+    { "id": "north-plinth", "bounds": { "minX": -2, "maxX": 2, "minZ": 14, "maxZ": 16 } }
+  ],
+  "enemies": [
+    { "id": "verdant-sentinel", "position": { "x": -4, "y": 0, "z": -1 }, "maxHp": 80, "moveSpeed": 2.1, "attackRange": 1.7, "damage": 14 },
+    { "id": "amber-sentinel", "position": { "x": 4, "y": 0, "z": 2 }, "maxHp": 80, "moveSpeed": 2.2, "attackRange": 1.7, "damage": 14 },
+    { "id": "azure-sentinel", "position": { "x": 0, "y": 0, "z": 8 }, "maxHp": 80, "moveSpeed": 2.3, "attackRange": 1.8, "damage": 16 }
+  ],
+  "landmarks": [
+    { "id": "south-crystal", "kind": "crystal", "position": { "x": 0, "y": 0, "z": -15 }, "scale": 1.2 },
+    { "id": "west-arch", "kind": "arch", "position": { "x": -13, "y": 0, "z": 7 }, "scale": 1.4 },
+    { "id": "east-arch", "kind": "arch", "position": { "x": 13, "y": 0, "z": 7 }, "scale": 1.4 },
+    { "id": "north-crystal", "kind": "crystal", "position": { "x": 0, "y": 0, "z": 16.5 }, "scale": 1.5 },
+    { "id": "west-tree", "kind": "tree", "position": { "x": -14, "y": 0, "z": -9 }, "scale": 1.1 },
+    { "id": "east-tree", "kind": "tree", "position": { "x": 14, "y": 0, "z": -9 }, "scale": 1.1 }
+  ],
+  "victoryCheckpointId": "north-beacon",
+  "playerModelAssetId": "field-runner"
+}

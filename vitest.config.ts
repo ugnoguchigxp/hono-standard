@@ -67,6 +67,11 @@ export default defineConfig({
 				"web/src/game/art/**/*.ts",
 				"web/src/game/input/**/*.ts",
 				"web/src/game/scenes/**/*.ts",
+				// Babylon/WebGL runtime adapters need a real GPU canvas and are covered by Playwright.
+				// Action rules remain in shared/action3d and stay inside unit coverage.
+				"web/src/action3d/runtime/**/*.ts",
+				"web/src/action3d/runtime/**/*.tsx",
+				"web/src/action3d/Action3dLauncher.tsx",
 			],
 			thresholds: {
 				lines: 95,

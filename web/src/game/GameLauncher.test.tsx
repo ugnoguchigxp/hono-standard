@@ -5,15 +5,19 @@ import {
 	type GameSession,
 	type GameState,
 } from "@shared/game";
+import { validateGameContentDirectory } from "../../../scripts/validate-game-content";
+import { GameLauncher } from "./GameLauncher";
+import {
+	ContentLoadError,
+	GameContentLoader,
+} from "./content/GameContentLoader";
 import {
 	gameSaveStorageKey,
 	LocalGameSaveRepository,
 } from "./save/LocalGameSaveRepository";
-import { GameLauncher } from "./GameLauncher";
 
-const mocks = vi.hoisted(() => ({
-	latestSession: null as GameSession | null,
-}));
+const registry = validateGameContentDirectory();
+const mocks = vi.hoisted(() => ({ latestSession: null as GameSession | null }));
 
 vi.mock("./GameScreen", () => ({
 	GameScreen: ({
@@ -31,8 +35,7 @@ vi.mock("./GameScreen", () => ({
 					onClick={() => {
 						const transition = session.dispatch({
 							type: "checkpoint.reached",
-							mapId: "signal-ruins",
-							checkpoint: { x: 14, y: 5 },
+							checkpointId: "signal-core",
 						});
 						onAutosave(transition.state);
 					}}
@@ -44,6 +47,20 @@ vi.mock("./GameScreen", () => ({
 	},
 }));
 
+const readyLoader = () => {
+	const loader = new GameContentLoader();
+	vi.spyOn(loader, "load").mockResolvedValue(registry);
+	vi.spyOn(loader, "reset").mockImplementation(() => undefined);
+	return loader;
+};
+
+const renderReadyLauncher = async () => {
+	const loader = readyLoader();
+	render(<GameLauncher playerId="player@example.com" contentLoader={loader} />);
+	await screen.findByRole("heading", { name: "The signal is waiting." });
+	return loader;
+};
+
 beforeEach(() => {
 	vi.restoreAllMocks();
 	window.localStorage.clear();
@@ -51,8 +68,35 @@ beforeEach(() => {
 });
 
 describe("GameLauncher", () => {
-	it("starts a new game and writes the initial checkpoint", () => {
-		render(<GameLauncher playerId="player@example.com" />);
+	it("uses the default browser content loader", async () => {
+		vi.spyOn(GameContentLoader.prototype, "load").mockResolvedValue(registry);
+		render(<GameLauncher playerId="default-loader@example.com" />);
+		expect(
+			await screen.findByRole("button", { name: "New Game" }),
+		).toBeVisible();
+	});
+
+	it("shows world loading before enabling the launcher", async () => {
+		let resolveLoad: ((value: typeof registry) => void) | undefined;
+		const loader = new GameContentLoader();
+		vi.spyOn(loader, "load").mockReturnValue(
+			new Promise((resolve) => {
+				resolveLoad = resolve;
+			}),
+		);
+		render(
+			<GameLauncher playerId="player@example.com" contentLoader={loader} />,
+		);
+		expect(
+			screen.getByRole("heading", { name: "Loading world…" }),
+		).toBeVisible();
+		expect(screen.queryByRole("button", { name: "New Game" })).toBeNull();
+		resolveLoad?.(registry);
+		await screen.findByRole("button", { name: "New Game" });
+	});
+
+	it("starts a new game and writes the initial checkpoint", async () => {
+		await renderReadyLauncher();
 		expect(screen.getByText("No checkpoint found.")).toBeVisible();
 		expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
 
@@ -61,54 +105,105 @@ describe("GameLauncher", () => {
 		expect(screen.getByRole("status")).toHaveTextContent(
 			"Initial checkpoint saved.",
 		);
+		expect(mocks.latestSession?.content).toBe(registry);
 		expect(
 			window.localStorage.getItem(gameSaveStorageKey("player@example.com")),
 		).not.toBeNull();
 	});
 
-	it("continues a saved checkpoint after remount", () => {
-		const first = render(<GameLauncher playerId="player@example.com" />);
+	it("continues a saved checkpoint after remount", async () => {
+		const first = render(
+			<GameLauncher
+				playerId="player@example.com"
+				contentLoader={readyLoader()}
+			/>,
+		);
+		await screen.findByRole("button", { name: "New Game" });
 		fireEvent.click(screen.getByRole("button", { name: "New Game" }));
 		fireEvent.click(screen.getByRole("button", { name: "Reach checkpoint" }));
 		expect(screen.getByRole("status")).toHaveTextContent("Checkpoint saved.");
 		first.unmount();
 
-		render(<GameLauncher playerId="player@example.com" />);
-		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-		expect(mocks.latestSession?.snapshot().currentMap.checkpoint).toEqual({
-			x: 14,
-			y: 5,
-		});
+		render(
+			<GameLauncher
+				playerId="player@example.com"
+				contentLoader={readyLoader()}
+			/>,
+		);
+		fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+		expect(mocks.latestSession?.snapshot().location.checkpointId).toBe(
+			"signal-core",
+		);
 		expect(screen.getByRole("status")).toHaveTextContent("Checkpoint loaded.");
 	});
 
-	it("blocks a corrupt save and lets New Game recover it", () => {
+	it("blocks corrupt, unsupported, and incompatible saves", async () => {
 		window.localStorage.setItem(
 			gameSaveStorageKey("player@example.com"),
 			"not-json",
 		);
-		render(<GameLauncher playerId="player@example.com" />);
+		const corrupt = render(
+			<GameLauncher
+				playerId="player@example.com"
+				contentLoader={readyLoader()}
+			/>,
+		);
+		await screen.findByRole("heading", { name: "The signal is waiting." });
 		expect(screen.getByRole("alert")).toHaveTextContent("not valid JSON");
 		expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+		corrupt.unmount();
 
-		fireEvent.click(screen.getByRole("button", { name: "New Game" }));
-		expect(screen.getByTestId("mock-game-screen")).toBeVisible();
-	});
-
-	it("blocks an unsupported save format", () => {
 		window.localStorage.setItem(
 			gameSaveStorageKey("player@example.com"),
 			JSON.stringify({ formatVersion: 99 }),
 		);
-		render(<GameLauncher playerId="player@example.com" />);
-		expect(screen.getByRole("alert")).toHaveTextContent(
+		const unsupported = render(
+			<GameLauncher
+				playerId="player@example.com"
+				contentLoader={readyLoader()}
+			/>,
+		);
+		expect(await screen.findByRole("alert")).toHaveTextContent(
 			"Save format version 99 is not supported.",
 		);
+		unsupported.unmount();
+
+		const state = createInitialGameState({ registry });
+		state.contentVersion = "different-world";
+		new LocalGameSaveRepository(
+			window.localStorage,
+			"incompatible@example.com",
+		).save(state);
+		const incompatibleView = render(
+			<GameLauncher
+				playerId="incompatible@example.com"
+				contentLoader={readyLoader()}
+			/>,
+		);
+		await screen.findByText(/different world version/i);
 		expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+		incompatibleView.unmount();
+
+		const missingMapState = createInitialGameState({ registry });
+		missingMapState.location.mapId = "removed-map";
+		const missingMapRepository = new LocalGameSaveRepository(
+			window.localStorage,
+			"missing-map@example.com",
+		);
+		expect(missingMapRepository.save(missingMapState).ok).toBe(true);
+		render(
+			<GameLauncher
+				playerId="missing-map@example.com"
+				contentLoader={readyLoader()}
+			/>,
+		);
+		await screen.findByText(/world data that is no longer available/i);
+		expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+		expect(missingMapRepository.load().status).toBe("ready");
 	});
 
-	it("upgrades a legacy save before continuing", () => {
-		const current = createInitialGameState();
+	it("upgrades a legacy save before continuing", async () => {
+		const current = createInitialGameState({ registry });
 		window.localStorage.setItem(
 			gameSaveStorageKey("player@example.com"),
 			JSON.stringify({
@@ -117,54 +212,70 @@ describe("GameLauncher", () => {
 				state: {
 					schemaVersion: 1,
 					mode: current.mode,
-					currentMap: current.currentMap,
+					currentMap: {
+						id: "signal-ruins",
+						checkpoint: { x: 3, y: 6 },
+					},
 					party: current.party,
 					story: current.story,
 					battle: current.battle,
 				},
 			}),
 		);
-		render(<GameLauncher playerId="player@example.com" />);
+		await renderReadyLauncher();
 		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 		expect(screen.getByRole("status")).toHaveTextContent(
 			"Save upgraded and loaded.",
 		);
 	});
 
-	it("shows write failures for new games and later checkpoints", () => {
-		const save = vi
-			.spyOn(LocalGameSaveRepository.prototype, "save")
-			.mockReturnValueOnce({
-				ok: false,
-				message: "Could not write the local autosave.",
-			})
-			.mockReturnValueOnce({
-				ok: false,
-				message: "Could not write the local autosave.",
-			});
-		render(<GameLauncher playerId="player@example.com" />);
-		fireEvent.click(screen.getByRole("button", { name: "New Game" }));
-		expect(screen.getByRole("status")).toHaveTextContent(
-			"Could not write the local autosave.",
+	it("retries a player-facing content failure", async () => {
+		const loader = new GameContentLoader();
+		const load = vi
+			.spyOn(loader, "load")
+			.mockRejectedValueOnce(
+				new ContentLoadError("http", "World request failed."),
+			)
+			.mockResolvedValueOnce(registry);
+		const reset = vi.spyOn(loader, "reset").mockImplementation(() => undefined);
+		render(
+			<GameLauncher playerId="player@example.com" contentLoader={loader} />,
 		);
-		fireEvent.click(screen.getByRole("button", { name: "Reach checkpoint" }));
-		expect(save).toHaveBeenCalledTimes(2);
-		expect(screen.getByRole("status")).toHaveTextContent(
-			"Could not write the local autosave.",
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"World request failed.",
 		);
+		fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+		await screen.findByRole("button", { name: "New Game" });
+		expect(reset).toHaveBeenCalledOnce();
+		expect(load).toHaveBeenCalledTimes(2);
 	});
 
-	it("shows a failed legacy upgrade without blocking play", () => {
-		const current = createInitialGameState();
+	it("normalizes an unexpected loader error for players", async () => {
+		const loader = new GameContentLoader();
+		vi.spyOn(loader, "load").mockRejectedValue(new Error("internal details"));
+		render(
+			<GameLauncher playerId="unexpected@example.com" contentLoader={loader} />,
+		);
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"The world could not be reached.",
+		);
+		expect(screen.queryByText("internal details")).toBeNull();
+	});
+
+	it("reports a failed legacy upgrade while still continuing", async () => {
+		const current = createInitialGameState({ registry });
 		window.localStorage.setItem(
-			gameSaveStorageKey("player@example.com"),
+			gameSaveStorageKey("upgrade-failure@example.com"),
 			JSON.stringify({
 				formatVersion: 0,
 				savedAt: "2026-08-10T00:00:00.000Z",
 				state: {
 					schemaVersion: 1,
 					mode: current.mode,
-					currentMap: current.currentMap,
+					currentMap: {
+						id: "signal-ruins",
+						checkpoint: { x: 3, y: 6 },
+					},
 					party: current.party,
 					story: current.story,
 					battle: current.battle,
@@ -175,21 +286,54 @@ describe("GameLauncher", () => {
 			ok: false,
 			message: "Could not write the local autosave.",
 		});
-		render(<GameLauncher playerId="player@example.com" />);
-		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-		expect(screen.getByTestId("mock-game-screen")).toBeVisible();
-		expect(screen.getByRole("status")).toHaveTextContent(
-			"Could not write the local autosave.",
+		render(
+			<GameLauncher
+				playerId="upgrade-failure@example.com"
+				contentLoader={readyLoader()}
+			/>,
 		);
+		fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+		expect(screen.getByTestId("mock-game-screen")).toBeVisible();
+		expect(
+			screen.getByText("Could not write the local autosave."),
+		).toBeVisible();
 	});
 
-	it("reports browser storage read failures", () => {
+	it("shows storage read and write failures without blocking play", async () => {
 		vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
 			throw new Error("storage disabled");
 		});
-		render(<GameLauncher playerId="player@example.com" />);
+		const readFailure = render(
+			<GameLauncher
+				playerId="player@example.com"
+				contentLoader={readyLoader()}
+			/>,
+		);
+		await screen.findByRole("heading", { name: "The signal is waiting." });
 		expect(screen.getByRole("alert")).toHaveTextContent(
 			"Browser storage is unavailable.",
 		);
+		readFailure.unmount();
+
+		vi.restoreAllMocks();
+		const save = vi
+			.spyOn(LocalGameSaveRepository.prototype, "save")
+			.mockReturnValue({
+				ok: false,
+				message: "Could not write the local autosave.",
+			});
+		const view = render(
+			<GameLauncher
+				playerId="write@example.com"
+				contentLoader={readyLoader()}
+			/>,
+		);
+		fireEvent.click(await screen.findByRole("button", { name: "New Game" }));
+		expect(
+			screen.getByText("Could not write the local autosave."),
+		).toBeVisible();
+		fireEvent.click(screen.getByRole("button", { name: "Reach checkpoint" }));
+		expect(save).toHaveBeenCalledTimes(2);
+		view.unmount();
 	});
 });

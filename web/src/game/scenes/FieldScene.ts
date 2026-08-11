@@ -1,32 +1,58 @@
 import {
-	FIELD_EVENT_TILE,
+	evaluateContentCondition,
 	type FieldDirection,
 	type FieldState,
 	type GameSession,
+	type MapDefinitionV1,
 } from "@shared/game";
 import Phaser from "phaser";
+import { GAME_RENDER_SCALE, GAME_TEXT_RESOLUTION } from "../display";
+import {
+	getFieldCharacterTextureKey,
+	type FieldWalkFrame,
+} from "../art/pixel-textures";
 import { InputManager } from "../input/InputManager";
 
-const TILE_SIZE = 16;
-const partyTextureKeys = ["field-mira", "field-sol", "field-lune"];
+const parseColor = (color: string): number =>
+	Number.parseInt(color.slice(1), 16);
+
+const directionBetween = (
+	from: { x: number; y: number },
+	to: { x: number; y: number },
+): FieldDirection | null => {
+	if (to.x > from.x) return "RIGHT";
+	if (to.x < from.x) return "LEFT";
+	if (to.y > from.y) return "DOWN";
+	if (to.y < from.y) return "UP";
+	return null;
+};
 
 export class FieldScene extends Phaser.Scene {
 	private inputManager?: InputManager;
 	private fieldState!: FieldState;
+	private map!: MapDefinitionV1;
 	private partySprites: Phaser.GameObjects.Image[] = [];
 	private partyShadows: Phaser.GameObjects.Ellipse[] = [];
+	private partyTextureKeys: string[] = [];
+	private partyFacings: FieldDirection[] = [];
+	private walkFrame: Exclude<FieldWalkFrame, 0> = 1;
 	private lastMoveAt = 0;
-	private eventStarted = false;
+	private transitionStarted = false;
 
 	constructor(private readonly gameSession: GameSession) {
 		super("field");
 	}
 
-	create(data: { victory?: boolean } = {}): void {
-		this.fieldState = this.gameSession.snapshot().field;
-		this.eventStarted = false;
+	create(): void {
+		const snapshot = this.gameSession.snapshot();
+		this.fieldState = snapshot.field;
+		this.map = this.gameSession.content.getMap(snapshot.location.mapId);
+		this.transitionStarted = false;
 		this.partySprites = [];
 		this.partyShadows = [];
+		this.partyTextureKeys = [];
+		this.partyFacings = [];
+		this.walkFrame = 1;
 		this.inputManager = new InputManager(this);
 		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
 			this.inputManager?.destroy();
@@ -35,26 +61,20 @@ export class FieldScene extends Phaser.Scene {
 		this.drawMap();
 		this.createAtmosphere();
 		this.createParty();
-		this.createLocationLabel();
-
-		if (
-			data.victory ||
-			this.gameSession.snapshot().story.flags["signal-ruins-cleared"] === true
-		) {
-			this.showFieldMessage(
-				"The signal is quiet. A path opens beyond the ruins.",
-			);
-		}
+		this.configureCamera();
 	}
 
 	update(time: number): void {
+		if (!this.inputManager || this.transitionStarted) return;
 		if (
-			!this.inputManager ||
-			this.eventStarted ||
-			time - this.lastMoveAt < 125
+			this.inputManager.justPressed("CANCEL") ||
+			this.inputManager.justPressed("MENU")
 		) {
+			this.transitionStarted = true;
+			this.scene.start("field-menu");
 			return;
 		}
+		if (time - this.lastMoveAt < 125) return;
 
 		const direction = this.readDirection();
 		if (!direction) return;
@@ -71,6 +91,11 @@ export class FieldScene extends Phaser.Scene {
 	}
 
 	private moveParty(direction: FieldDirection): void {
+		const previousPositions = this.fieldState.partyPositions.map(
+			(position) => ({
+				...position,
+			}),
+		);
 		const transition = this.gameSession.dispatch({
 			type: "field.move",
 			direction,
@@ -80,65 +105,235 @@ export class FieldScene extends Phaser.Scene {
 			(envelope) => envelope.event.type === "field.moved",
 		);
 		if (moveEvent?.event.type !== "field.moved") return;
-		this.syncPartySprites();
+		this.walkFrame = this.walkFrame === 1 ? 2 : 1;
+		this.syncPartySprites(true, previousPositions);
 
-		if (moveEvent.event.eventTriggered) {
-			this.eventStarted = true;
-			this.gameSession.dispatch({ type: "mode.enter", mode: "event" });
-			this.cameras.main.fadeOut(280, 12, 18, 38);
-			this.time.delayedCall(300, () => this.scene.start("event"));
+		if (transition.state.mode === "battle") {
+			this.transitionStarted = true;
+			this.cameras.main.fadeOut(240, 64, 8, 24);
+			this.time.delayedCall(260, () => this.scene.start("battle"));
+			return;
 		}
+		if (!moveEvent.event.pendingTriggerId) return;
+		this.transitionStarted = true;
+		const resolved = this.gameSession.dispatch({
+			type: "field.trigger.resolve",
+		});
+		const recovery = resolved.events.find(
+			(envelope) => envelope.event.type === "party.recovered",
+		);
+		if (recovery?.event.type === "party.recovered") {
+			this.showRecovery(recovery.event.restoredHp);
+			return;
+		}
+		this.cameras.main.fadeOut(240, 12, 18, 38);
+		this.time.delayedCall(260, () => {
+			if (resolved.state.mode === "event") {
+				this.scene.start("event");
+			} else if (resolved.state.mode === "battle") {
+				this.scene.start("battle");
+			} else {
+				this.scene.restart();
+			}
+		});
+	}
+
+	private showRecovery(restoredHp: number): void {
+		const camera = this.cameras.main;
+		const centerX = camera.worldView.centerX;
+		const centerY = camera.worldView.centerY;
+		camera.stopFollow();
+		camera.flash(280, 114, 215, 192);
+		this.add
+			.rectangle(centerX, centerY, 174, 28, 0x071523, 0.92)
+			.setStrokeStyle(1, 0x72d7c0, 0.9)
+			.setDepth(10_000);
+		this.add
+			.text(
+				centerX,
+				centerY,
+				restoredHp > 0
+					? `THE SPRING RESTORES ${restoredHp} HP`
+					: "THE PARTY IS ALREADY RESTORED",
+				{
+					fontFamily: '"Trebuchet MS", Arial, sans-serif',
+					fontSize: "7px",
+					fontStyle: "bold",
+					color: "#c5f5e7",
+					resolution: GAME_TEXT_RESOLUTION,
+				},
+			)
+			.setOrigin(0.5)
+			.setDepth(10_001);
+		this.time.delayedCall(720, () => {
+			this.cameras.main.fadeOut(220, 20, 80, 88);
+			this.time.delayedCall(240, () => this.scene.restart());
+		});
 	}
 
 	private createParty(): void {
+		const members = this.gameSession.snapshot().party.members;
 		this.partyShadows = this.fieldState.partyPositions.map(() =>
-			this.add.ellipse(0, 0, 10, 4, 0x07101c, 0.55),
+			this.add.ellipse(0, 0, 12, 4, 0x07101c, 0.55),
 		);
-		this.partySprites = this.fieldState.partyPositions.map((_position, index) =>
-			this.add.image(0, 0, partyTextureKeys[index]).setOrigin(0.5, 1),
+		this.partySprites = this.fieldState.partyPositions.map(
+			(_position, index) => {
+				const actor = this.gameSession.content.getActor(members[index].id);
+				this.partyTextureKeys[index] = actor.textureKey;
+				this.partyFacings[index] = this.fieldState.facing;
+				return this.add
+					.image(
+						0,
+						0,
+						getFieldCharacterTextureKey(
+							actor.textureKey,
+							this.fieldState.facing,
+							0,
+						),
+					)
+					.setOrigin(0.5, 1)
+					.setScale(0.66)
+					.setFlipX(this.fieldState.facing === "LEFT");
+			},
 		);
 		this.syncPartySprites();
 	}
 
-	private syncPartySprites(): void {
+	private syncPartySprites(
+		animated = false,
+		previousPositions?: FieldState["partyPositions"],
+	): void {
 		this.fieldState.partyPositions.forEach((position, index) => {
-			const x = position.x * TILE_SIZE + TILE_SIZE / 2;
-			const footY = position.y * TILE_SIZE + TILE_SIZE - 1;
-			this.partyShadows[index].setPosition(x, footY - 1).setDepth(footY - 1);
-			this.partySprites[index].setPosition(x, footY).setDepth(footY);
+			const x = position.x * this.map.tileSize + this.map.tileSize / 2;
+			const footY = position.y * this.map.tileSize + this.map.tileSize - 1;
+			const shadow = this.partyShadows[index];
+			const sprite = this.partySprites[index];
+			const facing = previousPositions
+				? (directionBetween(previousPositions[index], position) ??
+					this.partyFacings[index])
+				: (this.partyFacings[index] ?? this.fieldState.facing);
+			this.partyFacings[index] = facing;
+			sprite
+				.setTexture(
+					getFieldCharacterTextureKey(
+						this.partyTextureKeys[index],
+						facing,
+						animated ? this.walkFrame : 0,
+					),
+				)
+				.setFlipX(facing === "LEFT");
+			shadow.setDepth(footY - 1);
+			sprite.setDepth(footY);
+			if (!animated) {
+				shadow.setPosition(x, footY - 1);
+				sprite.setPosition(x, footY);
+				return;
+			}
+			this.tweens.killTweensOf([shadow, sprite]);
+			this.tweens.add({
+				targets: shadow,
+				x,
+				y: footY - 1,
+				duration: 105,
+				ease: "Sine.easeOut",
+			});
+			this.tweens.add({
+				targets: sprite,
+				x,
+				y: footY,
+				duration: 105,
+				ease: "Sine.easeOut",
+				onComplete: () => {
+					const idleFacing = this.partyFacings[index];
+					sprite
+						.setTexture(
+							getFieldCharacterTextureKey(
+								this.partyTextureKeys[index],
+								idleFacing,
+								0,
+							),
+						)
+						.setFlipX(idleFacing === "LEFT");
+				},
+			});
 		});
 	}
 
 	private drawMap(): void {
+		const worldWidth = this.map.width * this.map.tileSize;
+		const worldHeight = this.map.height * this.map.tileSize;
 		this.cameras.main.setBackgroundColor("#091225");
-		this.add.image(160, 96, "signal-ruins-field").setDepth(0);
-		this.add.rectangle(160, 96, 320, 192, 0x07101d, 0.07).setDepth(0.5);
-
-		const eventX = FIELD_EVENT_TILE.x * TILE_SIZE + TILE_SIZE / 2;
-		const eventY = FIELD_EVENT_TILE.y * TILE_SIZE + TILE_SIZE / 2;
-		const aura = this.add
-			.circle(eventX, eventY, 5, 0x72d7c0, 0.08)
-			.setStrokeStyle(1, 0x9ce6d1, 0.75)
-			.setBlendMode(Phaser.BlendModes.ADD)
-			.setDepth(2);
-		this.tweens.add({
-			targets: aura,
-			alpha: { from: 0.25, to: 0.75 },
-			scale: { from: 0.8, to: 1.45 },
-			duration: 1_400,
-			yoyo: true,
-			repeat: -1,
-			ease: "Sine.easeInOut",
-		});
+		this.add
+			.image(0, 0, this.map.backgroundAssetId)
+			.setOrigin(0)
+			.setDisplaySize(worldWidth, worldHeight)
+			.setDepth(0);
+		this.add
+			.rectangle(
+				worldWidth / 2,
+				worldHeight / 2,
+				worldWidth,
+				worldHeight,
+				0x07101d,
+				0.06,
+			)
+			.setDepth(0.5);
+		const story = this.gameSession.snapshot().story;
+		for (const trigger of this.map.triggers) {
+			if (
+				!trigger.marker ||
+				!evaluateContentCondition(trigger.condition, story)
+			) {
+				continue;
+			}
+			const x = trigger.position.x * this.map.tileSize + this.map.tileSize / 2;
+			const y = trigger.position.y * this.map.tileSize + this.map.tileSize / 2;
+			const color = parseColor(trigger.marker.color);
+			const marker =
+				trigger.marker.shape === "diamond"
+					? this.add.rectangle(x, y, 8, 8, color, 0.08).setAngle(45)
+					: trigger.marker.shape === "gate"
+						? this.add.rectangle(x, y, 10, 12, color, 0.08)
+						: trigger.marker.shape === "spring"
+							? this.add.circle(x, y, 7, 0x082b3b, 0.88)
+							: this.add.circle(x, y, 5, color, 0.08);
+			marker
+				.setStrokeStyle(1, color, 0.75)
+				.setBlendMode(Phaser.BlendModes.ADD)
+				.setDepth(2);
+			if (trigger.marker.shape === "spring") {
+				this.add
+					.circle(x, y, 4, color, 0.58)
+					.setStrokeStyle(1, 0xc5f5e7, 0.9)
+					.setBlendMode(Phaser.BlendModes.ADD)
+					.setDepth(2.1);
+				this.add.circle(x - 1, y - 1, 1.5, 0xe8fff8, 0.95).setDepth(2.2);
+			}
+			if (trigger.marker.pulse) {
+				this.tweens.add({
+					targets: marker,
+					alpha: { from: 0.25, to: 0.75 },
+					scale: { from: 0.8, to: 1.45 },
+					duration: 1_400,
+					yoyo: true,
+					repeat: -1,
+					ease: "Sine.easeInOut",
+				});
+			}
+		}
 	}
 
 	private createAtmosphere(): void {
+		const worldWidth = this.map.width * this.map.tileSize;
+		const worldHeight = this.map.height * this.map.tileSize;
 		const particles = [
-			{ x: 38, y: 38, delay: 0 },
-			{ x: 102, y: 76, delay: 500 },
-			{ x: 190, y: 46, delay: 900 },
-			{ x: 274, y: 122, delay: 1_300 },
-			{ x: 148, y: 152, delay: 1_700 },
+			{ x: worldWidth * 0.08, y: worldHeight * 0.16, delay: 0 },
+			{ x: worldWidth * 0.22, y: worldHeight * 0.42, delay: 500 },
+			{ x: worldWidth * 0.37, y: worldHeight * 0.2, delay: 900 },
+			{ x: worldWidth * 0.52, y: worldHeight * 0.68, delay: 1_300 },
+			{ x: worldWidth * 0.68, y: worldHeight * 0.34, delay: 1_700 },
+			{ x: worldWidth * 0.82, y: worldHeight * 0.72, delay: 2_100 },
+			{ x: worldWidth * 0.94, y: worldHeight * 0.18, delay: 2_500 },
 		];
 		for (const particle of particles) {
 			const mote = this.add
@@ -158,30 +353,16 @@ export class FieldScene extends Phaser.Scene {
 		}
 	}
 
-	private createLocationLabel(): void {
-		this.add.rectangle(42, 13, 74, 18, 0x07101d, 0.78).setDepth(200);
-		this.add
-			.text(8, 6, "SIGNAL RUINS", {
-				fontFamily: "monospace",
-				fontSize: "8px",
-				color: "#f2cf7a",
-				shadow: { color: "#07101d", offsetX: 1, offsetY: 1, fill: true },
-			})
-			.setDepth(201);
-	}
-
-	private showFieldMessage(message: string): void {
-		this.add
-			.rectangle(160, 163, 294, 34, 0x07101d, 0.94)
-			.setStrokeStyle(1, 0x9a7a45)
-			.setDepth(220);
-		this.add
-			.text(20, 153, message, {
-				fontFamily: "monospace",
-				fontSize: "7px",
-				color: "#f6edd4",
-				wordWrap: { width: 280 },
-			})
-			.setDepth(221);
+	private configureCamera(): void {
+		const worldWidth = this.map.width * this.map.tileSize;
+		const worldHeight = this.map.height * this.map.tileSize;
+		const leader = this.partySprites[0];
+		this.cameras.main
+			.setZoom(GAME_RENDER_SCALE)
+			.setBounds(0, 0, worldWidth, worldHeight)
+			.setRoundPixels(true);
+		if (leader) {
+			this.cameras.main.startFollow(leader, true, 0.16, 0.16);
+		}
 	}
 }

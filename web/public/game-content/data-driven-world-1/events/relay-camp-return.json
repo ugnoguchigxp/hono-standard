@@ -1,0 +1,17 @@
+{
+	"id": "relay-camp-return",
+	"title": "Return to the Ruins",
+	"presentation": {
+		"backgroundAssetId": "relay-camp-field",
+		"actors": []
+	},
+	"entryNodeId": "enter-signal-ruins",
+	"nodes": [
+		{
+			"id": "enter-signal-ruins",
+			"type": "map.enter",
+			"mapId": "signal-ruins",
+			"entranceId": "relay-return"
+		}
+	]
+}

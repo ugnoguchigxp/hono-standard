@@ -29,6 +29,10 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "bun run api/cli/migrate.ts",
 		"db:migrate:drizzle": "drizzle-kit migrate",
+		"validate:game-content": "bun run scripts/validate-game-content.ts",
+		"generate:action3d-assets": "bun run scripts/generate-action3d-assets.ts",
+		"validate:action3d-content": "bun run scripts/validate-action3d-content.ts",
+		"validate:domain-boundaries": "bun run scripts/validate-domain-boundaries.ts",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"test:e2e": "playwright test",
@@ -45,6 +49,8 @@
 		"verify:strict": "bun run verify"
 	},
 	"dependencies": {
+		"@babylonjs/core": "9.19.0",
+		"@babylonjs/loaders": "9.19.0",
 		"@hono/zod-validator": "0.8.0",
 		"@tanstack/react-query": "5.101.0",
 		"@tanstack/react-router": "1.170.15",
@@ -60,6 +66,7 @@
 		"zod": "4.4.3"
 	},
 	"devDependencies": {
+		"@babylonjs/serializers": "9.19.0",
 		"@biomejs/biome": "2.5.0",
 		"@hono/vite-dev-server": "0.26.0",
 		"@playwright/test": "1.61.1",

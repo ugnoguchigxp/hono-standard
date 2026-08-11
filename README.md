@@ -167,11 +167,11 @@ FieldScene
 → FieldScene
 ```
 
-フィールドは矢印キーまたはWASDで移動し、Z、Space、Enterで決定します。戦闘では3人のparty memberが時間経過で行動可能になり、Attack、固有Ability、Defendを選択できます。現在はwait型で、party memberのcommand選択中はlogical battle timeが進みません。
+フィールドは矢印キーまたはWASDで移動し、Z、Space、Enterで決定します。X、Escape、MでFF風のfield menuを開き、現在能力を表示するStatus、初期装備を確認するEquipment、所持品を確認するItemsを切り替えられます。メニューは閲覧専用で、GameSessionのmodeやsave dataには影響しません。一定歩数の安全区間後にはseed付き乱数による徘徊enemyとのrandom encounterが発生し、開始地点近くの回復の泉ではparty全員のHPとencounter歩数をresetできます。戦闘では3人のparty memberが時間経過で行動可能になり、Attack、固有Ability、Defendを選択できます。現在はwait型で、party memberのcommand選択中はlogical battle timeが進みません。味方は敵側を向いた横向きspriteで画面右側に縦並びし、攻撃時は前進、武器またはactor固有のAbility effect、被弾flash、damage number、帰還までを描画します。Signal Ruinsのstory戦は大型専用sprite、boss banner、専用HP gaugeを備えたSignal Warden戦です。
 
 移動、壁判定、party追従、時間ゲージ、damage、defend、勝敗は `shared/game/` のpure TypeScriptです。一つの`GameSession`がField、Event、Battleを通して正規stateを所有し、SceneはCommandを送って描画用snapshotを受け取ります。Phaserは描画、入力、scene transitionだけを担当し、React StrictModeで再mountされた場合も古いPhaser instanceとsubscriptionを破棄します。
 
-描画は320×192の内部解像度を基準に、画面幅に応じて2倍・3倍の整数倍率で拡大します。`web/public/assets/game/backgrounds/` のオリジナルpixel-art背景と、`web/src/game/art/` が生成するpalette統一済みspriteを組み合わせ、field、event、side-view battleで同じSignal Ruinsの画調を維持しています。
+描画座標は320×192を基準にしつつ、Canvasは960×576の高解像度backing bufferで描画します。背景はnearest-neighborのpixel-artを維持し、文字は3倍解像度のtextureで描くため、field、event、battleのUIは画面拡大時にも低解像度化しません。`web/src/game/art/` のcharacter spriteは32×40pxを基準にした16-bit密度で、Miraは勇者、Solは戦士、Luneは魔法使いとして装備とsilhouetteを描き分けています。それぞれ上下左右の向きと移動中の交互歩行frameを持ちます。Signal Ruinsは640×384の広域fieldを主人公追従cameraで移動し、石壁と崖で区切られた広い一本道に沿って画面外のworldが連続してscrollします。
 
 ## Build / Runtime
 

@@ -1,0 +1,46 @@
+{
+	"manifestVersion": 1,
+	"contentVersion": "data-driven-world-1",
+	"entryPoint": {
+		"mapId": "signal-ruins",
+		"entranceId": "signal-ruins-entry"
+	},
+	"documents": {
+		"maps": ["maps/signal-ruins.json", "maps/relay-camp.json"],
+		"events": [
+			"events/signal-ruins-contact.json",
+			"events/relay-camp-council.json",
+			"events/relay-camp-reaction.json",
+			"events/relay-camp-return.json"
+		]
+	},
+	"assets": [
+		{
+			"id": "signal-ruins-world-v2",
+			"type": "image",
+			"url": "/assets/game/backgrounds/signal-ruins-world-v2.png"
+		},
+		{
+			"id": "signal-ruins-field",
+			"type": "image",
+			"url": "/assets/game/backgrounds/signal-ruins-field.png"
+		},
+		{
+			"id": "signal-ruins-battle",
+			"type": "image",
+			"url": "/assets/game/backgrounds/signal-ruins-battle.png"
+		},
+		{
+			"id": "relay-camp-field",
+			"type": "image",
+			"url": "/assets/game/backgrounds/relay-camp-field.png"
+		}
+	],
+	"actors": [
+		{ "id": "mira", "displayName": "Mira", "textureKey": "field-mira" },
+		{ "id": "sol", "displayName": "Sol", "textureKey": "field-sol" },
+		{ "id": "lune", "displayName": "Lune", "textureKey": "field-lune" },
+		{ "id": "narrator", "displayName": "Narration", "textureKey": "field-mira" }
+	],
+	"encounterIds": ["signal-ruins-encounter", "signal-ruins-roamers"]
+}

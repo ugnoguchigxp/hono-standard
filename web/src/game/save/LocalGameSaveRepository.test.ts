@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createInitialGameState } from "@shared/game";
+import { validateGameContentDirectory } from "../../../../scripts/validate-game-content";
 import {
 	gameSaveStorageKey,
 	LocalGameSaveRepository,
 	type GameSaveStorage,
 } from "./LocalGameSaveRepository";
+
+const registry = validateGameContentDirectory();
 
 class MemoryStorage implements GameSaveStorage {
 	readonly values = new Map<string, string>();
@@ -38,7 +41,7 @@ describe("LocalGameSaveRepository", () => {
 		);
 		expect(repository.load()).toEqual({ status: "empty" });
 
-		const state = createInitialGameState({ rngSeed: 42 });
+		const state = createInitialGameState({ registry, rngSeed: 42 });
 		const written = repository.save(state, "2026-08-10T00:00:00.000Z");
 		expect(written).toMatchObject({ ok: true });
 		expect(repository.load()).toMatchObject({
@@ -54,7 +57,7 @@ describe("LocalGameSaveRepository", () => {
 		const storage = new MemoryStorage();
 		const playerA = new LocalGameSaveRepository(storage, "a@example.com");
 		const playerB = new LocalGameSaveRepository(storage, "b@example.com");
-		playerA.save(createInitialGameState());
+		playerA.save(createInitialGameState({ registry }));
 		expect(playerA.load().status).toBe("ready");
 		expect(playerB.load()).toEqual({ status: "empty" });
 	});
@@ -79,7 +82,7 @@ describe("LocalGameSaveRepository", () => {
 			status: "error",
 			message: "Browser storage is unavailable.",
 		});
-		expect(repository.save(createInitialGameState())).toEqual({
+		expect(repository.save(createInitialGameState({ registry }))).toEqual({
 			ok: false,
 			message: "Could not write the local autosave.",
 		});
@@ -90,7 +93,10 @@ describe("LocalGameSaveRepository", () => {
 			"player@example.com",
 		);
 		expect(
-			invalidRepository.save(createInitialGameState(), "invalid-date"),
+			invalidRepository.save(
+				createInitialGameState({ registry }),
+				"invalid-date",
+			),
 		).toEqual({
 			ok: false,
 			message: "Could not write the local autosave.",

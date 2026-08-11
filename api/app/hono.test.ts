@@ -204,5 +204,63 @@ describe("hono app entry", () => {
 			const body = await res.json();
 			expect(body.message).toBe("Something blew up");
 		});
+
+		it("uses HTTP status and generic fallbacks for empty HTTP exceptions", async () => {
+			const runtime = await getAppRuntime();
+			const fallbackApp = createApp(runtime);
+			fallbackApp.post("/api/status-fallback", () => {
+				const error = new HTTPException(500, {
+					res: new Response("", { status: 500, statusText: "Status fallback" }),
+				});
+				error.message = "Exception fallback";
+				throw error;
+			});
+			fallbackApp.post("/api/generic-fallback", () => {
+				const error = new HTTPException(500, {
+					res: new Response("", { status: 500, statusText: "" }),
+				});
+				error.message = "";
+				throw error;
+			});
+			vi.spyOn(console, "error").mockImplementation(() => {});
+
+			await expect(
+				(
+					await fallbackApp.request("http://localhost:5173/api/status-fallback", {
+						method: "POST",
+						headers: { Origin: "http://localhost:5173" },
+					})
+				).json(),
+			).resolves.toEqual({ message: "Exception fallback" });
+			await expect(
+				(
+					await fallbackApp.request("http://localhost:5173/api/generic-fallback", {
+						method: "POST",
+						headers: { Origin: "http://localhost:5173" },
+					})
+				).json(),
+			).resolves.toEqual({ message: "Request failed" });
+		});
+
+		it("hides production error details", async () => {
+			const runtime = await getAppRuntime();
+			const productionApp = createApp({
+				...runtime,
+				env: { ...runtime.env, nodeEnv: "production" },
+			});
+			productionApp.post("/api/production-error", () => {
+				throw new Error("private detail");
+			});
+			vi.spyOn(console, "error").mockImplementation(() => {});
+
+			await expect(
+				(
+					await productionApp.request("http://localhost:5173/api/production-error", {
+						method: "POST",
+						headers: { Origin: "http://localhost:5173" },
+					})
+				).json(),
+			).resolves.toEqual({ message: "Internal server error" });
+		});
 	});
 });

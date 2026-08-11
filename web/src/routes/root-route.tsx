@@ -5,6 +5,7 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import {
+	Box,
 	Database,
 	Gamepad2,
 	Home,
@@ -56,6 +57,14 @@ function AppLayout({ immersive }: { immersive: boolean }) {
 							>
 								<Gamepad2 className="icon" />
 								Game
+							</Link>
+							<Link
+								to="/games/action-3d"
+								className="menu-link"
+								activeProps={{ className: "menu-link active" }}
+							>
+								<Box className="icon" />
+								Action3D
 							</Link>
 							<Link
 								to="/login"

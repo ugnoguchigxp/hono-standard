@@ -1,0 +1,88 @@
+{
+	"id": "relay-camp-council",
+	"title": "A Direction for the Relay",
+	"presentation": {
+		"backgroundAssetId": "relay-camp-field",
+		"actors": [
+			{ "actorId": "mira", "slot": "left", "expression": "resolved" },
+			{ "actorId": "sol", "slot": "center", "expression": "restless" },
+			{ "actorId": "lune", "slot": "right", "expression": "watchful" }
+		]
+	},
+	"entryNodeId": "mira-proposal",
+	"nodes": [
+		{
+			"id": "mira-proposal",
+			"type": "line",
+			"speakerId": "mira",
+			"text": "We secure the relay first. A safe signal can guide everyone behind us.",
+			"nextNodeId": "sol-proposal"
+		},
+		{
+			"id": "sol-proposal",
+			"type": "line",
+			"speakerId": "sol",
+			"text": "Or we follow the echo now, before whoever sent it disappears.",
+			"nextNodeId": "choose-relay-plan"
+		},
+		{
+			"id": "choose-relay-plan",
+			"type": "choice",
+			"prompt": "Whose plan should the group follow?",
+			"choices": [
+				{
+					"id": "support-mira",
+					"text": "Secure the relay with Mira.",
+					"nextNodeId": "set-mira-plan"
+				},
+				{
+					"id": "support-sol",
+					"text": "Follow the echo with Sol.",
+					"nextNodeId": "set-sol-plan"
+				}
+			]
+		},
+		{
+			"id": "set-mira-plan",
+			"type": "flag.set",
+			"flagId": "relay-plan-mira",
+			"value": true,
+			"nextNodeId": "mira-trusts-choice"
+		},
+		{
+			"id": "mira-trusts-choice",
+			"type": "relationship.adjust",
+			"relationshipId": "mira:sol",
+			"amount": 10,
+			"nextNodeId": "mark-council-complete"
+		},
+		{
+			"id": "set-sol-plan",
+			"type": "flag.set",
+			"flagId": "relay-plan-sol",
+			"value": true,
+			"nextNodeId": "sol-pushes-back"
+		},
+		{
+			"id": "sol-pushes-back",
+			"type": "relationship.adjust",
+			"relationshipId": "mira:sol",
+			"amount": -5,
+			"nextNodeId": "mark-council-complete"
+		},
+		{
+			"id": "mark-council-complete",
+			"type": "flag.set",
+			"flagId": "relay-council-complete",
+			"value": true,
+			"nextNodeId": "relay-checkpoint"
+		},
+		{
+			"id": "relay-checkpoint",
+			"type": "checkpoint.reach",
+			"checkpointId": "relay-center",
+			"nextNodeId": "council-end"
+		},
+		{ "id": "council-end", "type": "end" }
+	]
+}

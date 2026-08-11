@@ -12,5 +12,8 @@ describe("route access", () => {
 		expect(requiresSessionCheck("/game")).toBe(true);
 		expect(requiresSessionCheck("/game/settings")).toBe(true);
 		expect(requiresSessionCheck("/games")).toBe(false);
+		expect(requiresSessionCheck("/games/action-3d")).toBe(true);
+		expect(requiresSessionCheck("/games/action-3d/settings")).toBe(true);
+		expect(requiresSessionCheck("/games/action-3dness")).toBe(false);
 	});
 });

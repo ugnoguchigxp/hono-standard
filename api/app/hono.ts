@@ -149,6 +149,7 @@ export function createApp(deps: AppDeps) {
 	app.route("/api", createApiRoutes(deps));
 
 	app.use("/assets/*", serveStatic({ root: "./dist-web" }));
+	app.use("/game-content/*", serveStatic({ root: "./dist-web" }));
 	app.use("/favicon.ico", serveStatic({ root: "./dist-web" }));
 	app.get("*", async (c) => {
 		if (c.req.path.startsWith("/api/")) {

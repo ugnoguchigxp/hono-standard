@@ -5,6 +5,7 @@ import {
 	type GameSaveEnvelope,
 	type GameState,
 } from "@shared/game";
+import { GAME_IDS } from "@shared/game-platform";
 
 export type GameSaveStorage = Pick<
 	Storage,
@@ -23,7 +24,7 @@ export type LocalGameSaveWriteResult =
 export const gameSaveStorageKey = (playerId: string): string => {
 	const normalized = playerId.trim().toLowerCase();
 	if (!normalized) throw new Error("Player ID must not be empty.");
-	return `echoes-at-dawn:autosave:${encodeURIComponent(normalized)}`;
+	return `${GAME_IDS.rpg2d}:autosave:${encodeURIComponent(normalized)}`;
 };
 
 export class LocalGameSaveRepository {

@@ -4,6 +4,18 @@ type VerifyStep = {
 };
 
 const steps: VerifyStep[] = [
+	{
+		label: "action3d-content",
+		command: ["bun", "run", "validate:action3d-content"],
+	},
+	{
+		label: "game-content",
+		command: ["bun", "run", "validate:game-content"],
+	},
+	{
+		label: "domain-boundaries",
+		command: ["bun", "run", "validate:domain-boundaries"],
+	},
 	{ label: "typecheck", command: ["bun", "run", "typecheck"] },
 	{ label: "lint", command: ["bun", "run", "lint"] },
 	{ label: "format", command: ["bun", "run", "format:check"] },
