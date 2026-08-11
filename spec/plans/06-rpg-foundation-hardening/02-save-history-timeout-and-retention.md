@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 | Planned |
+| 状態 | Complete (2026-08-12) |
 | 優先度 | P1: save durability and bounded operations |
 | 主対象 | `shared/game/save-codec`、`shared/schemas`、`web/src/game/save`、Field Menu、save API、Drizzle migration |
 | 依存 | Delivery 01 conflict contract |
@@ -161,3 +161,11 @@ migration testでは空DB、現行`game_saves`だけを持つDB、上限を超�
 - 不採用: unlimited slot/history。UIとDB容量がboundedにならない。
 - 不採用: localStorageだけで履歴を持つ。別browser復旧とserver corruption診断を満たさない。
 - 不採用: Event/Battle中quick save。再開可能なpresentation/runtime stateの契約が未定義である。
+
+## 14. 実装結果
+
+- save format v2、autosave＋manual 3 slot、v1 read migration、10秒timeout＋同一idempotency keyでの1回retryを実装した。
+- `game_save_versions` migration、autosave 10世代、manual 3世代、operation 7日/128件、SHA-256 checksum、corrupt currentからのverified recoveryを実装した。
+- 旧schemaのtemporary SQLite copyへ`0003`を適用し、revision/JSON backfill、integrity、foreign keyを検証した。
+- 135 autosave integrationとbrowser E2Eで保持上限、history restore、manual slotからautosaveへの復元を確認した。
+- 残存risk: remote object storageへの実backupはdeployment責任であり、手順とRPO/RTOはrunbookへ記載した。

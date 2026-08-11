@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 | Planned |
+| 状態 | Complete (2026-08-12) |
 | 優先度 | P0: progress loss prevention |
 | 主対象 | `shared/schemas`、`shared/game`、`web/src/game/save`、`web/src/game/GameLauncher.tsx`、`api/modules/game-save` |
 | 依存 | 現行server-backed autosave、Game State compatibility validation |
@@ -178,3 +178,11 @@ bunx playwright test tests/e2e/smoke.spec.ts --grep "separate browser|conflict|c
 - 不採用: `savedAt`が新しい方を自動採用する。端末時計とoffline期間を信頼できず、進行量も判断できない。
 - 不採用: last-write-winsを維持して警告だけ出す。警告表示前に進行を失うため目的を満たさない。
 - 延期: active browser lease/WebSocket lock。明示的conflict解決で安全性を確保し、同時play頻度を計測してから追加する。
+
+## 13. 実装結果
+
+- protocol v2で`intent`、`baseRevision`、`expectedRevision`、idempotency keyを必須化し、v1 writeとautomatic 409 rebaseを削除した。
+- browser/cloud候補を保持した明示的resolution UIとNew Game置換確認を実装した。
+- server起動時に同一content artifactからregistryを構築し、保存前にmaster参照を検証する。
+- unit/service/route testに加え、二browser context E2Eでstale writeが自動上書きされないことを確認した。
+- 残存risk: active browser leaseは未導入だが、同時編集は安全な明示的conflictへ収束する。

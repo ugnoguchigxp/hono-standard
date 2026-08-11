@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 | Planned |
+| 状態 | Complete (2026-08-12) |
 | 優先度 | P1: bounded frame work |
 | 主対象 | battle domain clock、`BattleScene` coordinator/HUD、GameSession subscription、performance gate |
 | 依存 | Delivery 03 Session/Scene decomposition |
@@ -150,3 +150,11 @@ bun run build:web
 - 不採用: variable render deltaをそのままruleへ渡す。refresh rateとtab復帰で結果が変わる。
 - 不採用: compatibility assertionをproductionだけ無効化する。性能のために破損検出を失う。
 - 延期: Web Worker。現在のstate transfer量と複雑性に対する必要性をbaselineが示していない。
+
+## 13. 実装結果
+
+- 50ms fixed logical tick、1 frame最大5 step、250ms catch-up clamp、pause/reset accumulatorを実装した。
+- 30/60/120fpsの同一入力で同じlogical結果になるunit testと、大delta/停止時に上限を超えないtestを追加した。
+- HUDはtext valueとgauge signatureが変わった場合だけ更新し、React側もmap/mode/battle phase selectorのみ購読する。
+- clampはGame Stateを含まないbounded diagnostic counterとして記録する。
+- 残存risk: 実時間p95はhost schedulingの影響を受けるため、release gateは決定的step/dirty contractを必須、browser値を補助証跡とする。

@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 | Planned |
+| 状態 | Complete (2026-08-12) |
 | 優先度 | P1: repeatable release evidence |
 | 主対象 | component/E2E test、diagnostics、visual regression、bundle budget、runbook |
 | 依存 | Delivery 01–04 |
@@ -209,3 +209,13 @@ bun run build:web
 - 不採用: flaky testへのretry追加だけで完了とする。focus契約のraceを残す。
 - 不採用: Game State全文をerror reportへ添付する。privacyとpayload上限を満たさない。
 - 不採用: monitoring vendorが未選定であることを理由にdiagnostics contractを延期する。
+
+## 17. 実装結果
+
+- strict diagnostics schema、2KB上限、PII/save/story/dialogue禁止field test、100件browser collector、fatal correlation ID、development overlayを実装した。
+- runtime/content/save/conflict/timeout/recovery/listener/catch-up経路をsafe diagnostic eventへ接続した。
+- Field、manual save、compact high-contrast reduced-motion、Event、Boss commandの5 visual baselineを追加した。
+- manifest dependency graphを合算するbundle gateを`verify`へ接続した。実測はinitial 253,393 bytes gzip、2D route追加14,533 bytes、Phaser追加378,637 bytesで、各260/25/390KB予算内だった。
+- SQLite WAL backup、migration rehearsal、slot限定diagnosis、history restore、content rollback、RPO/RTOを[runbook](../../runbooks/rpg-save-recovery.md)へ記載した。
+- focus testは20回連続成功。全unit/component 495件、Statements 97.34% / Branches 95.11% / Functions 96.78% / Lines 97.65%、全16 E2Eと5 baselineはretryなしで成功した。
+- 残存risk: production diagnostics transport/vendorはnon-goalのため未選定。collector failureはgameplayへ逆流しない。

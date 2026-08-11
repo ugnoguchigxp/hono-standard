@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 | Planned |
+| 状態 | Complete (2026-08-12) |
 | 優先度 | P1: behavior-preserving maintainability |
 | 主対象 | `shared/game/game-session.ts`、`shared/game/content/registry.ts`、`web/src/game/scenes` |
 | 依存 | Delivery 01のsave/conflict state契約 |
@@ -168,3 +168,11 @@ bunx playwright test tests/e2e/smoke.spec.ts --grep "field map|choices|checkpoin
 - 不採用: `GameSession`の全面rewrite。save/command互換性を同時に検証できない。
 - 不採用: generic event busへの置換。型付きCommand/Event契約とlistener commit問題を解決せず、追跡を難しくする。
 - 不採用: Phaser SceneごとにGame Stateを分ける。単一Session authorityを壊す。
+
+## 14. 実装結果
+
+- `GameSession`を212行のauthority facadeとclone/compatibility/reducer moduleへ分離し、selector subscriptionとlistener failure isolationを追加した。
+- contentのruntime registryとcondition評価をvalidation builderから分離し、public importとissue contractを維持した。
+- `BattleScene`を488行のcoordinatorへ縮小し、input controller、dirty HUD、animation director、pure layout、fixed clockを独立module化した。
+- Scene shutdown時のInputManager、content abort、Phaser runtime/audio/canvas破棄契約を維持し、StrictMode/component/E2Eで回帰を確認した。
+- 残存risk: Field/Event/Menuは現状500–700行だが、個別lifecycle ownerが明確で1,000行超の責務集中は残っていない。

@@ -146,6 +146,7 @@ test("field map renders its registered background instead of Phaser's missing te
 	).toBeVisible();
 	await page.getByLabel("Screen scale").selectOption("3");
 	await page.getByLabel("High contrast").check();
+	await page.getByLabel("Reduce flashes and battle motion").check();
 	await page.getByLabel("Mute all audio").check();
 	await expect(fieldCanvas).toHaveAttribute("data-audio-muted", "true");
 	await page.getByRole("button", { name: "Close settings" }).click();
@@ -154,6 +155,15 @@ test("field map renders its registered background instead of Phaser's missing te
 	expect(hostBounds).not.toBeNull();
 	expect(hostBounds?.width ?? 376).toBeLessThanOrEqual(375);
 	await expect(page.getByRole("button", { name: "Up" })).toBeVisible();
+	await expect(page.locator(".game-frame")).toHaveScreenshot(
+		"rpg-compact-high-contrast-reduced-motion.png",
+		{
+			animations: "disabled",
+			mask: [page.locator(".game-debug-overlay")],
+			maskColor: "#07101d",
+			maxDiffPixelRatio: 0.03,
+		},
+	);
 });
 
 test("a failed on-demand map transition resumes after runtime Retry", async ({
@@ -348,11 +358,34 @@ test("game choices and the second-world checkpoint survive a browser reload", as
 	await page.waitForTimeout(500);
 	await pressGameKey("Enter", 180);
 	await expect(gameHost).toHaveAttribute("data-game-mode", "event");
+	await expect(page.locator(".game-frame")).toHaveScreenshot(
+		"rpg-event-dialogue.png",
+		{
+			animations: "disabled",
+			mask: [page.locator(".game-debug-overlay")],
+			maskColor: "#07101d",
+			maxDiffPixelRatio: 0.03,
+		},
+	);
 	for (let advance = 0; advance < 3; advance += 1) {
 		if ((await gameHost.getAttribute("data-game-mode")) === "battle") break;
 		await pressGameKey("Enter", 250);
 	}
 	await expect(gameHost).toHaveAttribute("data-game-mode", "battle");
+	await expect(gameHost).toHaveAttribute(
+		"data-battle-phase",
+		"awaiting-command",
+		{ timeout: 10_000 },
+	);
+	await expect(page.locator(".game-frame")).toHaveScreenshot(
+		"rpg-boss-command.png",
+		{
+			animations: "disabled",
+			mask: [page.locator(".game-debug-overlay")],
+			maskColor: "#07101d",
+			maxDiffPixelRatio: 0.03,
+		},
+	);
 
 	await finishBattle();
 	await expect(page.getByRole("status")).toHaveText("Checkpoint saved.");

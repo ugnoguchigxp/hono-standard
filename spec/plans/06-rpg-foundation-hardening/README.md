@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Stage | Stage 6: Server-backed Session hardening / Stage 8: Production Readiness |
-| 状態 | Planned |
+| 状態 | Complete (2026-08-12) |
 | 対象 | `shared/game`、`web/src/game`、`api/modules/game-save`、品質gate |
 | 前提 | Stage 1–5 Complete、Stage 6 server-backed autosave実装済み |
 
@@ -95,3 +95,7 @@ Delivery 02と03はDelivery 01完了後に独立して着手できる。Delivery
 各Deliveryは`Planned`、`In Progress`、`Complete`のいずれかを記載する。`Complete`へ変更する際は、実装結果、migration結果、品質gate出力、残存riskを同じ文書へ追記する。途中で設計判断を変更した場合は、Acceptance Criteriaを弱めず、理由と互換性への影響を記録する。
 
 各Deliveryは`game-concept.md` 20.1の必須項目を満たし、player value、原則、Scope、UX、schema、ownership、migration、failure/recovery/security、test、performance/accessibility、rollout、未決事項を実装開始前に確定する。
+
+## 8. 実装結果
+
+Delivery 01–05を完了した。最終的な変更点、migration rehearsal、test・coverage・E2E・bundle evidence、残存riskは[実装証跡](./implementation-evidence.md)に集約した。

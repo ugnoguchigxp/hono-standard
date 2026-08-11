@@ -183,6 +183,8 @@ test("manual slot history can be restored and promoted to autosave", async ({
 		"rpg-signal-ruins-field.png",
 		{
 			animations: "disabled",
+			mask: [page.locator(".game-debug-overlay")],
+			maskColor: "#07101d",
 			maxDiffPixelRatio: 0.03,
 		},
 	);
@@ -194,7 +196,12 @@ test("manual slot history can be restored and promoted to autosave", async ({
 	await pressGameKey(page, "Enter");
 	await expect(page.locator(".game-frame")).toHaveScreenshot(
 		"rpg-manual-save-menu.png",
-		{ animations: "disabled", maxDiffPixelRatio: 0.01 },
+		{
+			animations: "disabled",
+			mask: [page.locator(".game-debug-overlay")],
+			maskColor: "#07101d",
+			maxDiffPixelRatio: 0.01,
+		},
 	);
 
 	for (let save = 0; save < 2; save += 1) {
