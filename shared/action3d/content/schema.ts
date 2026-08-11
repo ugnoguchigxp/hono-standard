@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const ACTION3D_MANIFEST_VERSION = 2 as const;
+export const ACTION3D_MANIFEST_VERSION = 3 as const;
 export const action3dStableIdSchema = z
 	.string()
 	.min(1)
@@ -8,6 +8,7 @@ export const action3dStableIdSchema = z
 	.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "IDs must be stable kebab-case values.");
 
 const finite = z.number().finite();
+const positiveDuration = z.number().int().positive().max(60_000);
 export const action3dVectorSchema = z
 	.object({ x: finite, y: finite, z: finite })
 	.strict();
@@ -180,11 +181,17 @@ const surfaceSchema = z
 const enemySchema = z
 	.object({
 		id: action3dStableIdSchema,
+		archetypeId: action3dStableIdSchema,
 		position: action3dVectorSchema,
-		maxHp: z.number().int().positive().max(10_000),
-		moveSpeed: finite.positive().max(20),
-		attackRange: finite.positive().max(10),
-		damage: z.number().int().positive().max(1_000),
+	})
+	.strict();
+const worldExitSchema = z
+	.object({
+		id: action3dStableIdSchema,
+		bounds: boundsSchema,
+		destinationWorldId: action3dStableIdSchema,
+		destinationSpawnId: action3dStableIdSchema,
+		requiresWorldClear: z.boolean().default(true),
 	})
 	.strict();
 const landmarkSchema = z
@@ -208,10 +215,94 @@ export const action3dWorldSchema = z
 		surfaces: z.array(surfaceSchema).max(128).default([]),
 		enemies: z.array(enemySchema).min(1).max(32),
 		landmarks: z.array(landmarkSchema).max(128),
+		exits: z.array(worldExitSchema).max(16).default([]),
+		finalWorld: z.boolean().default(true),
 		victoryCheckpointId: action3dStableIdSchema,
 		playerModelAssetId: action3dStableIdSchema,
-		enemyModelAssetId: action3dStableIdSchema,
 	})
+	.strict();
+
+const playerTuningSchema = z
+	.object({
+		maxHp: z.number().int().positive().max(10_000),
+		maxStamina: finite.positive().max(10_000),
+		walkSpeed: finite.positive().max(50),
+		runSpeed: finite.positive().max(50),
+		dodgeSpeed: finite.positive().max(50),
+		jumpSpeed: finite.positive().max(50),
+		gravity: finite.positive().max(100),
+		acceleration: finite.positive().max(500),
+		deceleration: finite.positive().max(500),
+		staminaSprintPerSecond: finite.nonnegative().max(1_000),
+		staminaRecoveryPerSecond: finite.nonnegative().max(1_000),
+		dodgeStaminaCost: finite.nonnegative().max(1_000),
+		dodgeDurationMs: positiveDuration,
+		dodgeCooldownMs: positiveDuration,
+		dodgeInvulnerableMs: positiveDuration,
+		playerRadius: finite.positive().max(10),
+		maxStepHeight: finite.nonnegative().max(10),
+		maxSlopeDegrees: finite.nonnegative().max(89),
+	})
+	.strict();
+
+const attackDefinitionSchema = z
+	.object({
+		id: action3dStableIdSchema,
+		kind: z.enum(["light", "heavy"]),
+		animationId: action3dStableIdSchema,
+		damage: z.number().int().positive().max(10_000),
+		range: finite.positive().max(20),
+		arcRadians: finite.positive().max(Math.PI * 2),
+		startupMs: z.number().int().nonnegative().max(60_000),
+		activeMs: positiveDuration,
+		recoveryMs: z.number().int().nonnegative().max(60_000),
+		queueOpensMs: z.number().int().nonnegative().max(60_000),
+		staminaCost: finite.nonnegative().max(1_000),
+		nextAttackId: action3dStableIdSchema.nullable(),
+	})
+	.strict();
+
+const enemyAttackSchema = z
+	.object({
+		damage: z.number().int().positive().max(1_000),
+		range: finite.positive().max(30),
+		windupMs: positiveDuration,
+		recoveryMs: positiveDuration,
+		cooldownMs: positiveDuration,
+		projectileSpeed: finite.positive().max(100).optional(),
+		projectileRadius: finite.positive().max(10).optional(),
+		projectileLifetimeMs: positiveDuration.optional(),
+	})
+	.strict();
+
+const enemyArchetypeSchema = z
+	.object({
+		id: action3dStableIdSchema,
+		behavior: z.enum(["melee", "ranged"]),
+		modelAssetId: action3dStableIdSchema,
+		maxHp: z.number().int().positive().max(10_000),
+		moveSpeed: finite.positive().max(20),
+		perceptionRange: finite.positive().max(100),
+		preferredRange: finite.positive().max(30),
+		attack: enemyAttackSchema,
+	})
+	.strict()
+	.superRefine((value, context) => {
+		if (
+			value.behavior === "ranged" &&
+			(value.attack.projectileSpeed === undefined ||
+				value.attack.projectileRadius === undefined ||
+				value.attack.projectileLifetimeMs === undefined)
+		)
+			context.addIssue({
+				code: "custom",
+				path: ["attack"],
+				message: "Ranged archetypes require projectile tuning.",
+			});
+	});
+
+const worldDocumentSchema = z
+	.object({ id: action3dStableIdSchema, path: z.string().min(1).max(240) })
 	.strict();
 
 export const action3dManifestSchema = z
@@ -225,8 +316,11 @@ export const action3dManifestSchema = z
 			})
 			.strict(),
 		documents: z
-			.object({ worlds: z.array(z.string().min(1)).min(1).max(32) })
+			.object({ worlds: z.array(worldDocumentSchema).min(1).max(32) })
 			.strict(),
+		playerTuning: playerTuningSchema,
+		attacks: z.array(attackDefinitionSchema).min(1).max(64),
+		enemyArchetypes: z.array(enemyArchetypeSchema).min(1).max(64),
 		assets: z.array(action3dAssetSchema).min(1).max(128),
 	})
 	.strict();
@@ -234,3 +328,6 @@ export const action3dManifestSchema = z
 export type Action3dManifest = z.infer<typeof action3dManifestSchema>;
 export type Action3dWorld = z.infer<typeof action3dWorldSchema>;
 export type Action3dAsset = z.infer<typeof action3dAssetSchema>;
+export type Action3dPlayerTuning = z.infer<typeof playerTuningSchema>;
+export type Action3dAttackDefinition = z.infer<typeof attackDefinitionSchema>;
+export type Action3dEnemyArchetype = z.infer<typeof enemyArchetypeSchema>;

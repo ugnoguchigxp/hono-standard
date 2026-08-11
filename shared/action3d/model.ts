@@ -1,9 +1,14 @@
-export const ACTION3D_STATE_SCHEMA_VERSION = 1 as const;
+export const ACTION3D_STATE_SCHEMA_VERSION = 2 as const;
 export const ACTION3D_CONTENT_VERSION = "action3d-field-lab-1" as const;
 export const ACTION3D_FIXED_STEP_MS = 1000 / 60;
 
 export type Action3dVector3 = { x: number; y: number; z: number };
-export type Action3dPhase = "playing" | "paused" | "victory" | "defeat";
+export type Action3dPhase =
+	| "playing"
+	| "paused"
+	| "transitioning"
+	| "victory"
+	| "defeat";
 export type PlayerLocomotion =
 	| "idle"
 	| "walk"
@@ -29,6 +34,7 @@ export type Action3dInput = {
 	sprint: boolean;
 	dodge: boolean;
 	attack: boolean;
+	heavyAttack: boolean;
 	lockOn: boolean;
 	pause: boolean;
 };
@@ -41,6 +47,7 @@ export const EMPTY_ACTION3D_INPUT: Readonly<Action3dInput> = Object.freeze({
 	sprint: false,
 	dodge: false,
 	attack: false,
+	heavyAttack: false,
 	lockOn: false,
 	pause: false,
 });
@@ -55,6 +62,7 @@ export type Action3dPlayerState = {
 	maxStamina: number;
 	grounded: boolean;
 	locomotion: PlayerLocomotion;
+	activeAttackId: string | null;
 	attackElapsedMs: number | null;
 	attackComboIndex: number;
 	attackQueued: boolean;
@@ -67,6 +75,7 @@ export type Action3dPlayerState = {
 
 export type Action3dEnemyState = {
 	id: string;
+	archetypeId: string;
 	position: Action3dVector3;
 	yaw: number;
 	hp: number;
@@ -74,6 +83,22 @@ export type Action3dEnemyState = {
 	state: EnemyActionState;
 	stateElapsedMs: number;
 	attackCooldownMs: number;
+};
+
+export type Action3dProjectileState = {
+	id: string;
+	ownerEnemyId: string;
+	position: Action3dVector3;
+	velocity: Action3dVector3;
+	radius: number;
+	damage: number;
+	lifetimeMs: number;
+};
+
+export type Action3dPendingTransition = {
+	exitId: string;
+	worldId: string;
+	spawnId: string;
 };
 
 export type Action3dState = {
@@ -85,12 +110,23 @@ export type Action3dState = {
 	location: { worldId: string; spawnId: string; checkpointId: string };
 	player: Action3dPlayerState;
 	enemies: Action3dEnemyState[];
+	projectiles: Action3dProjectileState[];
+	completedWorldIds: string[];
+	pendingTransition: Action3dPendingTransition | null;
 };
 
 export type Action3dEvent =
 	| { type: "enemy-hit"; enemyId: string; damage: number }
 	| { type: "player-hit"; enemyId: string; damage: number }
 	| { type: "enemy-defeated"; enemyId: string }
+	| { type: "projectile-spawned"; projectileId: string; enemyId: string }
+	| {
+			type: "world-transition-requested";
+			exitId: string;
+			worldId: string;
+			spawnId: string;
+	  }
+	| { type: "world-entered"; worldId: string; spawnId: string }
 	| { type: "victory"; checkpointId: string }
 	| { type: "defeat" };
 
