@@ -30,6 +30,14 @@ const steps: VerifyStep[] = [
 	{ label: "test", command: ["bun", "run", "test"] },
 	{ label: "coverage", command: ["bun", "run", "test:coverage"] },
 	{ label: "build", command: ["bun", "run", "build"] },
+	{
+		label: "rpg-bundle",
+		command: ["bun", "run", "validate:rpg-bundle"],
+	},
+	{
+		label: "action3d-bundle",
+		command: ["bun", "run", "validate:action3d-bundle"],
+	},
 ];
 
 const decoder = new TextDecoder();

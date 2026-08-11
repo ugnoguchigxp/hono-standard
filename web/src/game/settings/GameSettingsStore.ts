@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from "react";
 import {
+	type GameAction,
 	gameActions,
 	isSupportedKeyboardBinding,
 	supportedKeyboardBindings,
-	type GameAction,
 } from "../input/game-actions";
 
 export type GameTextSpeed = "slow" | "normal" | "fast" | "instant";

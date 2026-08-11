@@ -161,7 +161,9 @@ describe("GameScreen", () => {
 		expect(await screen.findByRole("alert")).toHaveTextContent(
 			"A required image failed.",
 		);
-		expect(screen.getByRole("button", { name: "Retry" })).toHaveFocus();
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "Retry" })).toHaveFocus(),
+		);
 		fireEvent.click(screen.getByRole("button", { name: "Back to launcher" }));
 		expect(onExit).toHaveBeenCalledOnce();
 		fireEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -202,8 +204,10 @@ describe("GameScreen", () => {
 			"The downloaded world is invalid.",
 		);
 		expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-		expect(
-			screen.getByRole("button", { name: "Back to launcher" }),
-		).toHaveFocus();
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Back to launcher" }),
+			).toHaveFocus(),
+		);
 	});
 });

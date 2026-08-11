@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A3 |
-| 状態 | Planned |
+| 状態 | Implemented (2026-08-11) |
 | 主対象 | Action3D world/content schema、content loader、Session、Babylon world presenter、save |
 | 依存 | Delivery A3-2完了、runtime/asset lifecycle seam |
 

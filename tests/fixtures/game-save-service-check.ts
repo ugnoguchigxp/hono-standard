@@ -1,12 +1,12 @@
-import { createInitialGameState, createGameSave } from "../../shared/game";
-import { GAME_IDS } from "../../shared/game-platform";
 import { readAppEnv } from "../../api/app/env";
 import { runSqliteMigrations } from "../../api/db/migrate-sqlite";
-import { createSqliteDbRuntime } from "../../api/db/sqlite";
 import { users } from "../../api/db/schema";
-import { GameSaveService } from "../../api/modules/game-save/game-save.service";
+import { createSqliteDbRuntime } from "../../api/db/sqlite";
 import { HttpError } from "../../api/modules/auth/errors";
+import { GameSaveService } from "../../api/modules/game-save/game-save.service";
 import { validateGameContentDirectory } from "../../scripts/validate-game-content";
+import { createGameSave, createInitialGameState } from "../../shared/game";
+import { GAME_IDS } from "../../shared/game-platform";
 
 const databaseUrl = process.env.GAME_SAVE_TEST_DATABASE;
 if (!databaseUrl) throw new Error("GAME_SAVE_TEST_DATABASE is required.");
@@ -42,8 +42,8 @@ try {
 			.run(),
 	);
 
-	const service = new GameSaveService(runtime.client);
 	const registry = validateGameContentDirectory();
+	const service = new GameSaveService(runtime.client, registry);
 	const state = createInitialGameState({ registry, rngSeed: 7 });
 	const firstSave = createGameSave(state, "2026-08-11T00:00:00.000Z");
 	const base = {
@@ -58,6 +58,8 @@ try {
 	const created = await service.save({
 		...base,
 		save: firstSave,
+		intent: "advance",
+		baseRevision: null,
 		expectedRevision: null,
 		idempotencyKey: "c3c3c3c3-c3c3-43c3-c3c3-c3c3c3c3c3c3",
 	});
@@ -68,6 +70,8 @@ try {
 	const replayed = await service.save({
 		...base,
 		save: firstSave,
+		intent: "advance",
+		baseRevision: null,
 		expectedRevision: null,
 		idempotencyKey: "c3c3c3c3-c3c3-43c3-c3c3-c3c3c3c3c3c3",
 	});
@@ -80,6 +84,8 @@ try {
 		await service.save({
 			...base,
 			save: firstSave,
+			intent: "advance",
+			baseRevision: null,
 			expectedRevision: null,
 			idempotencyKey: "d4d4d4d4-d4d4-44d4-d4d4-d4d4d4d4d4d4",
 		});
@@ -96,6 +102,8 @@ try {
 	const updated = await service.save({
 		...base,
 		save: secondSave,
+		intent: "advance",
+		baseRevision: 1,
 		expectedRevision: 1,
 		idempotencyKey: "e5e5e5e5-e5e5-45e5-e5e5-e5e5e5e5e5e5",
 	});

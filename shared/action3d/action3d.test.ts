@@ -10,6 +10,7 @@ import {
 	type Action3dState,
 	createAction3dCheckpointState,
 	createAction3dSave,
+	createAction3dWorldState,
 	createInitialAction3dState,
 	decodeAction3dSave,
 	EMPTY_ACTION3D_INPUT,
@@ -57,10 +58,37 @@ const runnerAsset = {
 	},
 };
 const manifest = {
-	manifestVersion: 2 as const,
+	manifestVersion: 3 as const,
 	contentVersion: "test-field-1",
 	entryPoint: { worldId: "test-world", spawnId: "entry" },
-	documents: { worlds: ["worlds/test.json"] },
+	documents: { worlds: [{ id: "test-world", path: "worlds/test.json" }] },
+	playerTuning: {
+		maxHp: 100,
+		maxStamina: 100,
+		walkSpeed: 4.2,
+		runSpeed: 7,
+		dodgeSpeed: 10,
+		jumpSpeed: 8.5,
+		gravity: 24,
+		acceleration: 42,
+		deceleration: 55,
+		staminaSprintPerSecond: 24,
+		staminaRecoveryPerSecond: 18,
+		dodgeStaminaCost: 20,
+		dodgeDurationMs: 400,
+		dodgeCooldownMs: 800,
+		dodgeInvulnerableMs: 260,
+		playerRadius: 0.42,
+		maxStepHeight: 0.45,
+		maxSlopeDegrees: 45,
+	},
+	attacks: [
+		{ id: "light-1", kind: "light" as const, animationId: "attack-1", damage: 40, range: 2.35, arcRadians: 2.7, startupMs: 150, activeMs: 160, recoveryMs: 210, queueOpensMs: 220, staminaCost: 0, nextAttackId: "light-2" },
+		{ id: "light-2", kind: "light" as const, animationId: "attack-2", damage: 45, range: 2.35, arcRadians: 2.7, startupMs: 150, activeMs: 160, recoveryMs: 210, queueOpensMs: 220, staminaCost: 0, nextAttackId: "light-3" },
+		{ id: "light-3", kind: "light" as const, animationId: "attack-3", damage: 50, range: 2.35, arcRadians: 2.7, startupMs: 150, activeMs: 160, recoveryMs: 210, queueOpensMs: 220, staminaCost: 0, nextAttackId: null },
+		{ id: "heavy-slash", kind: "heavy" as const, animationId: "attack-3", damage: 80, range: 2.8, arcRadians: 2.2, startupMs: 360, activeMs: 180, recoveryMs: 460, queueOpensMs: 1000, staminaCost: 35, nextAttackId: null },
+	],
+	enemyArchetypes: [{ id: "sentinel-melee", behavior: "melee" as const, modelAssetId: "runner", maxHp: 80, moveSpeed: 2, perceptionRange: 15, preferredRange: 1.36, staggerMs: 280, attack: { damage: 15, range: 1.7, windupMs: 440, recoveryMs: 600, cooldownMs: 650 } }],
 	assets: [runnerAsset],
 };
 const world = {
@@ -71,11 +99,12 @@ const world = {
 	spawnPoints: [{ id: "entry", position: { x: 0, y: 0, z: -4 }, yaw: 0, checkpointId: "south" }],
 	checkpoints: [{ id: "south", position: { x: 0, y: 0, z: -4 }, yaw: 0 }, { id: "north", position: { x: 0, y: 0, z: 8 }, yaw: Math.PI }],
 	colliders: [{ id: "block", bounds: { minX: 2, maxX: 3, minZ: -5, maxZ: -3 } }],
-	enemies: [{ id: "sentinel", position: { x: 0, y: 0, z: 2 }, maxHp: 80, moveSpeed: 2, attackRange: 1.7, damage: 15 }],
+	enemies: [{ id: "sentinel", archetypeId: "sentinel-melee", position: { x: 0, y: 0, z: 2 } }],
 	landmarks: [{ id: "beacon", kind: "crystal" as const, position: { x: 0, y: 0, z: 8 }, scale: 1 }],
+	exits: [],
+	finalWorld: true,
 	victoryCheckpointId: "north",
 	playerModelAssetId: "runner",
-	enemyModelAssetId: "runner",
 };
 const registry = (): Action3dContentRegistry => parseAction3dBundle({ manifest, worlds: [{ path: "worlds/test.json", data: world }], assetExists: () => true, assetSize: () => 10 });
 const registryWithSurfaces = (
@@ -102,7 +131,7 @@ describe("Action3D content registry", () => {
 	});
 
 	it("reports schema, loaded-document, duplicate, reference, asset, and bounds failures", () => {
-		expect(() => parseAction3dManifest({ ...manifest, manifestVersion: 3 })).toThrow(Action3dContentError);
+		expect(() => parseAction3dManifest({ ...manifest, manifestVersion: 4 })).toThrow(Action3dContentError);
 		expect(() => parseAction3dBundle({ manifest, worlds: [] })).toThrow(/validation failed/);
 		const invalidManifest = { ...manifest, entryPoint: { worldId: "missing", spawnId: "missing" }, assets: [...manifest.assets, manifest.assets[0]] };
 		const invalidWorld = {
@@ -301,13 +330,16 @@ describe("Action3D content registry", () => {
 				{ ...world.landmarks[0], position: { x: 20, y: 0, z: 8 } },
 			],
 			victoryCheckpointId: "missing-victory",
-			enemyModelAssetId: "missing-enemy-model",
 		};
 		try {
 			parseAction3dBundle({
 				manifest: {
 					...manifest,
 					entryPoint: { worldId: "test-world", spawnId: "missing-entry" },
+					enemyArchetypes: manifest.enemyArchetypes.map((archetype) => ({
+						...archetype,
+						modelAssetId: "missing-enemy-model",
+					})),
 				},
 				worlds: [{ path: "worlds/test.json", data: invalidWorld }],
 			});
@@ -570,9 +602,269 @@ describe("Action3D simulation", () => {
 		expect(result.state.enemies[0].state).toBe("chase");
 		result.state.enemies.push({ ...result.state.enemies[0], id: "unknown", state: "idle" });
 		result = stepAction3dState(result.state, content, input(), 16);
-		expect(result.state.enemies.find((enemy) => enemy.id === "unknown")?.state).toBe("idle");
+		expect(result.state.enemies.find((enemy) => enemy.id === "unknown")?.state).toBe("chase");
 		const stable = createAction3dCheckpointState(result.state, content);
 		expect(stable.phase).toBe("playing");
+	});
+
+	it("executes a definition-driven heavy slash", () => {
+		const content = registry();
+		const state = createInitialAction3dState(content);
+		state.player.position = { x: 0, y: 0, z: 0 };
+		state.enemies[0].position = { x: 0, y: 0, z: 2 };
+		const result = stepAction3dState(
+			state,
+			content,
+			input({ heavyAttack: true }),
+			360,
+		);
+		expect(result.state.player.stamina).toBe(65);
+		expect(result.state.player.activeAttackId).toBe("heavy-slash");
+		expect(result.events).toContainEqual({
+			type: "enemy-hit",
+			enemyId: "sentinel",
+			damage: 80,
+		});
+	});
+
+	it("spawns deterministic ranged projectiles in domain state", () => {
+		const rangedManifest = {
+			...manifest,
+			enemyArchetypes: [
+				...manifest.enemyArchetypes,
+				{
+					id: "sentinel-ranger",
+					behavior: "ranged" as const,
+					modelAssetId: "runner",
+					maxHp: 60,
+					moveSpeed: 1,
+					perceptionRange: 20,
+					preferredRange: 7,
+					staggerMs: 280,
+					attack: { damage: 8, range: 12, windupMs: 700, recoveryMs: 500, cooldownMs: 900, projectileSpeed: 8, projectileRadius: 0.35, projectileLifetimeMs: 2200 },
+				},
+			],
+		};
+		const content = parseAction3dBundle({
+			manifest: rangedManifest,
+			worlds: [{
+				path: "worlds/test.json",
+				data: { ...world, enemies: [{ ...world.enemies[0], archetypeId: "sentinel-ranger" }] },
+			}],
+		});
+		let state = createInitialAction3dState(content);
+		state = stepAction3dState(state, content, input(), 16).state;
+		const result = stepAction3dState(state, content, input(), 700);
+		expect(result.events).toContainEqual({
+			type: "projectile-spawned",
+			projectileId: expect.stringContaining("sentinel"),
+			enemyId: "sentinel",
+		});
+		expect(result.state.projectiles).toHaveLength(1);
+		expect(result.state.projectiles[0].velocity.z).toBeLessThan(0);
+	});
+
+	it("expires, blocks, applies, and evades ranged projectiles deterministically", () => {
+		const content = registry();
+		let state = createInitialAction3dState(content);
+		state.enemies[0].position = { x: 9, y: 0, z: 9 };
+		state.projectiles = [
+			{
+				id: "expired",
+				ownerEnemyId: "sentinel",
+				position: { x: -5, y: 0, z: -4 },
+				velocity: { x: 0, y: 0, z: 0 },
+				radius: 0.1,
+				damage: 1,
+				lifetimeMs: 1,
+			},
+			{
+				id: "blocked",
+				ownerEnemyId: "sentinel",
+				position: { x: 1.5, y: 0, z: -4 },
+				velocity: { x: 10, y: 0, z: 0 },
+				radius: 0.1,
+				damage: 2,
+				lifetimeMs: 500,
+			},
+			{
+				id: "hit",
+				ownerEnemyId: "sentinel",
+				position: { ...state.player.position },
+				velocity: { x: 0, y: 0, z: 0 },
+				radius: 0.1,
+				damage: 7,
+				lifetimeMs: 500,
+			},
+			{
+				id: "survivor",
+				ownerEnemyId: "sentinel",
+				position: { x: -5, y: 0, z: -4 },
+				velocity: { x: 1, y: 0, z: 0 },
+				radius: 0.1,
+				damage: 3,
+				lifetimeMs: 500,
+			},
+		];
+		let result = stepAction3dState(state, content, input(), 100);
+		expect(result.state.player.hp).toBe(93);
+		expect(result.events).toContainEqual({
+			type: "player-hit",
+			enemyId: "sentinel",
+			damage: 7,
+		});
+		expect(result.state.projectiles.map((projectile) => projectile.id)).toEqual([
+			"survivor",
+		]);
+
+		state = createInitialAction3dState(content);
+		state.enemies[0].position = { x: 9, y: 0, z: 9 };
+		state.player.invulnerableMs = 200;
+		state.projectiles = [
+			{
+				id: "evaded",
+				ownerEnemyId: "sentinel",
+				position: { ...state.player.position },
+				velocity: { x: 0, y: 0, z: 0 },
+				radius: 0.1,
+				damage: 7,
+				lifetimeMs: 500,
+			},
+		];
+		result = stepAction3dState(state, content, input(), 100);
+		expect(result.state.player.hp).toBe(100);
+		expect(result.state.projectiles).toEqual([]);
+		expect(result.events).not.toContainEqual(
+			expect.objectContaining({ type: "player-hit" }),
+		);
+	});
+
+	it("covers ranged spacing, terminal combo, optional exits, and stable completion", () => {
+		const rangedArchetype = {
+			id: "sentinel-ranger",
+			behavior: "ranged" as const,
+			modelAssetId: "runner",
+			maxHp: 60,
+			moveSpeed: 1,
+			perceptionRange: 20,
+			preferredRange: 7,
+			staggerMs: 280,
+			attack: {
+				damage: 8,
+				range: 12,
+				windupMs: 700,
+				recoveryMs: 500,
+				cooldownMs: 900,
+				projectileSpeed: 8,
+				projectileRadius: 0.35,
+				projectileLifetimeMs: 2200,
+			},
+		};
+		const ranged = parseAction3dBundle({
+			manifest: {
+				...manifest,
+				enemyArchetypes: [...manifest.enemyArchetypes, rangedArchetype],
+			},
+			worlds: [
+				{
+					path: "worlds/test.json",
+					data: {
+						...world,
+						enemies: [
+							{ ...world.enemies[0], archetypeId: "sentinel-ranger" },
+						],
+					},
+				},
+			],
+		});
+		let state = createInitialAction3dState(ranged);
+		state.player.position = { x: 0, y: 0, z: 0 };
+		state.enemies[0].position = { x: 0, y: 0, z: 3 };
+		state.enemies[0].attackCooldownMs = 500;
+		const retreatZ = state.enemies[0].position.z;
+		state = stepAction3dState(state, ranged, input(), 100).state;
+		expect(state.enemies[0].position.z).toBeGreaterThan(retreatZ);
+
+		const content = registry();
+		state = createInitialAction3dState(content);
+		state.player.activeAttackId = "light-3";
+		state.player.attackElapsedMs = 300;
+		state.player.attackComboIndex = 2;
+		state = stepAction3dState(state, content, input({ attack: true }), 10).state;
+		expect(state.player.attackQueued).toBe(false);
+
+		state = createInitialAction3dState(content);
+		state.enemies[0].state = "defeated";
+		state.enemies[0].hp = 0;
+		state.completedWorldIds = [world.id];
+		state = stepAction3dState(state, content, input(), 16).state;
+		expect(state.completedWorldIds).toEqual([world.id]);
+
+		const optionalExit = parseAction3dBundle({
+			manifest,
+			worlds: [
+				{
+					path: "worlds/test.json",
+					data: {
+						...world,
+						finalWorld: false,
+						exits: [
+							{
+								id: "return-loop",
+								bounds: {
+									minX: -1,
+									maxX: 1,
+									minZ: -5,
+									maxZ: -3,
+								},
+								destinationWorldId: "test-world",
+								destinationSpawnId: "entry",
+								requiresWorldClear: false,
+							},
+						],
+					},
+				},
+			],
+		});
+		state = createInitialAction3dState(optionalExit);
+		state = stepAction3dState(state, optionalExit, input(), 16).state;
+		expect(state.phase).toBe("transitioning");
+		expect(() =>
+			createAction3dWorldState(state, optionalExit, "test-world", "missing"),
+		).toThrow("Unknown Action3D spawn");
+	});
+
+	it("requests and commits a second-world transition", () => {
+		const causeway = {
+			...world,
+			id: "causeway",
+			displayName: "Causeway",
+			spawnPoints: [{ id: "arrival", position: { x: 0, y: 0, z: -4 }, yaw: 0, checkpointId: "south" }],
+			exits: [],
+			finalWorld: true,
+		};
+		const content = parseAction3dBundle({
+			manifest: {
+				...manifest,
+				documents: { worlds: [
+					{ id: "test-world", path: "worlds/test.json" },
+					{ id: "causeway", path: "worlds/causeway.json" },
+				] },
+			},
+			worlds: [
+				{ path: "worlds/test.json", data: { ...world, finalWorld: false, exits: [{ id: "north-path", bounds: { minX: -1, maxX: 1, minZ: -5, maxZ: -3 }, destinationWorldId: "causeway", destinationSpawnId: "arrival", requiresWorldClear: true }] } },
+				{ path: "worlds/causeway.json", data: causeway },
+			],
+		});
+		const state = createInitialAction3dState(content);
+		state.enemies[0].state = "defeated";
+		state.enemies[0].hp = 0;
+		const requested = stepAction3dState(state, content, input(), 16);
+		expect(requested.state.phase).toBe("transitioning");
+		expect(requested.events).toContainEqual({ type: "world-transition-requested", exitId: "north-path", worldId: "causeway", spawnId: "arrival" });
+		const entered = createAction3dWorldState(requested.state, content, "causeway", "arrival");
+		expect(entered).toMatchObject({ phase: "playing", location: { worldId: "causeway", spawnId: "arrival" } });
+		expect(entered.projectiles).toEqual([]);
 	});
 });
 
@@ -582,6 +874,11 @@ describe("Action3D session and save", () => {
 		const initial = createInitialAction3dState(content);
 		const session = new Action3dSession(initial, content);
 		expect(session.advance(ACTION3D_FIXED_STEP_MS / 2, input()).state.revision).toBe(0);
+		const frame = session.advanceFrame(0, input());
+		expect(frame.state).toBe(session.getFrameState());
+		const detached = session.getState();
+		detached.player.position.x = 999;
+		expect(session.getFrameState().player.position.x).not.toBe(999);
 		expect(session.tickIdle(ACTION3D_FIXED_STEP_MS).state.revision).toBe(1);
 		expect(session.advance(1000, input()).state.revision).toBeLessThanOrEqual(9);
 		session.setPaused(true);
@@ -600,7 +897,7 @@ describe("Action3D session and save", () => {
 		const state = createInitialAction3dState(registry());
 		const save = createAction3dSave(state, "2026-08-11T00:00:00.000Z");
 		expect(save.gameId).toBe(ACTION3D_GAME_ID);
-		expect(decodeAction3dSave(JSON.stringify(save))).toEqual({ status: "ready", save });
+		expect(decodeAction3dSave(JSON.stringify(save))).toEqual({ status: "ready", save, migrated: false });
 		expect(decodeAction3dSave("not-json")).toMatchObject({ status: "corrupt" });
 		expect(decodeAction3dSave("null")).toMatchObject({ status: "corrupt" });
 		expect(decodeAction3dSave(JSON.stringify({ ...save, formatVersion: 8 }))).toMatchObject({ status: "unsupported", formatVersion: 8 });
@@ -609,5 +906,36 @@ describe("Action3D session and save", () => {
 		expect(decodeAction3dSave(JSON.stringify({ ...save, state: { ...state, schemaVersion: "future" } }))).toMatchObject({ status: "corrupt" });
 		expect(decodeAction3dSave(JSON.stringify({ ...save, savedAt: "bad" }))).toMatchObject({ status: "corrupt" });
 		expect(() => createAction3dSave(state, "bad")).toThrow();
+	});
+
+	it("migrates a V1 checkpoint to state V2 without mutating the payload", () => {
+		const current = createInitialAction3dState(registry());
+		const { activeAttackId: _activeAttackId, ...legacyPlayer } = current.player;
+		const legacyEnemies = current.enemies.map(({ archetypeId: _archetypeId, ...enemy }) => enemy);
+		const legacy = {
+			formatVersion: 1,
+			gameId: ACTION3D_GAME_ID,
+			slotId: "checkpoint",
+			savedAt: "2026-08-11T00:00:00.000Z",
+			state: {
+				schemaVersion: 1,
+				contentVersion: current.contentVersion,
+				revision: current.revision,
+				elapsedMs: current.elapsedMs,
+				phase: current.phase,
+				location: current.location,
+				player: legacyPlayer,
+				enemies: legacyEnemies,
+			},
+		};
+		const serialized = JSON.stringify(legacy);
+		const decoded = decodeAction3dSave(serialized);
+		expect(decoded).toMatchObject({ status: "ready", migrated: true });
+		if (decoded.status === "ready") {
+			expect(decoded.save.state.schemaVersion).toBe(2);
+			expect(decoded.save.state.enemies[0].archetypeId).toBe("sentinel-melee");
+			expect(decoded.save.state.projectiles).toEqual([]);
+		}
+		expect(JSON.parse(serialized)).toEqual(legacy);
 	});
 });

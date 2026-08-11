@@ -1,6 +1,6 @@
 import {
-	ACTION_GAUGE_MAX,
 	type AbilityDefinition,
+	ACTION_GAUGE_MAX,
 	type BattleCombatant,
 	type BattleCommand,
 	type BattleElement,

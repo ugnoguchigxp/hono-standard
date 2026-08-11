@@ -1,14 +1,25 @@
-import type { GameSession, GameState } from "@shared/game";
+import {
+	createGameCorrelationId,
+	type GameSaveSlotId,
+	type GameSession,
+	type GameState,
+} from "@shared/game";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	type BrowserGameRuntimeFactory,
 	useBrowserGameRuntime,
 } from "../game-platform";
 import { GameContentLoader } from "./content/GameContentLoader";
+import { browserGameDiagnostics } from "./diagnostics/BrowserGameDiagnostics";
+import { GameDebugOverlay } from "./diagnostics/GameDebugOverlay";
 import { GameTouchControls } from "./input/GameTouchControls";
 import type { PhaserGameInstance } from "./PhaserGame";
 import { loadPhaserGameFactory } from "./PhaserGameLoader";
 import type { GameRuntimeError } from "./runtime-errors";
+import {
+	type ManualGameSaveRequestDetail,
+	REQUEST_MANUAL_GAME_SAVE_EVENT,
+} from "./save/manual-save-events";
 import { GameSettingsPanel } from "./settings/GameSettingsPanel";
 import { useGameSettings } from "./settings/GameSettingsStore";
 import { OPEN_GAME_SETTINGS_EVENT } from "./settings/settings-events";
@@ -17,11 +28,15 @@ export function GameScreen({
 	session,
 	contentLoader: providedContentLoader,
 	onAutosave,
+	onManualSave,
+	getPendingSaveCount,
 	onExit,
 }: {
 	session: GameSession;
 	contentLoader?: GameContentLoader;
 	onAutosave?: (state: GameState) => void;
+	onManualSave?: (state: GameState, slotId: GameSaveSlotId) => void;
+	getPendingSaveCount?: () => number;
 	onExit: () => void;
 }) {
 	const hostRef = useRef<HTMLDivElement>(null);
@@ -35,6 +50,9 @@ export function GameScreen({
 	const [runtimeError, setRuntimeError] = useState<GameRuntimeError | null>(
 		null,
 	);
+	const [runtimeCorrelationId, setRuntimeCorrelationId] = useState<
+		string | null
+	>(null);
 	const [mapId, setMapId] = useState(session.snapshot().location.mapId);
 	const [gameMode, setGameMode] = useState(session.snapshot().mode);
 	const [battlePhase, setBattlePhase] = useState(
@@ -57,20 +75,51 @@ export function GameScreen({
 	}, []);
 
 	useEffect(() => {
-		return session.subscribe((transition) => {
-			setMapId(transition.state.location.mapId);
-			setGameMode(transition.state.mode);
-			setBattlePhase(transition.state.battle?.phase ?? null);
-			if (
-				onAutosave &&
-				transition.events.some(
-					({ event }) => event.type === "checkpoint.reached",
-				)
-			) {
-				onAutosave(transition.state);
-			}
-		});
+		const unsubscribeUi = session.subscribeSelector(
+			(state) =>
+				[
+					state.location.mapId,
+					state.mode,
+					state.battle?.phase ?? null,
+				] as const,
+			([nextMapId, nextMode, nextBattlePhase]) => {
+				setMapId(nextMapId);
+				setGameMode(nextMode);
+				setBattlePhase(nextBattlePhase);
+			},
+			(left, right) => left.every((value, index) => value === right[index]),
+		);
+		const unsubscribeAutosave = onAutosave
+			? session.subscribe((transition) => {
+					if (
+						transition.events.some(
+							({ event }) => event.type === "checkpoint.reached",
+						)
+					) {
+						onAutosave(transition.state);
+					}
+				})
+			: () => undefined;
+		return () => {
+			unsubscribeUi();
+			unsubscribeAutosave();
+		};
 	}, [onAutosave, session]);
+
+	useEffect(() => {
+		const handleManualSave = (event: Event) => {
+			if (!onManualSave) return;
+			const slotId = (event as CustomEvent<ManualGameSaveRequestDetail>).detail
+				?.slotId;
+			if (slotId) onManualSave(session.snapshot(), slotId);
+		};
+		window.addEventListener(REQUEST_MANUAL_GAME_SAVE_EVENT, handleManualSave);
+		return () =>
+			window.removeEventListener(
+				REQUEST_MANUAL_GAME_SAVE_EVENT,
+				handleManualSave,
+			);
+	}, [onManualSave, session]);
 
 	const createRuntime = useCallback<BrowserGameRuntimeFactory>(() => {
 		let game: PhaserGameInstance | undefined;
@@ -80,22 +129,64 @@ export function GameScreen({
 				const createPhaserGame = await loadPhaserGameFactory();
 				if (signal.aborted) return;
 				game = createPhaserGame(host, session, contentLoader, (error) => {
-					if (!signal.aborted) setRuntimeError(error);
+					if (!signal.aborted) {
+						const correlationId = createGameCorrelationId();
+						browserGameDiagnostics.capture({
+							event: "runtime.error",
+							correlationId,
+							sessionId: session.id,
+							stateRevision: session.revision,
+							mode: session.snapshot().mode,
+							mapId: session.snapshot().location.mapId,
+							code: `runtime.${error.code}`,
+						});
+						setRuntimeCorrelationId(correlationId);
+						setRuntimeError(error);
+					}
+				});
+				browserGameDiagnostics.capture({
+					event: "runtime.start",
+					correlationId: createGameCorrelationId(),
+					sessionId: session.id,
+					stateRevision: session.revision,
+					mode: session.snapshot().mode,
+					mapId: session.snapshot().location.mapId,
 				});
 			},
 			dispose() {
+				if (game) {
+					browserGameDiagnostics.capture({
+						event: "runtime.stop",
+						correlationId: createGameCorrelationId(),
+						sessionId: session.id,
+						stateRevision: session.revision,
+						mode: session.snapshot().mode,
+						mapId: session.snapshot().location.mapId,
+					});
+				}
 				game?.destroy(true);
 			},
 		};
 	}, [contentLoader, runtimeAttempt, session]);
 	const handleRuntimeStartError = useCallback(() => {
+		const correlationId = createGameCorrelationId();
+		browserGameDiagnostics.capture({
+			event: "runtime.error",
+			correlationId,
+			sessionId: session.id,
+			stateRevision: session.revision,
+			mode: session.snapshot().mode,
+			mapId: session.snapshot().location.mapId,
+			code: "runtime.import",
+		});
+		setRuntimeCorrelationId(correlationId);
 		setRuntimeError({
 			code: "asset",
 			assetId: "phaser-runtime",
 			retryable: true,
 			message: "The game runtime could not be loaded.",
 		});
-	}, []);
+	}, [session]);
 	useBrowserGameRuntime({
 		hostRef,
 		createRuntime,
@@ -147,6 +238,9 @@ export function GameScreen({
 								: "World loading failed."}
 						</strong>
 						<p>{runtimeError.message}</p>
+						{runtimeCorrelationId ? (
+							<p>Reference: {runtimeCorrelationId}</p>
+						) : null}
 						<div className="game-runtime-actions">
 							{runtimeError.retryable ? (
 								<button
@@ -154,6 +248,7 @@ export function GameScreen({
 									type="button"
 									onClick={() => {
 										setRuntimeError(null);
+										setRuntimeCorrelationId(null);
 										setRuntimeAttempt((attempt) => attempt + 1);
 									}}
 								>
@@ -172,6 +267,12 @@ export function GameScreen({
 					onClose={() => setSettingsOpen(false)}
 					onToggleFullscreen={toggleFullscreen}
 				/>
+				{import.meta.env.DEV ? (
+					<GameDebugOverlay
+						session={session}
+						getPendingSaveCount={getPendingSaveCount}
+					/>
+				) : null}
 			</div>
 			<div className="game-screen-controls">
 				<p className="game-screen-help">

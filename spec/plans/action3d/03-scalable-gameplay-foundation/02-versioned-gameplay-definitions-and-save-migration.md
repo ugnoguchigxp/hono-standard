@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A3 |
-| 状態 | Planned |
+| 状態 | Implemented (2026-08-11) |
 | 主対象 | `shared/action3d/content`、`shared/action3d/model`、`shared/action3d/save-codec`、Action3D content |
 | 依存 | Delivery A3-1完了、現行simulation golden fixture |
 

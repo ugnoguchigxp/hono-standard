@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A3 |
-| 状態 | Planned |
+| 状態 | Implemented (2026-08-11) |
 | 主対象 | Action3D gameplay definitions、simulation behavior、input、presentation、Aether Courtyard content |
 | 依存 | Delivery A3-2完了、definition/save V2 |
 

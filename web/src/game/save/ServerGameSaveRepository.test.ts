@@ -1,4 +1,3 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	createGameSave,
 	createInitialGameState,
@@ -10,17 +9,18 @@ import type {
 	PutGameSaveResponse,
 	ServerGameSaveRecord,
 } from "@shared/schemas/game-save.schema";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { validateGameContentDirectory } from "../../../../scripts/validate-game-content";
 import { ApiRequestError } from "../../api";
 import {
+	type GameSaveStorage,
 	gameSaveStorageKey,
 	LocalGameSaveRepository,
-	type GameSaveStorage,
 } from "./LocalGameSaveRepository";
 import {
+	type GameSaveRemote,
 	pendingGameSaveStorageKey,
 	ServerGameSaveRepository,
-	type GameSaveRemote,
 } from "./ServerGameSaveRepository";
 
 const registry = validateGameContentDirectory();
@@ -60,6 +60,18 @@ class MemoryRemote implements GameSaveRemote {
 		if (replay) return replay;
 		if ((this.record?.revision ?? null) !== request.expectedRevision) {
 			throw new ApiRequestError(409, "revision conflict");
+		}
+		if (
+			request.intent === "advance" &&
+			request.baseRevision !== request.expectedRevision
+		) {
+			throw new ApiRequestError(409, "invalid advance base");
+		}
+		if (
+			request.intent === "resolve-browser" &&
+			request.baseRevision === request.expectedRevision
+		) {
+			throw new ApiRequestError(409, "missing divergence");
 		}
 		this.record = {
 			revision: (this.record?.revision ?? 0) + 1,
@@ -223,7 +235,9 @@ describe("ServerGameSaveRepository", () => {
 			remote,
 		);
 		expect(await repository.save(stateAt("signal-core", 2))).toMatchObject({
-			ok: false,
+			ok: true,
+			revision: 1,
+			synced: true,
 		});
 		const firstKey = remote.requests[0].idempotencyKey;
 
@@ -237,7 +251,7 @@ describe("ServerGameSaveRepository", () => {
 		expect(remote.requests[1].idempotencyKey).toBe(firstKey);
 	});
 
-	it("rebases once when another browser advances the server revision", async () => {
+	it("surfaces a conflict when another browser advances the server revision", async () => {
 		const storage = new MemoryStorage();
 		const remote = new MemoryRemote();
 		remote.record = record(createGameSave(stateAt("start", 1)), 1);
@@ -251,12 +265,76 @@ describe("ServerGameSaveRepository", () => {
 
 		const result = await repository.save(stateAt("signal-core", 3));
 
-		expect(result).toMatchObject({ ok: true, revision: 3 });
+		expect(result).toMatchObject({ ok: false, status: "conflict" });
+		expect(remote.requests).toHaveLength(1);
+		expect(remote.requests[0].expectedRevision).toBe(1);
+		expect(remote.record?.save.state.location.checkpointId).toBe("other-browser");
+	});
+
+	it("keeps the cloud candidate without writing when the player chooses cloud", async () => {
+		const storage = new MemoryStorage();
+		const remote = new MemoryRemote();
+		remote.record = record(createGameSave(stateAt("start", 1)), 1);
+		const repository = new ServerGameSaveRepository(
+			storage,
+			"player@example.com",
+			remote,
+		);
+		await repository.load();
+		remote.record = record(createGameSave(stateAt("other-browser", 2)), 2);
+		const conflictResult = await repository.save(stateAt("signal-core", 3));
+		if (conflictResult.ok || conflictResult.status !== "conflict") {
+			throw new Error("Expected a cloud save conflict.");
+		}
+
+		const resolved = await repository.resolveConflict(
+			conflictResult.conflict,
+			"cloud",
+		);
+
+		expect(resolved).toMatchObject({
+			status: "ready",
+			save: { state: { location: { checkpointId: "other-browser" } } },
+		});
+		expect(remote.requests).toHaveLength(1);
+		expect(
+			storage.getItem(pendingGameSaveStorageKey("player@example.com")),
+		).toBeNull();
+	});
+
+	it("writes exactly one explicit replacement when the player chooses browser", async () => {
+		const storage = new MemoryStorage();
+		const remote = new MemoryRemote();
+		remote.record = record(createGameSave(stateAt("start", 1)), 1);
+		const repository = new ServerGameSaveRepository(
+			storage,
+			"player@example.com",
+			remote,
+		);
+		await repository.load();
+		remote.record = record(createGameSave(stateAt("other-browser", 2)), 2);
+		const conflictResult = await repository.save(stateAt("signal-core", 3));
+		if (conflictResult.ok || conflictResult.status !== "conflict") {
+			throw new Error("Expected a cloud save conflict.");
+		}
+
+		const resolved = await repository.resolveConflict(
+			conflictResult.conflict,
+			"browser",
+		);
+
+		expect(resolved).toMatchObject({
+			status: "ready",
+			save: { state: { location: { checkpointId: "signal-core" } } },
+		});
 		expect(remote.requests).toHaveLength(2);
-		expect(remote.requests.map((request) => request.expectedRevision)).toEqual([
-			1, 2,
-		]);
-		expect(remote.record?.save.state.location.checkpointId).toBe("signal-core");
+		expect(remote.requests[1]).toMatchObject({
+			protocolVersion: 2,
+			intent: "resolve-browser",
+			baseRevision: 1,
+			expectedRevision: 2,
+		});
+		expect(remote.record?.revision).toBe(3);
 	});
 
 	it("falls back safely for unavailable cloud and corrupt pending metadata", async () => {
@@ -482,9 +560,88 @@ describe("ServerGameSaveRepository", () => {
 			).save(stateAt("signal-core", 1)),
 		).resolves.toEqual({
 			ok: false,
+			status: "rejected",
 			message: "Checkpoint could not be saved locally or to the cloud.",
 			save: undefined,
 			synced: false,
 		});
+	});
+
+	it("bounds a non-responsive cloud request and retries only once", async () => {
+		const load = vi.fn(
+			() => new Promise<GetGameSaveResponse>(() => undefined),
+		);
+		const saveRemote = vi.fn(
+			() => new Promise<PutGameSaveResponse>(() => undefined),
+		);
+		const repository = new ServerGameSaveRepository(
+			new MemoryStorage(),
+			"timeout@example.com",
+			{ load, save: saveRemote },
+			"autosave",
+			5,
+		);
+
+		await expect(repository.load()).resolves.toMatchObject({
+			status: "error",
+			source: "server",
+		});
+		expect(load).toHaveBeenCalledTimes(2);
+		load.mockResolvedValue({ save: null });
+		load.mockClear();
+		await expect(repository.save(stateAt("signal-core", 2))).resolves.toMatchObject(
+			{ ok: false, status: "queued-offline", reason: "timeout" },
+		);
+		expect(load).toHaveBeenCalledOnce();
+		expect(saveRemote).toHaveBeenCalledTimes(2);
+	});
+
+	it("isolates a manual slot and rejects manual saves outside a safe field", async () => {
+		const storage = new MemoryStorage();
+		const remote = new MemoryRemote();
+		const repository = new ServerGameSaveRepository(
+			storage,
+			"manual@example.com",
+			remote,
+			"manual-1",
+		);
+		const state = stateAt("signal-core", 2);
+		await expect(repository.reset(state)).resolves.toMatchObject({
+			ok: true,
+			save: { slotId: "manual-1" },
+		});
+		expect(remote.requests[0].save.slotId).toBe("manual-1");
+		expect(storage.getItem(gameSaveStorageKey("manual@example.com"))).toBeNull();
+		expect(
+			storage.getItem(gameSaveStorageKey("manual@example.com", "manual-1")),
+		).not.toBeNull();
+
+		state.mode = "event";
+		await expect(repository.saveToSlot(state, "manual-2")).resolves.toMatchObject({
+			ok: false,
+			status: "rejected",
+			message: expect.stringContaining("safe field"),
+		});
+	});
+
+	it("surfaces a verified server recovery candidate without overwriting local data", async () => {
+		const storage = new MemoryStorage();
+		const remote = new MemoryRemote();
+		remote.record = {
+			...record(createGameSave(stateAt("signal-core", 2)), 4),
+			recovery: { currentRevision: 7, sourceRevision: 4 },
+		};
+		const result = await new ServerGameSaveRepository(
+			storage,
+			"recovery@example.com",
+			remote,
+		).load();
+		expect(result).toMatchObject({
+			status: "recovery",
+			candidate: {
+				recovery: { currentRevision: 7, sourceRevision: 4 },
+			},
+		});
+		expect(storage.getItem(gameSaveStorageKey("recovery@example.com"))).toBeNull();
 	});
 });

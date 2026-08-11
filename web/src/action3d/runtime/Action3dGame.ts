@@ -1,19 +1,12 @@
 import "@babylonjs/loaders/glTF/2.0/glTFLoader";
-import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
-import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
+import type { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
-import { ImportMeshAsync } from "@babylonjs/core/Loading/sceneLoader";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
-import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
+import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Scene } from "@babylonjs/core/scene";
 import {
-	type Action3dEvent,
 	type Action3dState,
 	createAction3dCheckpointState,
 } from "@shared/action3d";
@@ -27,48 +20,15 @@ import {
 } from "../presentation/animation/Action3dAnimationController";
 import { createBabylonAnimationHandle } from "../presentation/animation/createBabylonAnimationHandle";
 import { getEnemyDefeatPresentation } from "../presentation/combat/EnemyDefeatPresentation";
+import { Action3dAudioBus } from "./Action3dAudioBus";
 import { Action3dInputController } from "./Action3dInputController";
+import { BabylonAssetCache } from "./BabylonAssetCache";
+import { syncBabylonCamera } from "./BabylonCameraRig";
+import {
+	buildBabylonWorld,
+	createAction3dMaterial,
+} from "./BabylonWorldPresenter";
 import type { Action3dRuntimeOptions } from "./types";
-
-const createMaterial = (
-	scene: Scene,
-	name: string,
-	color: Color3,
-	emissive = Color3.Black(),
-) => {
-	const material = new StandardMaterial(name, scene);
-	material.diffuseColor = color;
-	material.emissiveColor = emissive;
-	material.specularColor = new Color3(0.08, 0.12, 0.14);
-	return material;
-};
-
-const cameraCollisionRatio = (
-	from: { x: number; z: number },
-	to: { x: number; z: number },
-	bounds: { minX: number; maxX: number; minZ: number; maxZ: number },
-) => {
-	const padding = 0.35;
-	const dx = to.x - from.x;
-	const dz = to.z - from.z;
-	let near = 0;
-	let far = 1;
-	for (const [origin, delta, min, max] of [
-		[from.x, dx, bounds.minX - padding, bounds.maxX + padding],
-		[from.z, dz, bounds.minZ - padding, bounds.maxZ + padding],
-	] as const) {
-		if (Math.abs(delta) < 0.000_01) {
-			if (origin < min || origin > max) return null;
-			continue;
-		}
-		const first = (min - origin) / delta;
-		const second = (max - origin) / delta;
-		near = Math.max(near, Math.min(first, second));
-		far = Math.min(far, Math.max(first, second));
-		if (near > far) return null;
-	}
-	return near >= 0 && near <= 1 ? near : null;
-};
 
 export class Action3dGame implements BrowserGameRuntime {
 	private engine: Engine | null = null;
@@ -78,9 +38,11 @@ export class Action3dGame implements BrowserGameRuntime {
 	private playerRoot: TransformNode | null = null;
 	private camera: FreeCamera | null = null;
 	private attackEffect: Mesh | null = null;
+	private assetCache: BabylonAssetCache | null = null;
+	private readonly projectileMeshes = new Map<string, Mesh>();
 	private resizeObserver: ResizeObserver | null = null;
-	private readonly enemyRoots = new Map<string, TransformNode>();
-	private readonly enemyFallbackMeshes = new Map<string, Mesh[]>();
+	private enemyRoots = new Map<string, TransformNode>();
+	private enemyFallbackMeshes = new Map<string, Mesh[]>();
 	private readonly enemyAnimationControllers = new Map<
 		string,
 		Action3dAnimationController
@@ -96,7 +58,7 @@ export class Action3dGame implements BrowserGameRuntime {
 	private disposed = false;
 	private hiddenPaused = false;
 	private cameraShakeMs = 0;
-	private audioContext: AudioContext | null = null;
+	private readonly audioBus = new Action3dAudioBus();
 	private lowFpsSamples = 0;
 	private qualityReduced = false;
 	private lastDrawCallTotal = 0;
@@ -150,6 +112,7 @@ export class Action3dGame implements BrowserGameRuntime {
 				1.2 / Math.min(window.devicePixelRatio || 1, 1.5),
 			);
 			this.scene = new Scene(this.engine);
+			this.assetCache = new BabylonAssetCache(this.scene);
 			this.scene.clearColor = new Color4(0.025, 0.06, 0.1, 1);
 			this.scene.fogMode = Scene.FOGMODE_EXP2;
 			this.scene.fogDensity = 0.012;
@@ -158,10 +121,7 @@ export class Action3dGame implements BrowserGameRuntime {
 				this.pointerLocked = locked;
 			});
 			this.buildWorld(this.scene);
-			await Promise.all([
-				this.buildPlayer(this.scene),
-				this.buildEnemies(this.scene),
-			]);
+			await Promise.all([this.buildPlayer(this.scene), this.buildEnemies()]);
 			if (signal.aborted || this.disposed) return;
 			this.engine.runRenderLoop(this.renderFrame);
 			this.resizeObserver = new ResizeObserver(this.onResize);
@@ -186,258 +146,35 @@ export class Action3dGame implements BrowserGameRuntime {
 	private buildWorld(scene: Scene): void {
 		const state = this.options.session.getState();
 		const world = this.options.session.content.getWorld(state.location.worldId);
-		const groundMaterial = createMaterial(
-			scene,
-			"CourtyardStone",
-			new Color3(0.12, 0.23, 0.25),
-		);
-		const ground = MeshBuilder.CreateGround(
-			"Courtyard",
-			{
-				width: world.bounds.maxX - world.bounds.minX,
-				height: world.bounds.maxZ - world.bounds.minZ,
-				subdivisions: 2,
-			},
-			scene,
-		);
-		ground.material = groundMaterial;
-		for (const surface of world.surfaces) {
-			const width = surface.bounds.maxX - surface.bounds.minX;
-			const depth = surface.bounds.maxZ - surface.bounds.minZ;
-			const mesh = MeshBuilder.CreateGround(
-				`${surface.id}-surface`,
-				{ width, height: depth, subdivisions: 1, updatable: true },
-				scene,
-			);
-			const positions = mesh.getVerticesData(VertexBuffer.PositionKind);
-			if (positions) {
-				for (let index = 0; index < positions.length; index += 3) {
-					const local =
-						surface.axis === "x" ? positions[index] : positions[index + 2];
-					const span = surface.axis === "x" ? width : depth;
-					const progress = Math.min(1, Math.max(0, local / span + 0.5));
-					positions[index + 1] =
-						surface.fromHeight +
-						(surface.toHeight - surface.fromHeight) * progress +
-						0.01;
-				}
-				mesh.updateVerticesData(VertexBuffer.PositionKind, positions);
-			}
-			mesh.position.set(
-				(surface.bounds.minX + surface.bounds.maxX) / 2,
-				0,
-				(surface.bounds.minZ + surface.bounds.maxZ) / 2,
-			);
-			mesh.material = groundMaterial;
-		}
-		const ruinMaterial = createMaterial(
-			scene,
-			"Ruins",
-			new Color3(0.18, 0.3, 0.31),
-		);
-		for (const collider of world.colliders) {
-			const width = collider.bounds.maxX - collider.bounds.minX;
-			const depth = collider.bounds.maxZ - collider.bounds.minZ;
-			const ruin = MeshBuilder.CreateBox(
-				collider.id,
-				{ width, height: 2.5, depth },
-				scene,
-			);
-			ruin.position.set(
-				(collider.bounds.minX + collider.bounds.maxX) / 2,
-				1.25,
-				(collider.bounds.minZ + collider.bounds.maxZ) / 2,
-			);
-			ruin.material = ruinMaterial;
-		}
-		const edgeMaterial = createMaterial(
-			scene,
-			"FieldEdge",
-			new Color3(0.04, 0.12, 0.14),
-			new Color3(0.01, 0.08, 0.08),
-		);
-		for (const [name, x, z, width, depth] of [
-			["NorthEdge", 0, world.bounds.maxZ, 36, 0.35],
-			["SouthEdge", 0, world.bounds.minZ, 36, 0.35],
-			["WestEdge", world.bounds.minX, 0, 0.35, 36],
-			["EastEdge", world.bounds.maxX, 0, 0.35, 36],
-		] as const) {
-			const edge = MeshBuilder.CreateBox(
-				name,
-				{ width, height: 1.2, depth },
-				scene,
-			);
-			edge.position.set(x, 0.6, z);
-			edge.material = edgeMaterial;
-		}
-		const crystalMaterial = createMaterial(
-			scene,
-			"BeaconCrystal",
-			new Color3(0.12, 0.72, 0.7),
-			new Color3(0.04, 0.35, 0.34),
-		);
-		const woodMaterial = createMaterial(
-			scene,
-			"TreeTrunk",
-			new Color3(0.23, 0.15, 0.09),
-		);
-		const leafMaterial = createMaterial(
-			scene,
-			"TreeCrown",
-			new Color3(0.08, 0.34, 0.24),
-		);
-		for (const landmark of world.landmarks) {
-			const root = new TransformNode(landmark.id, scene);
-			root.position.set(
-				landmark.position.x,
-				landmark.position.y,
-				landmark.position.z,
-			);
-			root.scaling.setAll(landmark.scale);
-			if (landmark.kind === "crystal") {
-				const mesh = MeshBuilder.CreatePolyhedron(
-					`${landmark.id}-crystal`,
-					{ type: 1, size: 0.8 },
-					scene,
-				);
-				mesh.parent = root;
-				mesh.position.y = 1.1;
-				mesh.scaling.y = 1.8;
-				mesh.material = crystalMaterial;
-			} else if (landmark.kind === "tree") {
-				const trunk = MeshBuilder.CreateCylinder(
-					`${landmark.id}-trunk`,
-					{ height: 2.5, diameter: 0.45, tessellation: 7 },
-					scene,
-				);
-				trunk.parent = root;
-				trunk.position.y = 1.25;
-				trunk.material = woodMaterial;
-				const crown = MeshBuilder.CreateSphere(
-					`${landmark.id}-crown`,
-					{ diameter: 2.1, segments: 7 },
-					scene,
-				);
-				crown.parent = root;
-				crown.position.y = 2.8;
-				crown.scaling.y = 1.25;
-				crown.material = leafMaterial;
-			} else {
-				const left = MeshBuilder.CreateBox(
-					`${landmark.id}-left`,
-					{ width: 0.55, height: 3.5, depth: 0.75 },
-					scene,
-				);
-				left.parent = root;
-				left.position.set(-1.3, 1.75, 0);
-				left.material = ruinMaterial;
-				const right = left.clone(`${landmark.id}-right`);
-				right.parent = root;
-				right.position.x = 1.3;
-				const top = MeshBuilder.CreateBox(
-					`${landmark.id}-top`,
-					{ width: 3.2, height: 0.55, depth: 0.75 },
-					scene,
-				);
-				top.parent = root;
-				top.position.y = 3.25;
-				top.material = ruinMaterial;
-			}
-		}
-		const enemyMaterial = createMaterial(
-			scene,
-			"SentinelShell",
-			new Color3(0.66, 0.24, 0.17),
-			new Color3(0.11, 0.025, 0.01),
-		);
-		for (const enemy of state.enemies) {
-			const root = new TransformNode(enemy.id, scene);
-			const body = MeshBuilder.CreatePolyhedron(
-				`${enemy.id}-body`,
-				{ type: 2, size: 0.7 },
-				scene,
-			);
-			body.parent = root;
-			body.position.y = 1;
-			body.scaling.y = 1.4;
-			body.material = enemyMaterial;
-			const eye = MeshBuilder.CreateSphere(
-				`${enemy.id}-eye`,
-				{ diameter: 0.22, segments: 6 },
-				scene,
-			);
-			eye.parent = root;
-			eye.position.set(0, 1.15, 0.65);
-			eye.material = crystalMaterial;
-			this.enemyFallbackMeshes.set(enemy.id, [body, eye]);
-			this.enemyRoots.set(enemy.id, root);
-		}
-		this.playerRoot = new TransformNode("PlayerVisualRoot", scene);
-		const attackMaterial = createMaterial(
-			scene,
-			"PlayerAttackTrail",
-			new Color3(0.18, 0.9, 0.94),
-			new Color3(0.08, 0.72, 0.78),
-		);
-		attackMaterial.alpha = 0.72;
-		attackMaterial.disableLighting = true;
-		attackMaterial.backFaceCulling = false;
-		const attackPath = Array.from({ length: 15 }, (_, index) => {
-			const progress = index / 14;
-			const lift = Math.sin(progress * Math.PI);
-			return new Vector3(
-				(progress - 0.5) * 2.64,
-				lift * 0.28,
-				0.72 + lift * 0.12,
-			);
-		});
-		this.attackEffect = MeshBuilder.CreateTube(
-			"PlayerAttackArc",
-			{ path: attackPath, radius: 0.045, tessellation: 7 },
-			scene,
-		);
-		this.attackEffect.parent = this.playerRoot;
-		this.attackEffect.position.y = 0.72;
-		this.attackEffect.material = attackMaterial;
-		this.attackEffect.setEnabled(false);
-		this.camera = new FreeCamera(
-			"ThirdPersonCamera",
-			new Vector3(0, 4, -8),
-			scene,
-		);
-		this.camera.minZ = 0.1;
-		this.camera.fov = 0.9;
-		scene.activeCamera = this.camera;
-		new HemisphericLight(
-			"SkyLight",
-			new Vector3(0.2, 1, 0.1),
-			scene,
-		).intensity = 0.9;
-		const sun = new DirectionalLight(
-			"SunLight",
-			new Vector3(-0.5, -1, 0.45),
-			scene,
-		);
-		sun.position = new Vector3(8, 14, -8);
-		sun.intensity = 1.1;
+		const presentation = buildBabylonWorld(scene, state, world);
+		this.playerRoot = presentation.playerRoot;
+		this.attackEffect = presentation.attackEffect;
+		this.camera = presentation.camera;
+		this.enemyRoots = presentation.enemyRoots;
+		this.enemyFallbackMeshes = presentation.enemyFallbackMeshes;
 	}
 
-	private async buildEnemies(scene: Scene): Promise<void> {
+	private async buildEnemies(): Promise<void> {
 		const state = this.options.session.getState();
-		const world = this.options.session.content.getWorld(state.location.worldId);
-		const asset = this.options.session.content.getAsset(
-			world.enemyModelAssetId,
-		);
-		if (asset.type !== "model")
-			throw new Error(`Action3D asset '${asset.id}' is not a model.`);
 		await Promise.all(
 			state.enemies.map(async (enemy) => {
 				const root = this.enemyRoots.get(enemy.id);
 				if (!root) return;
+				const archetype = this.options.session.content.getEnemyArchetype(
+					enemy.archetypeId,
+				);
+				const asset = this.options.session.content.getAsset(
+					archetype.modelAssetId,
+				);
+				if (asset.type !== "model")
+					throw new Error(`Action3D asset '${asset.id}' is not a model.`);
 				try {
-					const result = await ImportMeshAsync(asset.url, scene);
-					for (const mesh of result.meshes)
-						if (!mesh.parent) mesh.parent = root;
+					const result = await this.assetCache?.instantiate(
+						asset.url,
+						enemy.id,
+					);
+					if (!result) return;
+					for (const node of result.rootNodes) node.parent = root;
 					root.scaling.setAll(asset.model.transform.unitMeters);
 					for (const fallback of this.enemyFallbackMeshes.get(enemy.id) ?? [])
 						fallback.setEnabled(false);
@@ -468,9 +205,9 @@ export class Action3dGame implements BrowserGameRuntime {
 		if (asset.type !== "model")
 			throw new Error(`Action3D asset '${asset.id}' is not a model.`);
 		try {
-			const result = await ImportMeshAsync(asset.url, scene);
-			for (const mesh of result.meshes)
-				if (!mesh.parent) mesh.parent = this.playerRoot;
+			const result = await this.assetCache?.instantiate(asset.url, "player");
+			if (!result) return;
+			for (const node of result.rootNodes) node.parent = this.playerRoot;
 			this.animationController = createAction3dAnimationController(
 				asset,
 				result.animationGroups.map(createBabylonAnimationHandle),
@@ -479,7 +216,7 @@ export class Action3dGame implements BrowserGameRuntime {
 			this.playerGroundOffset = asset.model.transform.groundOffset;
 			this.playerRoot.scaling.setAll(asset.model.transform.unitMeters);
 		} catch {
-			const material = createMaterial(
+			const material = createAction3dMaterial(
 				scene,
 				"FallbackPlayer",
 				new Color3(0.08, 0.58, 0.58),
@@ -511,7 +248,7 @@ export class Action3dGame implements BrowserGameRuntime {
 		)
 			return;
 		const input = this.input.read();
-		const preStepState = this.options.session.getState();
+		const preStepState = this.options.session.getFrameState();
 		const lockTarget = preStepState.enemies.find(
 			(enemy) => enemy.id === preStepState.player.lockOnEnemyId,
 		);
@@ -528,18 +265,20 @@ export class Action3dGame implements BrowserGameRuntime {
 			input.cameraYaw = this.input.cameraYaw;
 		}
 		if (input.pause) {
-			const paused = this.options.session.getState().phase === "paused";
+			const paused = preStepState.phase === "paused";
 			this.options.session.setPaused(!paused);
 			if (!paused && document.pointerLockElement === this.canvas)
 				void document.exitPointerLock();
 		}
 		const deltaMs = Math.min(100, this.engine.getDeltaTime());
-		const result = this.options.session.advance(deltaMs, input);
+		const result = this.options.session.advanceFrame(deltaMs, input);
 		for (const event of result.events) {
 			this.options.onEvent(event);
-			this.playEventSound(event.type);
+			this.audioBus.play(event.type, this.options.isMuted());
 			if (event.type === "enemy-hit") this.cameraShakeMs = 130;
 			if (event.type === "player-hit") this.cameraShakeMs = 220;
+			if (event.type === "world-transition-requested")
+				this.options.onWorldTransition(event.worldId, event.spawnId);
 		}
 		if (
 			!this.victorySaved &&
@@ -563,7 +302,7 @@ export class Action3dGame implements BrowserGameRuntime {
 		this.scene.render();
 		const now = performance.now();
 		if (
-			now - this.lastSnapshotAt >= 120 ||
+			now - this.lastSnapshotAt >= 200 ||
 			result.state.phase !== this.lastPhase
 		) {
 			this.lastSnapshotAt = now;
@@ -584,7 +323,7 @@ export class Action3dGame implements BrowserGameRuntime {
 			this.lastDrawSampleAt = now;
 			this.updateAdaptiveQuality(fps);
 			this.options.onSnapshot({
-				state: result.state,
+				state: this.options.session.getState(),
 				pointerLocked: this.pointerLocked,
 				stats: {
 					fps,
@@ -597,7 +336,7 @@ export class Action3dGame implements BrowserGameRuntime {
 	};
 
 	private syncVisuals(
-		state: Action3dState,
+		state: Readonly<Action3dState>,
 		cameraYaw: number,
 		cameraPitch: number,
 		deltaMs: number,
@@ -639,10 +378,46 @@ export class Action3dGame implements BrowserGameRuntime {
 				root.scaling.y = enemy.state === "windup" ? 1.22 : 1;
 			}
 		}
+		const synchronizeProjectiles =
+			state.projectiles.length > 0 || this.projectileMeshes.size > 0;
+		const activeProjectileIds = synchronizeProjectiles
+			? new Set(state.projectiles.map(({ id }) => id))
+			: null;
+		for (const projectile of state.projectiles) {
+			let mesh = this.projectileMeshes.get(projectile.id);
+			if (!mesh && this.scene) {
+				mesh = MeshBuilder.CreatePolyhedron(
+					projectile.id,
+					{ type: 1, size: projectile.radius * 2.4 },
+					this.scene,
+				);
+				mesh.material = createAction3dMaterial(
+					this.scene,
+					`${projectile.id}-material`,
+					new Color3(0.95, 0.36, 0.1),
+					new Color3(0.72, 0.08, 0.01),
+				);
+				this.projectileMeshes.set(projectile.id, mesh);
+			}
+			mesh?.position.set(
+				projectile.position.x,
+				projectile.position.y,
+				projectile.position.z,
+			);
+		}
+		for (const [id, mesh] of this.projectileMeshes)
+			if (!activeProjectileIds?.has(id)) {
+				mesh.dispose(false, true);
+				this.projectileMeshes.delete(id);
+			}
 		this.canvas?.setAttribute(
 			"data-action3d-defeated-settled",
 			String(settledEnemyCount),
 		);
+		const attackAnimationId = state.player.activeAttackId
+			? this.options.session.content.getAttack(state.player.activeAttackId)
+					.animationId
+			: null;
 		const animationId =
 			state.phase === "defeat"
 				? "defeat"
@@ -656,7 +431,7 @@ export class Action3dGame implements BrowserGameRuntime {
 							: state.player.locomotion === "dodge"
 								? "dodge"
 								: state.player.locomotion === "attack"
-									? `attack-${state.player.attackComboIndex + 1}`
+									? (attackAnimationId ?? "attack-1")
 									: "idle";
 		const clip = this.playerModelAssetId
 			? this.options.session.content.getModelClip(
@@ -667,13 +442,22 @@ export class Action3dGame implements BrowserGameRuntime {
 		if (clip) this.animationController?.select(animationId);
 		this.animationController?.update(deltaMs);
 		if (this.attackEffect) {
-			const attackActive =
-				state.player.attackElapsedMs !== null &&
-				state.player.attackElapsedMs >= 90 &&
-				state.player.attackElapsedMs <= 330;
+			const attack = state.player.activeAttackId
+				? this.options.session.content.getAttack(state.player.activeAttackId)
+				: null;
+			const attackActive = Boolean(
+				attack &&
+					state.player.attackElapsedMs !== null &&
+					state.player.attackElapsedMs >= attack.startupMs &&
+					state.player.attackElapsedMs <= attack.startupMs + attack.activeMs,
+			);
 			this.attackEffect.setEnabled(attackActive);
 			if (attackActive) {
-				const progress = (state.player.attackElapsedMs ?? 0) / 330;
+				const progress = Math.min(
+					1,
+					(state.player.attackElapsedMs ?? 0) /
+						Math.max(1, (attack?.startupMs ?? 0) + (attack?.activeMs ?? 1)),
+				);
 				const combo = state.player.attackComboIndex;
 				const comboTilt = [-0.38, 0.4, Math.PI / 2][combo] ?? 0;
 				this.attackEffect.scaling.set(
@@ -685,44 +469,16 @@ export class Action3dGame implements BrowserGameRuntime {
 					comboTilt + (progress - 0.5) * (combo === 2 ? 0.12 : 0.24);
 			}
 		}
-		const target = new Vector3(
-			state.player.position.x,
-			state.player.position.y + 1.25,
-			state.player.position.z,
-		);
-		const horizontal = Math.cos(cameraPitch) * 6.5;
-		let desired = new Vector3(
-			target.x - Math.sin(cameraYaw) * horizontal,
-			target.y + 2.2 - Math.sin(cameraPitch) * 4,
-			target.z - Math.cos(cameraYaw) * horizontal,
-		);
 		const world = this.options.session.content.getWorld(state.location.worldId);
-		desired.x = Math.min(
-			world.bounds.maxX - 0.2,
-			Math.max(world.bounds.minX + 0.2, desired.x),
+		syncBabylonCamera(
+			this.camera,
+			state,
+			world,
+			cameraYaw,
+			cameraPitch,
+			this.cameraShakeMs,
+			this.reduceMotion,
 		);
-		desired.z = Math.min(
-			world.bounds.maxZ - 0.2,
-			Math.max(world.bounds.minZ + 0.2, desired.z),
-		);
-		let collisionRatio = 1;
-		for (const collider of world.colliders) {
-			const ratio = cameraCollisionRatio(target, desired, collider.bounds);
-			if (ratio !== null) collisionRatio = Math.min(collisionRatio, ratio);
-		}
-		if (collisionRatio < 1)
-			desired = Vector3.Lerp(
-				target,
-				desired,
-				Math.max(0.08, collisionRatio - 0.04),
-			);
-		if (this.cameraShakeMs > 0 && !this.reduceMotion) {
-			const strength = (this.cameraShakeMs / 220) * 0.09;
-			desired.x += (Math.random() - 0.5) * strength;
-			desired.y += (Math.random() - 0.5) * strength;
-		}
-		this.camera.position = Vector3.Lerp(this.camera.position, desired, 0.16);
-		this.camera.setTarget(target);
 	}
 
 	private onResize = () => this.engine?.resize();
@@ -739,38 +495,6 @@ export class Action3dGame implements BrowserGameRuntime {
 			message: "Rendering resolution was reduced to keep the field responsive.",
 			recoverable: true,
 		});
-	}
-	private playEventSound(type: Action3dEvent["type"]) {
-		if (this.options.isMuted() || typeof AudioContext === "undefined") return;
-		try {
-			this.audioContext ??= new AudioContext();
-			if (this.audioContext.state === "suspended")
-				void this.audioContext.resume();
-			const oscillator = this.audioContext.createOscillator();
-			const gain = this.audioContext.createGain();
-			const frequency =
-				type === "enemy-hit"
-					? 210
-					: type === "player-hit"
-						? 92
-						: type === "enemy-defeated"
-							? 340
-							: type === "victory"
-								? 520
-								: 72;
-			oscillator.type = type === "victory" ? "sine" : "triangle";
-			oscillator.frequency.value = frequency;
-			gain.gain.setValueAtTime(0.045, this.audioContext.currentTime);
-			gain.gain.exponentialRampToValueAtTime(
-				0.000_1,
-				this.audioContext.currentTime + 0.12,
-			);
-			oscillator.connect(gain).connect(this.audioContext.destination);
-			oscillator.start();
-			oscillator.stop(this.audioContext.currentTime + 0.12);
-		} catch {
-			// Audio feedback is optional and never changes the simulation result.
-		}
 	}
 	private onContextLost = (event: Event) => {
 		event.preventDefault();
@@ -791,7 +515,8 @@ export class Action3dGame implements BrowserGameRuntime {
 		});
 	private onVisibilityChange = () => {
 		if (document.hidden) {
-			this.hiddenPaused = this.options.session.getState().phase === "playing";
+			this.hiddenPaused =
+				this.options.session.getFrameState().phase === "playing";
 			if (this.hiddenPaused) this.options.session.setPaused(true);
 		} else if (this.hiddenPaused) {
 			this.options.session.setPaused(false);
@@ -820,8 +545,12 @@ export class Action3dGame implements BrowserGameRuntime {
 			controller.dispose();
 		this.enemyAnimationControllers.clear();
 		this.enemyDefeatElapsedMs.clear();
-		if (this.audioContext) void this.audioContext.close();
-		this.audioContext = null;
+		for (const mesh of this.projectileMeshes.values())
+			mesh.dispose(false, true);
+		this.projectileMeshes.clear();
+		this.assetCache?.dispose();
+		this.assetCache = null;
+		this.audioBus.dispose();
 		this.engine?.stopRenderLoop(this.renderFrame);
 		this.scene?.dispose();
 		this.engine?.dispose();

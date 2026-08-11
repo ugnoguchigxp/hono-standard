@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useBrowserGameRuntime } from "../../game-platform";
+import type { Action3dContentLoader } from "../content/Action3dContentLoader";
+import type { Action3dTelemetry } from "../telemetry/Action3dTelemetry";
 import { LazyAction3dRuntime } from "./LazyAction3dRuntime";
 import type { Action3dRuntimeError, Action3dRuntimeSnapshot } from "./types";
 
@@ -25,12 +27,16 @@ export function Action3dGameScreen({
 	onAutosave,
 	onExit,
 	saveStatus,
+	contentLoader,
+	telemetry,
 }: {
 	session: Action3dSession;
 	checkpoint: Action3dState;
 	onAutosave: (state: Action3dState) => void;
 	onExit: () => void;
 	saveStatus: string | null;
+	contentLoader: Action3dContentLoader;
+	telemetry: Action3dTelemetry;
 }) {
 	const hostRef = useRef<HTMLDivElement>(null);
 	const [snapshot, setSnapshot] = useState<Action3dRuntimeSnapshot>({
@@ -53,17 +59,83 @@ export function Action3dGameScreen({
 		mutedRef.current = !mutedRef.current;
 		setMuted(mutedRef.current);
 	};
-	const onEvent = useCallback((event: Action3dEvent) => {
-		if (event.type === "enemy-hit")
-			setLastEvent(`Hit ${event.enemyId} for ${event.damage}.`);
-		else if (event.type === "player-hit")
-			setLastEvent(`${event.enemyId} hit you for ${event.damage}.`);
-		else if (event.type === "enemy-defeated")
-			setLastEvent(`${event.enemyId} defeated.`);
-		else if (event.type === "victory")
-			setLastEvent("North beacon secured. Checkpoint saved.");
-		else setLastEvent("You fell. Retry from the last checkpoint.");
-	}, []);
+	const onEvent = useCallback(
+		(event: Action3dEvent) => {
+			if (event.type === "enemy-hit")
+				setLastEvent(`Hit ${event.enemyId} for ${event.damage}.`);
+			else if (event.type === "player-hit")
+				setLastEvent(`${event.enemyId} hit you for ${event.damage}.`);
+			else if (event.type === "enemy-defeated")
+				setLastEvent(`${event.enemyId} defeated.`);
+			else if (event.type === "victory")
+				setLastEvent("North beacon secured. Checkpoint saved.");
+			else if (event.type === "defeat")
+				setLastEvent("You fell. Retry from the last checkpoint.");
+			else if (event.type === "projectile-spawned")
+				setLastEvent(`${event.enemyId} launched a projectile.`);
+			else if (event.type === "world-transition-requested")
+				setLastEvent("Opening the path to the next field…");
+			else if (event.type === "world-entered")
+				setLastEvent(`Entered ${event.worldId}.`);
+			if (event.type === "defeat")
+				telemetry.capture("action3d_player_defeated", {
+					worldId: session.getState().location.worldId,
+				});
+			if (event.type === "victory")
+				telemetry.capture("action3d_combat_completed", {
+					worldId: session.getState().location.worldId,
+				});
+		},
+		[session, telemetry],
+	);
+	const onWorldTransition = useCallback(
+		(worldId: string, spawnId: string) => {
+			void contentLoader
+				.loadWorld(session.content, worldId)
+				.then(() => {
+					const state = session.enterWorld(worldId, spawnId);
+					telemetry.capture("action3d_world_entered", {
+						contentVersion: state.contentVersion,
+						worldId,
+					});
+					onAutosave(state);
+					setSnapshot((value) => ({ ...value, state }));
+					setRuntimeAttempt((value) => value + 1);
+				})
+				.catch((error: unknown) => {
+					setRuntimeError({
+						code: "startup",
+						message:
+							error instanceof Error
+								? error.message
+								: "The next Action3D world could not load.",
+						recoverable: true,
+					});
+				});
+		},
+		[contentLoader, onAutosave, session, telemetry],
+	);
+	const onWarning = useCallback(
+		(value: Action3dRuntimeError) => {
+			setWarning(value);
+			telemetry.capture(
+				value.code === "asset-load"
+					? "action3d_asset_fallback_used"
+					: "action3d_performance_degraded",
+				{ errorCode: value.code },
+			);
+		},
+		[telemetry],
+	);
+	const onRuntimeError = useCallback(
+		(value: Action3dRuntimeError) => {
+			setRuntimeError(value);
+			telemetry.capture("action3d_runtime_interrupted", {
+				errorCode: value.code,
+			});
+		},
+		[telemetry],
+	);
 	const createRuntime = useMemo(
 		() => () =>
 			new LazyAction3dRuntime({
@@ -72,11 +144,21 @@ export function Action3dGameScreen({
 				onSnapshot: setSnapshot,
 				onEvent,
 				onCheckpoint: onAutosave,
+				onWorldTransition,
 				isMuted,
-				onWarning: setWarning,
-				onError: setRuntimeError,
+				onWarning,
+				onError: onRuntimeError,
 			}),
-		[isMuted, onAutosave, onEvent, runtimeAttempt, session],
+		[
+			isMuted,
+			onAutosave,
+			onEvent,
+			onRuntimeError,
+			onWarning,
+			onWorldTransition,
+			runtimeAttempt,
+			session,
+		],
 	);
 	const onStartError = useCallback((error: unknown) => {
 		setRuntimeError({
@@ -118,6 +200,8 @@ export function Action3dGameScreen({
 			data-action3d-player-z={snapshot.state.player.position.z.toFixed(2)}
 			data-action3d-player-hp={snapshot.state.player.hp}
 			data-action3d-enemies={activeEnemies.length}
+			data-action3d-lock-on={lockOnTarget?.id ?? ""}
+			data-action3d-world={snapshot.state.location.worldId}
 			data-action3d-fps={snapshot.stats.fps}
 			data-action3d-frame-ms={snapshot.stats.frameTimeMs}
 			data-action3d-draw-calls={snapshot.stats.drawCalls}
@@ -180,7 +264,9 @@ export function Action3dGameScreen({
 							? `Locked · ${lockOnTarget.id} · ${lockOnTarget.hp}/${lockOnTarget.maxHp} HP`
 							: activeEnemies.length
 								? `Sentinels remaining · ${activeEnemies.length}`
-								: "North beacon secured"}
+								: snapshot.state.phase === "victory"
+									? "North beacon secured"
+									: "Path to the next field is open"}
 					</span>
 				</div>
 				<div className="action3d-event" aria-live="polite">
@@ -248,7 +334,7 @@ export function Action3dGameScreen({
 				<strong>Controls</strong>
 				<span>
 					WASD / left stick · Mouse · Space jump · Shift sprint · Ctrl / B dodge
-					· Click / X attack · E / R3 lock-on · P / Start pause
+					· Click / X light · Q / Y heavy · E / R3 lock-on · P / Start pause
 				</span>
 				<Link to="/">Home</Link>
 			</div>

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
+	type GameAction,
 	gameActionLabels,
 	gameActions,
 	normalizeKeyboardBinding,
-	type GameAction,
 } from "../input/game-actions";
 import { gameSettingsStore, useGameSettings } from "./GameSettingsStore";
 

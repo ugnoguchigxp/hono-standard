@@ -1,17 +1,29 @@
 import { z } from "zod";
 import { createFieldStateAt } from "./field-engine";
 import {
-	GAME_CONTENT_VERSION,
-	GAME_STATE_SCHEMA_VERSION,
-	getGameStateInvariantIssues,
 	type BattleState,
 	type CharacterState,
 	type FieldDirection,
+	GAME_CONTENT_VERSION,
+	GAME_STATE_SCHEMA_VERSION,
 	type GameState,
+	getGameStateInvariantIssues,
 } from "./model";
 
-export const GAME_SAVE_FORMAT_VERSION = 1 as const;
+export const GAME_SAVE_FORMAT_VERSION = 2 as const;
 export const AUTOSAVE_SLOT_ID = "autosave" as const;
+export const MANUAL_SAVE_SLOT_IDS = [
+	"manual-1",
+	"manual-2",
+	"manual-3",
+] as const;
+export const GAME_SAVE_SLOT_IDS = [
+	AUTOSAVE_SLOT_ID,
+	...MANUAL_SAVE_SLOT_IDS,
+] as const;
+export type GameSaveSlotId = (typeof GAME_SAVE_SLOT_IDS)[number];
+export const isGameSaveSlotId = (value: string): value is GameSaveSlotId =>
+	GAME_SAVE_SLOT_IDS.includes(value as GameSaveSlotId);
 const LEGACY_V2_CONTENT_VERSION = "signal-ruins-1" as const;
 
 const nonNegativeInteger = z.number().int().nonnegative();
@@ -339,7 +351,7 @@ const legacyGameStateV1Schema = z
 
 export type GameSaveEnvelope = {
 	formatVersion: typeof GAME_SAVE_FORMAT_VERSION;
-	slotId: typeof AUTOSAVE_SLOT_ID;
+	slotId: GameSaveSlotId;
 	savedAt: string;
 	state: GameState;
 };
@@ -357,7 +369,7 @@ export type GameSaveDecodeResult =
 const currentSaveSchema: z.ZodType<GameSaveEnvelope> = z
 	.object({
 		formatVersion: z.literal(GAME_SAVE_FORMAT_VERSION),
-		slotId: z.literal(AUTOSAVE_SLOT_ID),
+		slotId: z.enum(GAME_SAVE_SLOT_IDS),
 		savedAt: savedAtSchema,
 		state: gameStateSchema,
 	})
@@ -374,7 +386,7 @@ const legacySaveV0Schema = z
 const currentEnvelopeBaseSchema = z
 	.object({
 		formatVersion: z.literal(GAME_SAVE_FORMAT_VERSION),
-		slotId: z.literal(AUTOSAVE_SLOT_ID),
+		slotId: z.enum(GAME_SAVE_SLOT_IDS),
 		savedAt: savedAtSchema,
 		state: z.unknown(),
 	})
@@ -649,17 +661,22 @@ const migrateV1ToV5 = (
 export function createGameSave(
 	state: GameState,
 	savedAt: string = new Date().toISOString(),
+	slotId: GameSaveSlotId = AUTOSAVE_SLOT_ID,
 ): GameSaveEnvelope {
 	return currentSaveSchema.parse({
 		formatVersion: GAME_SAVE_FORMAT_VERSION,
-		slotId: AUTOSAVE_SLOT_ID,
+		slotId,
 		savedAt,
 		state,
 	});
 }
 
-export function serializeGameSave(state: GameState, savedAt?: string): string {
-	return JSON.stringify(createGameSave(state, savedAt));
+export function serializeGameSave(
+	state: GameState,
+	savedAt?: string,
+	slotId?: GameSaveSlotId,
+): string {
+	return JSON.stringify(createGameSave(state, savedAt, slotId));
 }
 
 export function decodeGameSave(serialized: string): GameSaveDecodeResult {
@@ -675,6 +692,20 @@ export function decodeGameSave(serialized: string): GameSaveDecodeResult {
 	}
 
 	const formatVersion = value.formatVersion;
+	if (formatVersion === 1) {
+		if (value.slotId !== AUTOSAVE_SLOT_ID) {
+			return {
+				status: "corrupt",
+				message: "Legacy save data contains an invalid slot.",
+			};
+		}
+		const upgraded = decodeGameSave(
+			JSON.stringify({ ...value, formatVersion: GAME_SAVE_FORMAT_VERSION }),
+		);
+		return upgraded.status === "ready"
+			? { ...upgraded, migrated: true }
+			: upgraded;
+	}
 	if (formatVersion === GAME_SAVE_FORMAT_VERSION) {
 		const current = currentSaveSchema.safeParse(value);
 		if (current.success) {

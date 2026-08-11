@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => {
 		build: {
 			outDir: "../dist-web",
 			emptyOutDir: true,
+			manifest: true,
 		},
 	};
 });

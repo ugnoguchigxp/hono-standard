@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const resetRpgSave = async (page: Page) => {
 	const status = await page.evaluate(async () => {
@@ -206,7 +206,10 @@ test("a failed on-demand map transition resumes after runtime Retry", async ({
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
+					protocolVersion: 2,
+					intent: "advance",
 					save,
+					baseRevision: current.save.revision,
 					expectedRevision: current.save.revision,
 					idempotencyKey: crypto.randomUUID(),
 				}),

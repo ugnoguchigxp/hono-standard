@@ -1,9 +1,9 @@
-import Phaser from "phaser";
 import type { GameSession } from "@shared/game";
-import { createGameConfig } from "./config";
-import type { GameRuntimeError } from "./runtime-errors";
-import type { GameContentLoader } from "./content/GameContentLoader";
+import Phaser from "phaser";
 import { GameAudioManager } from "./audio/GameAudioManager";
+import { createGameConfig } from "./config";
+import type { GameContentLoader } from "./content/GameContentLoader";
+import type { GameRuntimeError } from "./runtime-errors";
 
 export type PhaserGameInstance = Pick<Phaser.Game, "destroy">;
 

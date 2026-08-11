@@ -28,9 +28,9 @@ export function validateAction3dContentDirectory(
 	const manifestRaw = readJson(manifestPath);
 	const manifest = parseAction3dManifest(manifestRaw, manifestPath);
 	const worlds: RawAction3dDocument[] = manifest.documents.worlds.map(
-		(documentPath) => ({
-			path: documentPath,
-			data: readJson(path.join(contentRoot, documentPath)),
+		(document) => ({
+			path: document.path,
+			data: readJson(path.join(contentRoot, document.path)),
 		}),
 	);
 	return parseAction3dBundle({

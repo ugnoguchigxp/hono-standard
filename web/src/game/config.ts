@@ -1,14 +1,14 @@
-import Phaser from "phaser";
 import type { GameSession } from "@shared/game";
-import { BootScene } from "./scenes/BootScene";
+import Phaser from "phaser";
+import type { GameAudioManager } from "./audio/GameAudioManager";
+import type { GameContentLoader } from "./content/GameContentLoader";
+import { GAME_CANVAS_HEIGHT, GAME_CANVAS_WIDTH } from "./display";
+import type { GameRuntimeError } from "./runtime-errors";
 import { BattleScene } from "./scenes/BattleScene";
+import { BootScene } from "./scenes/BootScene";
 import { EventScene } from "./scenes/EventScene";
 import { FieldMenuScene } from "./scenes/FieldMenuScene";
 import { FieldScene } from "./scenes/FieldScene";
-import type { GameRuntimeError } from "./runtime-errors";
-import type { GameContentLoader } from "./content/GameContentLoader";
-import { GAME_CANVAS_HEIGHT, GAME_CANVAS_WIDTH } from "./display";
-import type { GameAudioManager } from "./audio/GameAudioManager";
 
 export const GAME_WIDTH = GAME_CANVAS_WIDTH;
 export const GAME_HEIGHT = GAME_CANVAS_HEIGHT;

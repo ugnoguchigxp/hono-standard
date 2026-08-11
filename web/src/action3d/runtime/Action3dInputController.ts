@@ -15,6 +15,7 @@ const blockedKeys = new Set([
 	"ControlLeft",
 	"ControlRight",
 	"KeyE",
+	"KeyQ",
 	"KeyP",
 ]);
 export class Action3dInputController {
@@ -23,6 +24,7 @@ export class Action3dInputController {
 	private pointerAttack = false;
 	private pointerLock = false;
 	private gamepadAttack = false;
+	private gamepadHeavyAttack = false;
 	private gamepadDodge = false;
 	private gamepadJump = false;
 	private gamepadLock = false;
@@ -79,6 +81,7 @@ export class Action3dInputController {
 		this.pointerAttack = false;
 		const gamepad = navigator.getGamepads?.()[0];
 		this.gamepadAttack = Boolean(gamepad?.buttons[2]?.pressed);
+		this.gamepadHeavyAttack = Boolean(gamepad?.buttons[3]?.pressed);
 		this.gamepadDodge = Boolean(gamepad?.buttons[1]?.pressed);
 		this.gamepadJump = Boolean(gamepad?.buttons[0]?.pressed);
 		this.gamepadLock = Boolean(gamepad?.buttons[10]?.pressed);
@@ -103,6 +106,7 @@ export class Action3dInputController {
 		const axisZ =
 			Math.abs(gamepad?.axes[1] ?? 0) > 0.16 ? -(gamepad?.axes[1] ?? 0) : 0;
 		const attack = Boolean(gamepad?.buttons[2]?.pressed);
+		const heavyAttack = Boolean(gamepad?.buttons[3]?.pressed);
 		const dodge = Boolean(gamepad?.buttons[1]?.pressed);
 		const jump = Boolean(gamepad?.buttons[0]?.pressed);
 		const lock = Boolean(gamepad?.buttons[10]?.pressed);
@@ -132,6 +136,9 @@ export class Action3dInputController {
 				this.pointerAttack ||
 				this.pressed.has("KeyF") ||
 				this.buttonEdge(attack, this.gamepadAttack),
+			heavyAttack:
+				this.pressed.has("KeyQ") ||
+				this.buttonEdge(heavyAttack, this.gamepadHeavyAttack),
 			lockOn:
 				this.pressed.has("KeyE") || this.buttonEdge(lock, this.gamepadLock),
 			pause:
@@ -140,6 +147,7 @@ export class Action3dInputController {
 		this.pressed.clear();
 		this.pointerAttack = false;
 		this.gamepadAttack = attack;
+		this.gamepadHeavyAttack = heavyAttack;
 		this.gamepadDodge = dodge;
 		this.gamepadJump = jump;
 		this.gamepadLock = lock;

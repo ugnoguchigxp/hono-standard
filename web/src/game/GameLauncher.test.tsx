@@ -1,5 +1,3 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	createGameSave,
 	createInitialGameState,
@@ -7,12 +5,14 @@ import {
 	type GameSession,
 	type GameState,
 } from "@shared/game";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { validateGameContentDirectory } from "../../../scripts/validate-game-content";
-import { GameLauncher } from "./GameLauncher";
 import {
 	ContentLoadError,
 	GameContentLoader,
 } from "./content/GameContentLoader";
+import { GameLauncher } from "./GameLauncher";
 import {
 	gameSaveStorageKey,
 	LocalGameSaveRepository,
@@ -511,6 +511,99 @@ describe("GameLauncher", () => {
 			"relay-camp",
 			expect.any(AbortSignal),
 		);
+	});
+
+	it("requires confirmation before New Game replaces an existing checkpoint", async () => {
+		const existing = createGameSave(createInitialGameState({ registry }));
+		const reset = vi.fn((state: GameState) => ({
+			ok: true as const,
+			save: createGameSave(state),
+			revision: 4,
+			synced: true as const,
+		}));
+		const repository: GameSaveRepository = {
+			load: async () => ({
+				status: "ready",
+				save: existing,
+				migrated: false,
+				source: "server",
+			}),
+			save: vi.fn(),
+			reset,
+		};
+		render(
+			<GameLauncher
+				playerId="replace@example.com"
+				contentLoader={readyLoader()}
+				saveRepository={repository}
+			/>,
+		);
+
+		fireEvent.click(await screen.findByRole("button", { name: "New Game" }));
+		expect(
+			screen.getByRole("alertdialog", { name: "Replace cloud progress?" }),
+		).toBeVisible();
+		expect(reset).not.toHaveBeenCalled();
+		expect(screen.queryByTestId("mock-game-screen")).toBeNull();
+
+		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+		expect(screen.queryByRole("alertdialog")).toBeNull();
+		fireEvent.click(screen.getByRole("button", { name: "New Game" }));
+		fireEvent.click(screen.getByRole("button", { name: "Replace and start" }));
+		expect(reset).toHaveBeenCalledOnce();
+		expect(screen.getByTestId("mock-game-screen")).toBeVisible();
+	});
+
+	it("shows both conflict candidates and resolves only after an explicit choice", async () => {
+		const browserSave = createGameSave(createInitialGameState({ registry }));
+		browserSave.state.location.checkpointId = "signal-core";
+		const cloudSave = createGameSave(createInitialGameState({ registry }));
+		const conflict = {
+			browserSave,
+			cloudSave: {
+				revision: 3,
+				save: cloudSave,
+				updatedAt: "2026-08-11T00:00:00.000Z",
+			},
+			baseRevision: 2,
+		};
+		const resolveConflict = vi.fn(async () => ({
+			status: "ready" as const,
+			save: cloudSave,
+			migrated: false,
+			source: "server" as const,
+			syncMessage: "Cloud checkpoint kept.",
+		}));
+		const repository: GameSaveRepository = {
+			load: async () => ({
+				status: "conflict",
+				message: "Choose which checkpoint to keep.",
+				conflict,
+				source: "server",
+			}),
+			save: vi.fn(),
+			resolveConflict,
+		};
+		render(
+			<GameLauncher
+				playerId="conflict@example.com"
+				contentLoader={readyLoader()}
+				saveRepository={repository}
+			/>,
+		);
+
+		expect(
+			await screen.findByRole("alertdialog", {
+				name: "Choose checkpoint progress",
+			}),
+		).toBeVisible();
+		expect(screen.getByLabelText("Browser checkpoint")).toHaveTextContent(
+			"signal-core",
+		);
+		expect(resolveConflict).not.toHaveBeenCalled();
+		fireEvent.click(screen.getByRole("button", { name: "Use cloud progress" }));
+		await screen.findByRole("button", { name: "Continue" });
+		expect(resolveConflict).toHaveBeenCalledWith(conflict, "cloud");
 	});
 
 	it("cancels an in-flight save load when unmounted", async () => {

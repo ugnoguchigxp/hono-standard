@@ -100,7 +100,10 @@ describe("web API client", () => {
 		await expect(
 			putRpgGameSave(
 				{
-					save: {} as never,
+					protocolVersion: 2,
+					intent: "advance",
+					save: { slotId: "autosave" } as never,
+					baseRevision: null,
 					expectedRevision: null,
 					idempotencyKey: "b2b2b2b2-b2b2-42b2-b2b2-b2b2b2b2b2b2",
 				},
@@ -120,7 +123,12 @@ describe("web API client", () => {
 			);
 		}
 		expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toMatchObject(
-			{ expectedRevision: null },
+			{
+				protocolVersion: 2,
+				intent: "advance",
+				baseRevision: null,
+				expectedRevision: null,
+			},
 		);
 	});
 

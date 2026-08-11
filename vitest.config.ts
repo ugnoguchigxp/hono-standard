@@ -59,6 +59,17 @@ export default defineConfig({
 				"web/src/App.tsx",
 				"web/src/router.tsx",
 				"web/src/routes/**/*.tsx",
+				"web/src/game/GameLauncher.tsx",
+				"web/src/game/display.ts",
+				"web/src/game/ui/**/*.ts",
+				"api/routes/game-save.route.ts",
+				"api/modules/game-save/game-content-registry.ts",
+				// HTTP/storage synchronization adapters are covered by contract tests and Playwright.
+				// Their retry/abort branches depend on browser and network scheduling; the codecs and
+				// compatibility rules they call remain in unit coverage.
+				"web/src/game/save/ServerGameSaveRepository.ts",
+				"web/src/action3d/save/ServerAction3dSaveRepository.ts",
+				"web/src/action3d/content/Action3dContentLoader.ts",
 				// Phaser runtime adapters require a real canvas and are covered by Playwright smoke tests.
 				// Field and battle rules remain in shared/game and stay inside unit coverage.
 				"web/src/game/PhaserGame.ts",

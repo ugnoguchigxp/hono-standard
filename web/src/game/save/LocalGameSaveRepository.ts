@@ -1,8 +1,10 @@
 import {
+	AUTOSAVE_SLOT_ID,
 	createGameSave,
 	decodeGameSave,
 	type GameSaveDecodeResult,
 	type GameSaveEnvelope,
+	type GameSaveSlotId,
 	type GameState,
 } from "@shared/game";
 import { GAME_IDS } from "@shared/game-platform";
@@ -21,10 +23,13 @@ export type LocalGameSaveWriteResult =
 	| { ok: true; save: GameSaveEnvelope }
 	| { ok: false; message: string };
 
-export const gameSaveStorageKey = (playerId: string): string => {
+export const gameSaveStorageKey = (
+	playerId: string,
+	slotId: GameSaveSlotId = AUTOSAVE_SLOT_ID,
+): string => {
 	const normalized = playerId.trim().toLowerCase();
 	if (!normalized) throw new Error("Player ID must not be empty.");
-	return `${GAME_IDS.rpg2d}:autosave:${encodeURIComponent(normalized)}`;
+	return `${GAME_IDS.rpg2d}:${slotId}:${encodeURIComponent(normalized)}`;
 };
 
 export class LocalGameSaveRepository {
@@ -33,8 +38,9 @@ export class LocalGameSaveRepository {
 	constructor(
 		private readonly storage: GameSaveStorage,
 		playerId: string,
+		private readonly slotId: GameSaveSlotId = AUTOSAVE_SLOT_ID,
 	) {
-		this.key = gameSaveStorageKey(playerId);
+		this.key = gameSaveStorageKey(playerId, slotId);
 	}
 
 	load(): LocalGameSaveLoadResult {
@@ -50,7 +56,7 @@ export class LocalGameSaveRepository {
 
 	save(state: GameState, savedAt?: string): LocalGameSaveWriteResult {
 		try {
-			return this.saveEnvelope(createGameSave(state, savedAt));
+			return this.saveEnvelope(createGameSave(state, savedAt, this.slotId));
 		} catch {
 			return { ok: false, message: "Could not write the local autosave." };
 		}
@@ -58,6 +64,12 @@ export class LocalGameSaveRepository {
 
 	saveEnvelope(save: GameSaveEnvelope): LocalGameSaveWriteResult {
 		try {
+			if (save.slotId !== this.slotId) {
+				return {
+					ok: false,
+					message: "Save slot does not match browser storage.",
+				};
+			}
 			this.storage.setItem(this.key, JSON.stringify(save));
 			return { ok: true, save };
 		} catch {

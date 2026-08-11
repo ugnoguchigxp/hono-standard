@@ -122,3 +122,37 @@ export const gameSaveOperations = sqliteTable(
 		),
 	}),
 );
+
+export const gameSaveVersions = sqliteTable(
+	"game_save_versions",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => randomUUID()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		gameId: text("game_id").notNull(),
+		slotId: text("slot_id").notNull(),
+		revision: integer("revision").notNull(),
+		contentVersion: text("content_version").notNull(),
+		stateRevision: integer("state_revision").notNull(),
+		savedAt: text("saved_at").notNull(),
+		saveJson: text("save_json").notNull(),
+		checksum: text("checksum").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		ownerSlotRevisionIdx: uniqueIndex(
+			"game_save_versions_owner_slot_revision_idx",
+		).on(table.userId, table.gameId, table.slotId, table.revision),
+		ownerSlotCreatedIdx: index("game_save_versions_owner_slot_created_idx").on(
+			table.userId,
+			table.gameId,
+			table.slotId,
+			table.createdAt,
+		),
+	}),
+);

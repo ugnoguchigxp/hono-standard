@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
 import { createInitialGameState } from "@shared/game";
+import { describe, expect, it } from "vitest";
 import { validateGameContentDirectory } from "../../../../scripts/validate-game-content";
 import {
+	type GameSaveStorage,
 	gameSaveStorageKey,
 	LocalGameSaveRepository,
-	type GameSaveStorage,
 } from "./LocalGameSaveRepository";
 
 const registry = validateGameContentDirectory();

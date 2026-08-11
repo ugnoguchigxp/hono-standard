@@ -1,5 +1,5 @@
+import { type BattleEvent, createSignalRuinsEncounterState } from "@shared/game";
 import { describe, expect, it } from "vitest";
-import { createSignalRuinsEncounterState, type BattleEvent } from "@shared/game";
 import {
 	getNextEnemyIntentLabel,
 	splitBattlePresentationEvents,

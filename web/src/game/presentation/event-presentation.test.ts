@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { GameSessionEvent } from "@shared/game";
+import { describe, expect, it } from "vitest";
 import { getEventPresentationSteps } from "./event-presentation";
 
 const envelope = (event: GameSessionEvent) => ({ event });

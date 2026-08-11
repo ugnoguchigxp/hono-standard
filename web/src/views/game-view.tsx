@@ -51,3 +51,5 @@ export function GameView() {
 		</main>
 	);
 }
+
+export default GameView;

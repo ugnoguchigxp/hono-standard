@@ -130,5 +130,26 @@ export type Action3dEvent =
 	| { type: "victory"; checkpointId: string }
 	| { type: "defeat" };
 
-export const cloneAction3dState = (state: Action3dState): Action3dState =>
-	structuredClone(state);
+export const cloneAction3dState = (state: Action3dState): Action3dState => ({
+	...state,
+	location: { ...state.location },
+	player: {
+		...state.player,
+		position: { ...state.player.position },
+		velocity: { ...state.player.velocity },
+		attackHitEnemyIds: [...state.player.attackHitEnemyIds],
+	},
+	enemies: state.enemies.map((enemy) => ({
+		...enemy,
+		position: { ...enemy.position },
+	})),
+	projectiles: state.projectiles.map((projectile) => ({
+		...projectile,
+		position: { ...projectile.position },
+		velocity: { ...projectile.velocity },
+	})),
+	completedWorldIds: [...state.completedWorldIds],
+	pendingTransition: state.pendingTransition
+		? { ...state.pendingTransition }
+		: null,
+});

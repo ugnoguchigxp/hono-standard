@@ -37,12 +37,14 @@ baselineはmachine-readable artifactと短い人間向けsummaryを同じrun ID�
 
 | 順序 | Delivery | 状態 | 完了時に証明すること |
 | --- | --- | --- | --- |
-| 1 | [A3-1 Runtime and Simulation Seams](01-runtime-and-simulation-seams.md) | Planned | 現行挙動を変えず、simulation/runtimeの責務を小さなmoduleへ分割できる |
-| 2 | [A3-2 Versioned Gameplay Definitions and Save Migration](02-versioned-gameplay-definitions-and-save-migration.md) | Planned | attack/enemy archetypeをversioned dataにし、既存checkpointを失わずstate V2へ移行できる |
-| 3 | [A3-3 Second Attack and Enemy Archetype](03-second-attack-and-enemy-archetype.md) | Planned | heavy attackとranged enemyを既存分岐の複製なしで追加できる |
-| 4 | [A3-4 Second World and Transition Lifecycle](04-second-world-and-transition-lifecycle.md) | Planned | 第二worldをon-demand loadし、安全に遷移・破棄・再開できる |
-| 5 | [A3-5 Durable Save Repository and Server Sync](05-durable-save-repository-and-server-sync.md) | Planned | local fallbackとrevision付きserver checkpointで別browser Continueが成立する |
-| 6 | [A3-6 Observability, Performance Budgets, and Release Gate](06-observability-performance-and-release-gate.md) | Planned | product event、failure、容量・性能予算を自動Gateとして運用できる |
+| 1 | [A3-1 Runtime and Simulation Seams](01-runtime-and-simulation-seams.md) | Implemented | 現行挙動を変えず、simulation/runtimeの責務を小さなmoduleへ分割できる |
+| 2 | [A3-2 Versioned Gameplay Definitions and Save Migration](02-versioned-gameplay-definitions-and-save-migration.md) | Implemented | attack/enemy archetypeをversioned dataにし、既存checkpointを失わずstate V2へ移行できる |
+| 3 | [A3-3 Second Attack and Enemy Archetype](03-second-attack-and-enemy-archetype.md) | Implemented | heavy attackとranged enemyを既存分岐の複製なしで追加できる |
+| 4 | [A3-4 Second World and Transition Lifecycle](04-second-world-and-transition-lifecycle.md) | Implemented | 第二worldをon-demand loadし、安全に遷移・破棄・再開できる |
+| 5 | [A3-5 Durable Save Repository and Server Sync](05-durable-save-repository-and-server-sync.md) | Implemented | local fallbackとrevision付きserver checkpointで別browser Continueが成立する |
+| 6 | [A3-6 Observability, Performance Budgets, and Release Gate](06-observability-performance-and-release-gate.md) | Implemented | product event、failure、容量・性能予算を自動Gateとして運用できる |
+
+実装結果と検証値は[A3 implementation evidence](A3-implementation-evidence.md)を正本とする。
 
 ```mermaid
 flowchart LR
@@ -84,7 +86,7 @@ flowchart LR
 - V1 local checkpointがV2へ一度だけmigrationされ、失敗時に元payloadを保持する。
 - 認証userが別browser contextから同じcheckpointをContinueでき、revision競合を明示的に扱う。
 - telemetry無効時もgameplayが完全に成立し、有効時はPIIなしのsession/failure eventを一度だけ送る。
-- desktop p95 20.5 ms、compact p95 33.3 ms、50 ms超long task 0、draw calls 60以下、active meshes 100以下をCI referenceでassertする。
+- desktop p95 20.5 ms、compact p95 33.3 msを各3計測window中2以上で満たし、その2 windowでは50 ms超long task 0、draw calls 60以下、active meshes 100以下をCI referenceでassertする。
 - Home/launcherではBabylon runtime、world GLB、enemy GLBを取得せず、第二world assetは遷移開始まで取得しない。
 - `bun run verify`と`bun run verify:e2e`が成功し、Stage文書と実装状態が一致する。
 

@@ -1,12 +1,15 @@
 import {
 	type ContentManifestV1,
 	ContentValidationError,
+	createGameCorrelationId,
 	GAME_CONTENT_VERSION,
 	type GameContentRegistry,
+	gameDiagnosticDurationBucket,
 	parseContentManifest,
 	parseGameContentBundle,
 	type RawContentDocument,
 } from "@shared/game";
+import { browserGameDiagnostics } from "../diagnostics/BrowserGameDiagnostics";
 
 export type ContentLoadErrorCode =
 	| "network"
@@ -236,6 +239,7 @@ export class GameContentLoader {
 		signal: AbortSignal | undefined,
 		work: (signal: AbortSignal) => Promise<GameContentRegistry>,
 	): Promise<GameContentRegistry> {
+		const startedAt = performance.now();
 		const controller = new AbortController();
 		this.controllers.add(controller);
 		const onAbort = () => controller.abort();
@@ -243,8 +247,27 @@ export class GameContentLoader {
 		else signal?.addEventListener("abort", onAbort, { once: true });
 		const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 		return work(controller.signal)
+			.then((registry) => {
+				browserGameDiagnostics.capture({
+					event: "content.load",
+					correlationId: createGameCorrelationId(),
+					durationBucketMs: gameDiagnosticDurationBucket(
+						performance.now() - startedAt,
+					),
+				});
+				return registry;
+			})
 			.catch((error: unknown) => {
-				throw this.normalizeError(error);
+				const normalized = this.normalizeError(error);
+				browserGameDiagnostics.capture({
+					event: "content.error",
+					correlationId: createGameCorrelationId(),
+					code: `content.${normalized.code}`,
+					durationBucketMs: gameDiagnosticDurationBucket(
+						performance.now() - startedAt,
+					),
+				});
+				throw normalized;
 			})
 			.finally(() => {
 				clearTimeout(timeout);

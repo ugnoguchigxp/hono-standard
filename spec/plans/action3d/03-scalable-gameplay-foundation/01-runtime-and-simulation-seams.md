@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A3 |
-| 状態 | Planned |
+| 状態 | Implemented (2026-08-11) |
 | 主対象 | `shared/action3d/simulation`、`web/src/action3d/runtime`、`web/src/action3d/presentation` |
 | 依存 | A1 full playable、A2 animation/model contract |
 

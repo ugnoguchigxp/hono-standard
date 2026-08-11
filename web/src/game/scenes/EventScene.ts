@@ -4,6 +4,7 @@ import type {
 	GameSessionTransition,
 } from "@shared/game";
 import Phaser from "phaser";
+import type { GameAudioManager } from "../audio/GameAudioManager";
 import {
 	GAME_LOGICAL_HEIGHT,
 	GAME_LOGICAL_WIDTH,
@@ -15,7 +16,6 @@ import {
 	type EventPresentationStep,
 	getEventPresentationSteps,
 } from "../presentation/event-presentation";
-import type { GameAudioManager } from "../audio/GameAudioManager";
 import {
 	gameSettingsStore,
 	getTextCharacterDelay,

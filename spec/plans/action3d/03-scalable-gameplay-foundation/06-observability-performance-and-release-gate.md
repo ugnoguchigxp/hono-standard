@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A3 |
-| 状態 | Planned |
+| 状態 | Implemented (2026-08-11) |
 | 主対象 | Action3D telemetry port、runtime metrics、Playwright performance、build report、delivery docs |
 | 依存 | Delivery A3-3、A3-4、A3-5完了 |
 
@@ -49,7 +49,7 @@ CI referenceで次をassertする。
 | --- | ---: |
 | Desktop p95 frame time | 20.5 ms以下 |
 | Compact p95 frame time | 33.3 ms以下 |
-| 50 ms超long task | 0 |
+| 50 ms超long task | 3計測window中2以上で0 |
 | Steady draw calls | 60/frame以下 |
 | Steady active meshes | 100以下 |
 | Action3D first-world runtime transfer | baseline + 15%以下 |

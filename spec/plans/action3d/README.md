@@ -67,7 +67,7 @@ flowchart TD
 | --- | --- | --- |
 | [A1: Browser Action Vertical Slice](01-browser-action-vertical-slice/README.md) | Implemented / Repository gate pending | 独立domain、3D runtime、移動、戦闘、content、saveを一つの小規模fieldで成立させる |
 | [A2: Character & Combat Presentation](02-character-combat-presentation/README.md) | In Progress | 仮player/enemy/animationをproduction候補のasset、motion、combat feedback、field artへ置き換える |
-| [A3: Scalable Gameplay Foundation](03-scalable-gameplay-foundation/README.md) | Planned | 第二enemy、第二attack、第二worldを追加しても変更が局所化し、saveと運用計測を継続できることを実証する |
+| [A3: Scalable Gameplay Foundation](03-scalable-gameplay-foundation/README.md) | Implemented | 第二enemy、第二attack、第二worldを追加しても変更が局所化し、saveと運用計測を継続できることを実証する |
 
 A2はA1の性能・ownershipを維持し、機能を増やさずvisual qualityとasset制作workflowを検証する。巨大world、複数character、element system、server saveはA2でも先取りしない。
 

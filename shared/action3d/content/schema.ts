@@ -284,6 +284,7 @@ const enemyArchetypeSchema = z
 		moveSpeed: finite.positive().max(20),
 		perceptionRange: finite.positive().max(100),
 		preferredRange: finite.positive().max(30),
+		staggerMs: positiveDuration,
 		attack: enemyAttackSchema,
 	})
 	.strict()

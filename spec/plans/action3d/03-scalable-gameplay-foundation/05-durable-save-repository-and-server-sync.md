@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 対応Track | Action3D / Stage A3 |
-| 状態 | Planned |
+| 状態 | Implemented (2026-08-11) |
 | 主対象 | Action3D save application service、local/server repository、Hono route、shared API schema、DB migration |
 | 依存 | Delivery A3-2 migration、Delivery A3-3/A3-4 stable checkpoint semantics |
 

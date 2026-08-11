@@ -1,6 +1,6 @@
+import { createInitialGameState } from "@shared/game";
 import { describe, expect, it } from "vitest";
 import { validateGameContentDirectory } from "../../../../scripts/validate-game-content";
-import { createInitialGameState } from "@shared/game";
 import {
 	getRequiredAssetIdsForMap,
 	getRequiredAssetsForState,

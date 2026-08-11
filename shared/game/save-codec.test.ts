@@ -2,15 +2,16 @@ import { describe, expect, it } from "vitest";
 import { validateGameContentDirectory } from "../../scripts/validate-game-content";
 import { createDemoBattleState, createInitialGameState } from "./demo-state";
 import {
-	decodeGameSave,
-	GAME_SAVE_FORMAT_VERSION,
-	serializeGameSave,
-} from "./save-codec";
-import {
 	GAME_CONTENT_VERSION,
 	GAME_STATE_SCHEMA_VERSION,
 	type GameState,
 } from "./model";
+import {
+	createGameSave,
+	decodeGameSave,
+	GAME_SAVE_FORMAT_VERSION,
+	serializeGameSave,
+} from "./save-codec";
 
 const registry = validateGameContentDirectory();
 const savedAt = "2026-08-10T00:00:00.000Z";
@@ -97,6 +98,27 @@ const envelope = (state: unknown) => ({
 });
 
 describe("game save codec", () => {
+	it("writes manual slots in format v2 and migrates format v1 autosaves", () => {
+		const state = currentState();
+		const manual = createGameSave(
+			state,
+			"2026-08-11T00:00:00.000Z",
+			"manual-2",
+		);
+		expect(manual).toMatchObject({ formatVersion: 2, slotId: "manual-2" });
+		expect(decodeGameSave(JSON.stringify(manual))).toMatchObject({
+			status: "ready",
+			migrated: false,
+			save: { slotId: "manual-2" },
+		});
+
+		const legacy = { ...createGameSave(state), formatVersion: 1 };
+		expect(decodeGameSave(JSON.stringify(legacy))).toMatchObject({
+			status: "ready",
+			migrated: true,
+			save: { formatVersion: 2, slotId: "autosave" },
+		});
+	});
 	it("round-trips current field and active event states", () => {
 		const state = currentState();
 		state.story.flags["signal-contacted"] = true;

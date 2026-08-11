@@ -4,8 +4,8 @@ import { createBattleStateFromEncounter, createInitialGameState } from "./demo-s
 import { advanceEvent } from "./event-engine";
 import {
 	ACTION_GAUGE_MAX,
-	getGameStateInvariantIssues,
 	type GameState,
+	getGameStateInvariantIssues,
 } from "./model";
 
 const registry = validateGameContentDirectory();

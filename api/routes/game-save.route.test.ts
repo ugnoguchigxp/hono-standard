@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { validateGameContentDirectory } from "../../scripts/validate-game-content";
 import {
 	AUTOSAVE_SLOT_ID,
 	createGameSave,
 	createInitialGameState,
 } from "../../shared/game";
 import { GAME_IDS } from "../../shared/game-platform";
-import { validateGameContentDirectory } from "../../scripts/validate-game-content";
+import { GAME_SAVE_PROTOCOL_VERSION } from "../../shared/schemas/game-save.schema";
 import { HttpError } from "../modules/auth/errors";
 import { createGameSaveRoute } from "./game-save.route";
 
@@ -21,7 +22,10 @@ const path = `/${GAME_IDS.rpg2d}/saves/${AUTOSAVE_SLOT_ID}`;
 const createTestApp = () => {
 	const service = {
 		load: vi.fn(),
+		listSlots: vi.fn(),
+		listHistory: vi.fn(),
 		save: vi.fn(),
+		restore: vi.fn(),
 		delete: vi.fn(),
 	};
 	const app = new Hono();
@@ -67,6 +71,91 @@ describe("game save route", () => {
 		);
 	});
 
+	it("lists slot metadata and history without exposing save payloads", async () => {
+		const { app, service } = createTestApp();
+		service.listSlots.mockResolvedValue([
+			{
+				slotId: "manual-1",
+				revision: 2,
+				savedAt: save.savedAt,
+				updatedAt: save.savedAt,
+				contentVersion: save.state.contentVersion,
+				stateRevision: save.state.revision,
+				mapId: save.state.location.mapId,
+				checkpointId: save.state.location.checkpointId,
+				status: "ready",
+			},
+		]);
+		service.listHistory.mockResolvedValue([
+			{
+				slotId: "manual-1",
+				revision: 1,
+				savedAt: save.savedAt,
+				updatedAt: save.savedAt,
+				contentVersion: save.state.contentVersion,
+				stateRevision: save.state.revision,
+				mapId: save.state.location.mapId,
+				checkpointId: save.state.location.checkpointId,
+				status: "ready",
+				checksum: "abc",
+			},
+		]);
+
+		const slotsResponse = await app.request(`/${GAME_IDS.rpg2d}/saves`);
+		expect(slotsResponse.status).toBe(200);
+		const slotsJson = await slotsResponse.json();
+		expect(slotsJson).toMatchObject({ slots: [{ slotId: "manual-1" }] });
+		expect(JSON.stringify(slotsJson)).not.toContain("saveJson");
+
+		const historyResponse = await app.request(
+			`/${GAME_IDS.rpg2d}/saves/manual-1/history`,
+		);
+		expect(historyResponse.status).toBe(200);
+		expect(await historyResponse.json()).toMatchObject({
+			history: [{ revision: 1, checksum: "abc" }],
+		});
+		expect(service.listHistory).toHaveBeenCalledWith(
+			userId,
+			GAME_IDS.rpg2d,
+			"manual-1",
+		);
+	});
+
+	it("restores a history revision as a new current revision", async () => {
+		const { app, service } = createTestApp();
+		service.restore.mockResolvedValue({
+			record: {
+				revision: 4,
+				save,
+				updatedAt: save.savedAt,
+			},
+			idempotent: false,
+		});
+		const idempotencyKey = crypto.randomUUID();
+		const response = await app.request(
+			`/${GAME_IDS.rpg2d}/saves/autosave/history/2/restore`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					protocolVersion: GAME_SAVE_PROTOCOL_VERSION,
+					expectedRevision: 3,
+					idempotencyKey,
+				}),
+			},
+		);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ save: { revision: 4 } });
+		expect(service.restore).toHaveBeenCalledWith(
+			userId,
+			GAME_IDS.rpg2d,
+			"autosave",
+			2,
+			3,
+			idempotencyKey,
+		);
+	});
+
 	it("validates and writes a current save with revision and idempotency data", async () => {
 		const { app, service } = createTestApp();
 		service.save.mockResolvedValue({
@@ -82,7 +171,14 @@ describe("game save route", () => {
 		const response = await app.request(path, {
 			method: "PUT",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ save, expectedRevision: null, idempotencyKey }),
+			body: JSON.stringify({
+				protocolVersion: GAME_SAVE_PROTOCOL_VERSION,
+				intent: "advance",
+				save,
+				baseRevision: null,
+				expectedRevision: null,
+				idempotencyKey,
+			}),
 		});
 
 		expect(response.status).toBe(200);
@@ -95,6 +191,8 @@ describe("game save route", () => {
 			gameId: GAME_IDS.rpg2d,
 			slotId: AUTOSAVE_SLOT_ID,
 			save,
+			intent: "advance",
+			baseRevision: null,
 			expectedRevision: null,
 			idempotencyKey,
 		});
@@ -119,7 +217,10 @@ describe("game save route", () => {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
+						protocolVersion: GAME_SAVE_PROTOCOL_VERSION,
+						intent: "advance",
 						save: { formatVersion: 0 },
+						baseRevision: null,
 						expectedRevision: null,
 						idempotencyKey: crypto.randomUUID(),
 					}),
@@ -134,7 +235,10 @@ describe("game save route", () => {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
+						protocolVersion: GAME_SAVE_PROTOCOL_VERSION,
+						intent: "advance",
 						save: { padding: "x".repeat(256 * 1024) },
+						baseRevision: null,
 						expectedRevision: null,
 						idempotencyKey: crypto.randomUUID(),
 					}),

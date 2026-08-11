@@ -20,15 +20,15 @@ import type {
 	BattleStatusState,
 } from "./model";
 import {
-	createInitialPartyState,
-	grantExperience,
-	toRuntimeAbility,
-} from "./progression-engine";
-import {
 	ACTION_GAUGE_MAX,
 	GAME_CONTENT_VERSION,
 	GAME_STATE_SCHEMA_VERSION,
 } from "./model";
+import {
+	createInitialPartyState,
+	grantExperience,
+	toRuntimeAbility,
+} from "./progression-engine";
 
 const registry = validateGameContentDirectory();
 

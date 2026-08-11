@@ -2043,8 +2043,80 @@
 
 .game-launch-actions {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 10px;
 	margin: 26px 0 18px;
+}
+
+.game-launcher [role="alertdialog"] {
+	padding: 20px;
+	border: 1px solid #705a39;
+	background: rgb(7 16 29 / 88%);
+}
+
+.game-launcher [role="alertdialog"] h2,
+.game-save-slots h2 {
+	margin: 0 0 10px;
+	color: #f2cf7a;
+	font-family: Georgia, "Times New Roman", serif;
+	font-size: 1rem;
+	font-weight: 500;
+}
+
+.game-save-conflict-candidates {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	margin: 18px 0;
+}
+
+.game-save-conflict-candidates section,
+.game-save-slots > div {
+	padding: 12px;
+	border: 1px solid rgb(112 90 57 / 72%);
+	background: rgb(16 29 46 / 80%);
+}
+
+.game-save-conflict-candidates p {
+	margin-bottom: 0;
+	color: #aebed2;
+	font-family: monospace;
+	font-size: 0.68rem;
+	line-height: 1.5;
+}
+
+.game-save-slots {
+	margin-top: 24px;
+}
+
+.game-save-slots > div {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 8px;
+	color: #aebed2;
+	font-family: monospace;
+	font-size: 0.68rem;
+}
+
+.game-save-slots button {
+	padding: 6px 8px;
+	border: 1px solid #705a39;
+	background: #101d2e;
+	color: #d7e2df;
+	font: inherit;
+}
+
+@media (max-width: 520px) {
+	.game-save-conflict-candidates {
+		grid-template-columns: 1fr;
+	}
+
+	.game-save-slots > div {
+		align-items: stretch;
+		flex-direction: column;
+	}
 }
 
 .game-launch-button {
@@ -2224,6 +2296,19 @@
 	background: #243a47;
 	color: #f2cf7a;
 	font: inherit;
+}
+
+.game-debug-overlay {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 60;
+	max-width: calc(100% - 16px);
+	padding: 3px 5px;
+	background: rgb(0 0 0 / 78%);
+	color: #72d7c0;
+	font: 5px / 1.35 monospace;
+	pointer-events: none;
 }
 
 .game-screen-help {

@@ -1,27 +1,50 @@
 import { zValidator } from "@hono/zod-validator";
-import { AUTOSAVE_SLOT_ID, decodeGameSave } from "../../shared/game";
-import { GAME_IDS } from "../../shared/game-platform";
-import {
-	GAME_SAVE_MAX_BYTES,
-	type DeleteGameSaveResponse,
-	type GetGameSaveResponse,
-	type PutGameSaveResponse,
-} from "../../shared/schemas/game-save.schema";
 import { Hono } from "hono";
 import { z } from "zod";
+import {
+	ACTION3D_AUTOSAVE_SLOT,
+	decodeAction3dSave,
+} from "../../shared/action3d";
+import { decodeGameSave, isGameSaveSlotId } from "../../shared/game";
+import { GAME_IDS } from "../../shared/game-platform";
+import {
+	type DeleteGameSaveResponse,
+	GAME_SAVE_MAX_BYTES,
+	GAME_SAVE_PROTOCOL_VERSION,
+	type GetGameSaveResponse,
+	type ListGameSaveHistoryResponse,
+	type ListGameSaveSlotsResponse,
+	type PutGameSaveResponse,
+	type RestoreGameSaveRequest,
+	type SupportedGameSaveEnvelope,
+} from "../../shared/schemas/game-save.schema";
 import { getAuthContextUser } from "../modules/auth/context";
 import { HttpError } from "../modules/auth/errors";
 import type { GameSaveService } from "../modules/game-save/game-save.service";
 
 const putGameSaveSchema = z
 	.object({
+		protocolVersion: z.literal(GAME_SAVE_PROTOCOL_VERSION),
+		intent: z.enum(["advance", "resolve-browser", "reset"]),
 		save: z.unknown(),
+		baseRevision: z.number().int().positive().nullable(),
 		expectedRevision: z.number().int().positive().nullable(),
 		idempotencyKey: z.string().uuid(),
 	})
 	.strict();
 
-type GameSaveRouteService = Pick<GameSaveService, "load" | "save" | "delete">;
+const restoreGameSaveSchema: z.ZodType<RestoreGameSaveRequest> = z
+	.object({
+		protocolVersion: z.literal(GAME_SAVE_PROTOCOL_VERSION),
+		expectedRevision: z.number().int().positive(),
+		idempotencyKey: z.string().uuid(),
+	})
+	.strict();
+
+type GameSaveRouteService = Pick<
+	GameSaveService,
+	"load" | "save" | "delete" | "listSlots" | "listHistory" | "restore"
+>;
 
 const getAuthorizedUserId = (c: Parameters<typeof getAuthContextUser>[0]) => {
 	const user = getAuthContextUser(c);
@@ -33,20 +56,73 @@ const getAuthorizedUserId = (c: Parameters<typeof getAuthContextUser>[0]) => {
 };
 
 const assertSupportedSlot = (gameId: string, slotId: string): void => {
-	if (gameId !== GAME_IDS.rpg2d || slotId !== AUTOSAVE_SLOT_ID) {
+	const supported =
+		(gameId === GAME_IDS.rpg2d && isGameSaveSlotId(slotId)) ||
+		(gameId === GAME_IDS.action3d && slotId === ACTION3D_AUTOSAVE_SLOT);
+	if (!supported) {
 		throw new HttpError(404, "Game save slot not found.");
 	}
 };
 
 export function createGameSaveRoute(service: GameSaveRouteService) {
 	return new Hono()
+		.get("/:gameId/saves", async (c) => {
+			const { gameId } = c.req.param();
+			if (gameId !== GAME_IDS.rpg2d) {
+				throw new HttpError(404, "Game save collection not found.");
+			}
+			const response = {
+				slots: await service.listSlots(getAuthorizedUserId(c), gameId),
+			} satisfies ListGameSaveSlotsResponse;
+			return c.json(response);
+		})
+		.get("/:gameId/saves/:slotId/history", async (c) => {
+			const { gameId, slotId } = c.req.param();
+			assertSupportedSlot(gameId, slotId);
+			if (gameId !== GAME_IDS.rpg2d) {
+				throw new HttpError(404, "Game save history not found.");
+			}
+			const response = {
+				history: await service.listHistory(
+					getAuthorizedUserId(c),
+					gameId,
+					slotId,
+				),
+			} satisfies ListGameSaveHistoryResponse;
+			return c.json(response);
+		})
+		.post(
+			"/:gameId/saves/:slotId/history/:revision/restore",
+			zValidator("json", restoreGameSaveSchema),
+			async (c) => {
+				const { gameId, slotId, revision } = c.req.param();
+				assertSupportedSlot(gameId, slotId);
+				if (gameId !== GAME_IDS.rpg2d || !/^\d+$/.test(revision)) {
+					throw new HttpError(404, "Game save history entry not found.");
+				}
+				const body = c.req.valid("json");
+				const result = await service.restore(
+					getAuthorizedUserId(c),
+					gameId,
+					slotId,
+					Number(revision),
+					body.expectedRevision,
+					body.idempotencyKey,
+				);
+				const response = {
+					save: result.record,
+					idempotent: result.idempotent,
+				} satisfies PutGameSaveResponse<SupportedGameSaveEnvelope>;
+				return c.json(response);
+			},
+		)
 		.get("/:gameId/saves/:slotId", async (c) => {
 			const { gameId, slotId } = c.req.param();
 			assertSupportedSlot(gameId, slotId);
 			const userId = getAuthorizedUserId(c);
 			const response = {
 				save: await service.load(userId, gameId, slotId),
-			} satisfies GetGameSaveResponse;
+			} satisfies GetGameSaveResponse<SupportedGameSaveEnvelope>;
 			return c.json(response);
 		})
 		.put(
@@ -62,10 +138,15 @@ export function createGameSaveRoute(service: GameSaveRouteService) {
 				) {
 					throw new HttpError(413, "Game save payload is too large.");
 				}
-				const decoded = decodeGameSave(serialized);
+				const decoded =
+					gameId === GAME_IDS.action3d
+						? decodeAction3dSave(serialized)
+						: decodeGameSave(serialized);
 				if (
 					decoded.status !== "ready" ||
 					decoded.migrated ||
+					(gameId === GAME_IDS.action3d &&
+						(!("gameId" in decoded.save) || decoded.save.gameId !== gameId)) ||
 					decoded.save.slotId !== slotId
 				) {
 					throw new HttpError(
@@ -74,18 +155,21 @@ export function createGameSaveRoute(service: GameSaveRouteService) {
 					);
 				}
 				const userId = getAuthorizedUserId(c);
-				const result = await service.save({
+				const saveInput = {
 					userId,
 					gameId,
 					slotId,
 					save: decoded.save,
+					intent: body.intent,
+					baseRevision: body.baseRevision,
 					expectedRevision: body.expectedRevision,
 					idempotencyKey: body.idempotencyKey,
-				});
+				};
+				const result = await service.save(saveInput);
 				const response = {
 					save: result.record,
 					idempotent: result.idempotent,
-				} satisfies PutGameSaveResponse;
+				} satisfies PutGameSaveResponse<SupportedGameSaveEnvelope>;
 				return c.json(response);
 			},
 		)

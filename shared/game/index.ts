@@ -2,6 +2,7 @@ export * from "./battle-engine";
 export * from "./content";
 export * from "./demo-state";
 export * from "./deterministic-rng";
+export * from "./diagnostics";
 export * from "./event-engine";
 export * from "./field-engine";
 export * from "./game-session";

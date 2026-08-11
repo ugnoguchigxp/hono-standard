@@ -10,6 +10,8 @@ import {
 	type FieldWalkFrame,
 	getFieldCharacterTextureKey,
 } from "../art/pixel-textures";
+import { fieldMusicForMap } from "../audio/audio-catalog";
+import type { GameAudioManager } from "../audio/GameAudioManager";
 import { getRequiredAssetIdsForMap } from "../content/content-assets";
 import {
 	ContentLoadError,
@@ -19,8 +21,6 @@ import { GAME_RENDER_SCALE, GAME_TEXT_RESOLUTION } from "../display";
 import { InputManager } from "../input/InputManager";
 import { getPendingFieldTriggerAction } from "../presentation/field-transition";
 import type { GameRuntimeError } from "../runtime-errors";
-import { fieldMusicForMap } from "../audio/audio-catalog";
-import type { GameAudioManager } from "../audio/GameAudioManager";
 import { gameSettingsStore } from "../settings/GameSettingsStore";
 
 const parseColor = (color: string): number =>

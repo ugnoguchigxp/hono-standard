@@ -1,26 +1,30 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { serveStatic } from "hono/bun";
-import { csrf } from "hono/csrf";
-import { bodyLimit } from "hono/body-limit";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
+import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
+import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
+import { GAME_SAVE_MAX_BYTES } from "../../shared/schemas/game-save.schema";
 import type { DbRuntime } from "../db";
 import { createDbRuntime } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { AuthService } from "../modules/auth/auth.service";
-import { GameSaveService } from "../modules/game-save/game-save.service";
 import { HttpError } from "../modules/auth/errors";
+import {
+	loadServerAction3dContentRegistry,
+	loadServerGameContentRegistry,
+} from "../modules/game-save/game-content-registry";
+import { GameSaveService } from "../modules/game-save/game-save.service";
 import { createAuthRoute } from "../routes/auth.route";
-import { createHealthRoute } from "../routes/health.route";
 import { createGameSaveRoute } from "../routes/game-save.route";
+import { createHealthRoute } from "../routes/health.route";
 import { createProtectedRoute } from "../routes/protected.route";
-import { readAppEnv, type AppEnv } from "./env";
+import { type AppEnv, readAppEnv } from "./env";
 import { appContentSecurityPolicy } from "./security-headers";
-import { GAME_SAVE_MAX_BYTES } from "../../shared/schemas/game-save.schema";
 
 export type AppDeps = {
 	env: AppEnv;
@@ -37,7 +41,11 @@ export async function createDefaultAppDeps(): Promise<AppDeps> {
 	const env = readAppEnv();
 	const dbRuntime = createDbRuntime(env);
 	const authService = new AuthService(dbRuntime.client, env);
-	const gameSaveService = new GameSaveService(dbRuntime.client);
+	const gameSaveService = new GameSaveService(
+		dbRuntime.client,
+		loadServerGameContentRegistry(),
+		loadServerAction3dContentRegistry(),
+	);
 	return { env, dbRuntime, authService, gameSaveService };
 }
 

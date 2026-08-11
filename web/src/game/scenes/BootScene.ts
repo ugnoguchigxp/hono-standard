@@ -1,10 +1,10 @@
 import type { GameSession } from "@shared/game";
 import Phaser from "phaser";
 import { createPixelTextures } from "../art/pixel-textures";
-import { getRequiredAssetsForState } from "../content/content-assets";
-import type { GameRuntimeError } from "../runtime-errors";
 import { gameAudioCatalog } from "../audio/audio-catalog";
 import type { GameAudioManager } from "../audio/GameAudioManager";
+import { getRequiredAssetsForState } from "../content/content-assets";
+import type { GameRuntimeError } from "../runtime-errors";
 import { createGameUiBitmapFont } from "../ui/bitmap-font";
 
 export class BootScene extends Phaser.Scene {

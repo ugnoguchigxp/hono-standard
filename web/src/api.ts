@@ -1,26 +1,33 @@
-import {
-	useMutation,
-	useQuery,
-	useQueryClient,
-	type UseMutationOptions,
-} from "@tanstack/react-query";
 import type { AppType } from "@api/app/hono";
-import { hc } from "hono/client";
+import {
+	ACTION3D_AUTOSAVE_SLOT,
+	type Action3dSaveEnvelope,
+} from "@shared/action3d";
+import { AUTOSAVE_SLOT_ID, type GameSaveSlotId } from "@shared/game";
+import { GAME_IDS } from "@shared/game-platform";
 import type {
 	AuthResponse,
 	AuthSessionUser,
 	LoginInput,
 	LogoutResponse,
 } from "@shared/schemas/auth.schema";
-import type { ProtectedProfileResponse } from "@shared/schemas/protected.schema";
 import type {
 	DeleteGameSaveResponse,
 	GetGameSaveResponse,
+	ListGameSaveHistoryResponse,
+	ListGameSaveSlotsResponse,
 	PutGameSaveRequest,
 	PutGameSaveResponse,
+	RestoreGameSaveRequest,
 } from "@shared/schemas/game-save.schema";
-import { AUTOSAVE_SLOT_ID } from "@shared/game";
-import { GAME_IDS } from "@shared/game-platform";
+import type { ProtectedProfileResponse } from "@shared/schemas/protected.schema";
+import {
+	type UseMutationOptions,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import { hc } from "hono/client";
 
 export type AuthUser = AuthSessionUser;
 export type LoginParams = LoginInput & {
@@ -147,14 +154,18 @@ export class ApiRequestError extends Error {
 	}
 }
 
-const gameSavePath = `/api/games/${GAME_IDS.rpg2d}/saves/${AUTOSAVE_SLOT_ID}`;
+const rpgGameSavesPath = `/api/games/${GAME_IDS.rpg2d}/saves`;
+const rpgGameSavePath = (slotId: GameSaveSlotId) =>
+	`${rpgGameSavesPath}/${slotId}`;
+const action3dSavePath = `/api/games/${GAME_IDS.action3d}/saves/${ACTION3D_AUTOSAVE_SLOT}`;
 
 export async function fetchRpgGameSave(
 	expectedOwner: string,
 	signal?: AbortSignal,
+	slotId: GameSaveSlotId = AUTOSAVE_SLOT_ID,
 ): Promise<GetGameSaveResponse> {
 	return parseJsonResponse<GetGameSaveResponse>(
-		await customFetch(gameSavePath, {
+		await customFetch(rpgGameSavePath(slotId), {
 			headers: { "X-Game-Save-Owner": expectedOwner },
 			signal,
 		}),
@@ -165,9 +176,10 @@ export async function putRpgGameSave(
 	request: PutGameSaveRequest,
 	expectedOwner: string,
 	signal?: AbortSignal,
+	slotId: GameSaveSlotId = request.save.slotId,
 ): Promise<PutGameSaveResponse> {
 	return parseJsonResponse<PutGameSaveResponse>(
-		await customFetch(gameSavePath, {
+		await customFetch(rpgGameSavePath(slotId), {
 			method: "PUT",
 			headers: {
 				"Content-Type": "application/json",
@@ -181,11 +193,90 @@ export async function putRpgGameSave(
 
 export async function deleteRpgGameSave(
 	expectedOwner: string,
+	slotId: GameSaveSlotId = AUTOSAVE_SLOT_ID,
 ): Promise<DeleteGameSaveResponse> {
 	return parseJsonResponse<DeleteGameSaveResponse>(
-		await customFetch(gameSavePath, {
+		await customFetch(rpgGameSavePath(slotId), {
 			method: "DELETE",
 			headers: { "X-Game-Save-Owner": expectedOwner },
+		}),
+	);
+}
+
+export async function listRpgGameSaveSlots(
+	expectedOwner: string,
+	signal?: AbortSignal,
+): Promise<ListGameSaveSlotsResponse> {
+	return parseJsonResponse<ListGameSaveSlotsResponse>(
+		await customFetch(rpgGameSavesPath, {
+			headers: { "X-Game-Save-Owner": expectedOwner },
+			signal,
+		}),
+	);
+}
+
+export async function listRpgGameSaveHistory(
+	expectedOwner: string,
+	slotId: GameSaveSlotId,
+	signal?: AbortSignal,
+): Promise<ListGameSaveHistoryResponse> {
+	return parseJsonResponse<ListGameSaveHistoryResponse>(
+		await customFetch(`${rpgGameSavePath(slotId)}/history`, {
+			headers: { "X-Game-Save-Owner": expectedOwner },
+			signal,
+		}),
+	);
+}
+
+export async function restoreRpgGameSave(
+	expectedOwner: string,
+	slotId: GameSaveSlotId,
+	sourceRevision: number,
+	request: RestoreGameSaveRequest,
+	signal?: AbortSignal,
+): Promise<PutGameSaveResponse> {
+	return parseJsonResponse<PutGameSaveResponse>(
+		await customFetch(
+			`${rpgGameSavePath(slotId)}/history/${sourceRevision}/restore`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Game-Save-Owner": expectedOwner,
+				},
+				body: JSON.stringify(request),
+				signal,
+			},
+		),
+	);
+}
+
+export async function fetchAction3dGameSave(
+	expectedOwner: string,
+	signal?: AbortSignal,
+): Promise<GetGameSaveResponse<Action3dSaveEnvelope>> {
+	return parseJsonResponse<GetGameSaveResponse<Action3dSaveEnvelope>>(
+		await customFetch(action3dSavePath, {
+			headers: { "X-Game-Save-Owner": expectedOwner },
+			signal,
+		}),
+	);
+}
+
+export async function putAction3dGameSave(
+	request: PutGameSaveRequest<Action3dSaveEnvelope>,
+	expectedOwner: string,
+	signal?: AbortSignal,
+): Promise<PutGameSaveResponse<Action3dSaveEnvelope>> {
+	return parseJsonResponse<PutGameSaveResponse<Action3dSaveEnvelope>>(
+		await customFetch(action3dSavePath, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Game-Save-Owner": expectedOwner,
+			},
+			body: JSON.stringify(request),
+			signal,
 		}),
 	);
 }

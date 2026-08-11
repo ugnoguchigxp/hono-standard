@@ -984,4 +984,65 @@ describe("GameSession", () => {
 		expect(() => session.resume()).toThrow("closed session");
 		expect(listener).toHaveBeenCalledTimes(2);
 	});
+
+	it("isolates listener and diagnostics failures after committing once", () => {
+		const listenerErrorSink = vi.fn(() => {
+			throw new Error("diagnostics failed");
+		});
+		const session = new GameSession({
+			sessionId: "listener-isolation",
+			initialState: createState(),
+			registry,
+			encounterProvider: createDemoEncounterProvider(),
+			listenerErrorSink,
+		});
+		const laterListener = vi.fn();
+		session.subscribe(() => {
+			throw new Error("listener failed");
+		});
+		session.subscribe(laterListener);
+
+		expect(() =>
+			session.dispatch({
+				type: "story.flag.set",
+				flagId: "listener-isolated",
+				value: true,
+			}),
+		).not.toThrow();
+		expect(session.revision).toBe(1);
+		expect(session.snapshot().story.flags["listener-isolated"]).toBe(true);
+		expect(laterListener).toHaveBeenCalledOnce();
+		expect(listenerErrorSink).toHaveBeenCalledWith(expect.any(Error), {
+			sessionId: "listener-isolation",
+			sequence: 1,
+			stateRevision: 1,
+		});
+	});
+
+	it("notifies selector subscriptions only when their selected value changes", () => {
+		const session = createSession("selector");
+		const listener = vi.fn();
+		const unsubscribe = session.subscribeSelector(
+			(state) => state.mode,
+			listener,
+		);
+
+		session.dispatch({
+			type: "story.flag.set",
+			flagId: "selector-unrelated",
+			value: true,
+		});
+		expect(listener).not.toHaveBeenCalled();
+		session.dispatch({
+			type: "event.start",
+			eventId: "signal-ruins-contact",
+		});
+		expect(listener).toHaveBeenCalledOnce();
+		expect(listener).toHaveBeenCalledWith(
+			"event",
+			"field",
+			expect.objectContaining({ state: expect.objectContaining({ mode: "event" }) }),
+		);
+		unsubscribe();
+	});
 });

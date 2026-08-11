@@ -2,8 +2,10 @@ import {
 	type CharacterState,
 	experienceRequiredForLevel,
 	type GameSession,
+	MANUAL_SAVE_SLOT_IDS,
 } from "@shared/game";
 import Phaser from "phaser";
+import type { GameAudioManager } from "../audio/GameAudioManager";
 import {
 	GAME_LOGICAL_HEIGHT,
 	GAME_LOGICAL_WIDTH,
@@ -18,16 +20,17 @@ import {
 	getFieldMenuItems,
 	nextEquipmentCandidate,
 } from "../menu/menu-data";
-import type { GameAudioManager } from "../audio/GameAudioManager";
-import { addUiBitmapText, type UiBitmapTextStyle } from "../ui/bitmap-font";
+import { requestManualGameSave } from "../save/manual-save-events";
 import { OPEN_GAME_SETTINGS_EVENT } from "../settings/settings-events";
+import { addUiBitmapText, type UiBitmapTextStyle } from "../ui/bitmap-font";
 
-type MenuPage = "root" | "status" | "equipment" | "items";
+type MenuPage = "root" | "status" | "equipment" | "items" | "save";
 
 const menuCommands = [
 	{ id: "status", label: "STATUS" },
 	{ id: "equipment", label: "EQUIPMENT" },
 	{ id: "items", label: "ITEMS" },
+	{ id: "save", label: "SAVE" },
 	{ id: "settings", label: "SETTINGS" },
 	{ id: "return", label: "RETURN" },
 ] as const;
@@ -39,6 +42,8 @@ export class FieldMenuScene extends Phaser.Scene {
 	private actorIndex = 0;
 	private itemIndex = 0;
 	private equipmentIndex = 0;
+	private saveIndex = 0;
+	private saveConfirmation = false;
 	private itemTargeting = false;
 	private feedback = "";
 	private contentObjects: Phaser.GameObjects.GameObject[] = [];
@@ -56,6 +61,8 @@ export class FieldMenuScene extends Phaser.Scene {
 		this.actorIndex = 0;
 		this.itemIndex = 0;
 		this.equipmentIndex = 0;
+		this.saveIndex = 0;
+		this.saveConfirmation = false;
 		this.itemTargeting = false;
 		this.feedback = "";
 		this.contentObjects = [];
@@ -155,6 +162,10 @@ export class FieldMenuScene extends Phaser.Scene {
 			this.handleItemInput();
 			return;
 		}
+		if (this.page === "save") {
+			this.handleSaveInput();
+			return;
+		}
 		const partySize = this.gameSession.snapshot().party.members.length;
 		if (this.inputManager.justPressed("LEFT")) {
 			this.actorIndex = (this.actorIndex + partySize - 1) % partySize;
@@ -179,6 +190,36 @@ export class FieldMenuScene extends Phaser.Scene {
 				this.changeEquipment();
 			}
 		}
+	}
+
+	private handleSaveInput(): void {
+		if (!this.inputManager) return;
+		if (this.inputManager.justPressed("UP")) {
+			this.saveIndex =
+				(this.saveIndex + MANUAL_SAVE_SLOT_IDS.length - 1) %
+				MANUAL_SAVE_SLOT_IDS.length;
+			this.saveConfirmation = false;
+			this.feedback = "";
+			this.renderPage();
+		}
+		if (this.inputManager.justPressed("DOWN")) {
+			this.saveIndex = (this.saveIndex + 1) % MANUAL_SAVE_SLOT_IDS.length;
+			this.saveConfirmation = false;
+			this.feedback = "";
+			this.renderPage();
+		}
+		if (!this.inputManager.justPressed("CONFIRM")) return;
+		if (!this.saveConfirmation) {
+			this.saveConfirmation = true;
+			this.feedback = "Press confirm again to overwrite this manual slot.";
+			this.renderPage();
+			return;
+		}
+		const slotId = MANUAL_SAVE_SLOT_IDS[this.saveIndex];
+		requestManualGameSave(slotId);
+		this.saveConfirmation = false;
+		this.feedback = `${slotId.toUpperCase()} save requested.`;
+		this.renderPage();
 	}
 
 	private handleItemInput(): void {
@@ -317,18 +358,52 @@ export class FieldMenuScene extends Phaser.Scene {
 		if (this.page === "root") this.renderRoot();
 		else if (this.page === "status") this.renderStatus();
 		else if (this.page === "equipment") this.renderEquipment();
+		else if (this.page === "save") this.renderSave();
 		else this.renderItems();
+	}
+
+	private renderSave(): void {
+		this.panel(5, 27, 310, 136);
+		this.text(15, 35, "MANUAL CHECKPOINT", {
+			fontSize: "7px",
+			color: "#72d7c0",
+		});
+		MANUAL_SAVE_SLOT_IDS.forEach((slotId, index) => {
+			const y = 58 + index * 24;
+			if (index === this.saveIndex) {
+				this.track(
+					this.add
+						.rectangle(160, y + 7, 286, 20, 0x244d73, 0.95)
+						.setStrokeStyle(1, 0x72d7c0),
+				);
+				this.text(14, y + 2, "▶", { color: "#f2cf7a" });
+			}
+			this.text(28, y + 2, slotId.toUpperCase(), {
+				fontSize: "7px",
+				color: index === this.saveIndex ? "#ffffff" : "#c4d0d8",
+			});
+		});
+		this.text(
+			160,
+			140,
+			this.feedback || "Choose a slot for this safe field position.",
+			{
+				fontSize: "5px",
+				color: this.feedback ? "#f2cf7a" : "#bcd1d7",
+			},
+		).setOrigin(0.5, 0);
+		this.help("UP / DOWN SLOT   Z CONFIRM TWICE   X BACK");
 	}
 
 	private renderRoot(): void {
 		this.panel(5, 27, 74, 136);
 		this.panel(83, 27, 232, 136);
 		menuCommands.forEach((command, index) => {
-			const y = 34 + index * 25;
+			const y = 32 + index * 21;
 			if (index === this.menuIndex) {
 				this.track(
 					this.add
-						.rectangle(42, y + 8, 64, 21, 0x244d73, 0.95)
+						.rectangle(42, y + 7, 64, 18, 0x244d73, 0.95)
 						.setStrokeStyle(1, 0x72d7c0),
 				);
 				this.text(12, y + 3, "▶", { color: "#f2cf7a" });

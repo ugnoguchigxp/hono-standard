@@ -1,16 +1,16 @@
 import Phaser from "phaser";
 import {
-	gameActions,
-	type GameAction,
-	type VirtualGameInputDetail,
-	VIRTUAL_GAME_INPUT_EVENT,
-} from "./game-actions";
-import {
-	gameSettingsStore,
 	type GameSettingsStore,
+	gameSettingsStore,
 } from "../settings/GameSettingsStore";
+import {
+	type GameAction,
+	gameActions,
+	VIRTUAL_GAME_INPUT_EVENT,
+	type VirtualGameInputDetail,
+} from "./game-actions";
 
-export { gameActions, type GameAction } from "./game-actions";
+export { type GameAction, gameActions } from "./game-actions";
 
 const gamepadButtons: Readonly<Partial<Record<GameAction, number>>> = {
 	CONFIRM: 0,

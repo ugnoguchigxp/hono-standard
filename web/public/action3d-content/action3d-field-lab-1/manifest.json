@@ -104,8 +104,9 @@
 			"moveSpeed": 2.2,
 			"perceptionRange": 15,
 			"preferredRange": 1.36,
+			"staggerMs": 280,
 			"attack": {
-				"damage": 5,
+				"damage": 3,
 				"range": 1.7,
 				"windupMs": 440,
 				"recoveryMs": 600,
@@ -120,8 +121,9 @@
 			"moveSpeed": 1.8,
 			"perceptionRange": 18,
 			"preferredRange": 8,
+			"staggerMs": 280,
 			"attack": {
-				"damage": 8,
+				"damage": 4,
 				"range": 12,
 				"windupMs": 700,
 				"recoveryMs": 500,

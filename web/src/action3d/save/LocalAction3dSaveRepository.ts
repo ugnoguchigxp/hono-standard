@@ -44,6 +44,13 @@ export class LocalAction3dSaveRepository {
 	save(state: Action3dState, savedAt?: string): LocalAction3dWriteResult {
 		try {
 			const save = createAction3dSave(state, savedAt);
+			return this.saveEnvelope(save);
+		} catch {
+			return { ok: false, message: "Could not write the Action3D checkpoint." };
+		}
+	}
+	saveEnvelope(save: Action3dSaveEnvelope): LocalAction3dWriteResult {
+		try {
 			this.storage.setItem(this.key, JSON.stringify(save));
 			return { ok: true, save };
 		} catch {

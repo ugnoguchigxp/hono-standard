@@ -91,7 +91,9 @@ export class Action3dContentRegistry {
 		this.entryPoint = frozenManifest.entryPoint;
 		this.playerTuning = frozenManifest.playerTuning;
 		this.attacksById = deepFreeze(
-			Object.fromEntries(frozenManifest.attacks.map((attack) => [attack.id, attack])),
+			Object.fromEntries(
+				frozenManifest.attacks.map((attack) => [attack.id, attack]),
+			),
 		);
 		this.enemyArchetypesById = deepFreeze(
 			Object.fromEntries(
@@ -119,7 +121,7 @@ export class Action3dContentRegistry {
 		);
 	}
 	get worldsById(): Readonly<Record<string, Action3dWorld>> {
-		return this.worldStore;
+		return Object.freeze({ ...this.worldStore });
 	}
 	hasWorld(id: string): boolean {
 		return Boolean(this.worldStore[id]);
@@ -130,7 +132,7 @@ export class Action3dContentRegistry {
 		this.worldStore[world.id] = deepFreeze(structuredClone(world));
 	}
 	getWorld(id: string): Action3dWorld {
-		const world = this.worldsById[id];
+		const world = this.worldStore[id];
 		if (!world) throw new Error(`Unknown Action3D world '${id}'.`);
 		return world;
 	}
@@ -187,6 +189,16 @@ export const parseAction3dManifest = (
 	path = "manifest.json",
 ): Action3dManifest => {
 	const result = action3dManifestSchema.safeParse(raw);
+	if (!result.success)
+		throw new Action3dContentError(zodIssues(path, result.error));
+	return result.data;
+};
+
+export const parseAction3dWorld = (
+	raw: unknown,
+	path = "world.json",
+): Action3dWorld => {
+	const result = action3dWorldSchema.safeParse(raw);
 	if (!result.success)
 		throw new Action3dContentError(zodIssues(path, result.error));
 	return result.data;
@@ -409,7 +421,6 @@ export function parseAction3dBundle(
 				code: "reference",
 				message: `Unknown model asset '${archetype.modelAssetId}'.`,
 			});
-	const worldIds = new Set(worlds.map((world) => world.id));
 	const declaredWorldIds = new Set(
 		manifest.documents.worlds.map((document) => document.id),
 	);

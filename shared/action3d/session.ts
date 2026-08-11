@@ -7,7 +7,7 @@ import {
 	type Action3dInput,
 	type Action3dState,
 } from "./model";
-import { stepAction3dState } from "./simulation";
+import { createAction3dWorldState, stepOwnedAction3dState } from "./simulation";
 
 export class Action3dSession {
 	readonly content: Action3dContentRegistry;
@@ -22,6 +22,13 @@ export class Action3dSession {
 	getState(): Action3dState {
 		return cloneAction3dState(this.state);
 	}
+	/**
+	 * Returns the session-owned state for synchronous render-loop reads. Callers
+	 * must not mutate or retain this view beyond the current frame.
+	 */
+	getFrameState(): Readonly<Action3dState> {
+		return this.state;
+	}
 	restore(state: Action3dState): void {
 		if (state.contentVersion !== this.content.contentVersion)
 			throw new Error("Action3D state and content versions do not match.");
@@ -33,10 +40,38 @@ export class Action3dSession {
 		else if (!paused && this.state.phase === "paused")
 			this.state.phase = "playing";
 	}
+	enterWorld(worldId: string, spawnId: string): Action3dState {
+		this.state = createAction3dWorldState(
+			this.state,
+			this.content,
+			worldId,
+			spawnId,
+		);
+		this.accumulatorMs = 0;
+		return this.getState();
+	}
 	advance(
 		deltaMs: number,
 		input: Action3dInput,
 	): { state: Action3dState; events: Action3dEvent[] } {
+		const events = this.advanceOwnedState(deltaMs, input);
+		return { state: this.getState(), events };
+	}
+	/**
+	 * Render-loop variant whose state is borrowed until the next session write.
+	 * UI, save, and asynchronous consumers must use getState() instead.
+	 */
+	advanceFrame(
+		deltaMs: number,
+		input: Action3dInput,
+	): { state: Readonly<Action3dState>; events: Action3dEvent[] } {
+		const events = this.advanceOwnedState(deltaMs, input);
+		return { state: this.state, events };
+	}
+	private advanceOwnedState(
+		deltaMs: number,
+		input: Action3dInput,
+	): Action3dEvent[] {
 		if (!Number.isFinite(deltaMs) || deltaMs < 0)
 			throw new Error("Action3D delta must be a non-negative finite duration.");
 		this.accumulatorMs = Math.min(
@@ -53,21 +88,21 @@ export class Action3dSession {
 						jump: false,
 						dodge: false,
 						attack: false,
+						heavyAttack: false,
 						lockOn: false,
 						pause: false,
 					};
-			const result = stepAction3dState(
+			const stepEvents = stepOwnedAction3dState(
 				this.state,
 				this.content,
 				stepInput,
 				ACTION3D_FIXED_STEP_MS,
 			);
-			this.state = result.state;
-			events.push(...result.events);
+			events.push(...stepEvents);
 			this.accumulatorMs -= ACTION3D_FIXED_STEP_MS;
 			first = false;
 		}
-		return { state: this.getState(), events };
+		return events;
 	}
 	tickIdle(deltaMs: number) {
 		return this.advance(deltaMs, { ...EMPTY_ACTION3D_INPUT });
