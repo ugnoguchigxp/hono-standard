@@ -1,6 +1,9 @@
 import {
 	type Action3dAsset,
+	type Action3dAttackDefinition,
+	type Action3dEnemyArchetype,
 	type Action3dManifest,
+	type Action3dPlayerTuning,
 	type Action3dWorld,
 	action3dManifestSchema,
 	action3dWorldSchema,
@@ -32,6 +35,7 @@ export type RawAction3dBundle = {
 	assetExists?: (url: string) => boolean;
 	assetSize?: (url: string) => number | undefined;
 	assetHash?: (url: string) => string | undefined;
+	allowPartialWorlds?: boolean;
 };
 const deepFreeze = <T>(value: T): T => {
 	if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -73,23 +77,57 @@ const duplicates = <T extends { id: string }>(
 export class Action3dContentRegistry {
 	readonly contentVersion: string;
 	readonly entryPoint: Readonly<Action3dManifest["entryPoint"]>;
-	readonly worldsById: Readonly<Record<string, Action3dWorld>>;
+	readonly playerTuning: Readonly<Action3dPlayerTuning>;
+	readonly attacksById: Readonly<Record<string, Action3dAttackDefinition>>;
+	readonly enemyArchetypesById: Readonly<
+		Record<string, Action3dEnemyArchetype>
+	>;
 	readonly assetsById: Readonly<Record<string, Action3dAsset>>;
+	readonly worldDocumentPaths: Readonly<Record<string, string>>;
+	private readonly worldStore: Record<string, Action3dWorld>;
 	constructor(manifest: Action3dManifest, worlds: readonly Action3dWorld[]) {
 		const frozenManifest = deepFreeze(structuredClone(manifest));
 		this.contentVersion = frozenManifest.contentVersion;
 		this.entryPoint = frozenManifest.entryPoint;
-		this.worldsById = deepFreeze(
+		this.playerTuning = frozenManifest.playerTuning;
+		this.attacksById = deepFreeze(
+			Object.fromEntries(frozenManifest.attacks.map((attack) => [attack.id, attack])),
+		);
+		this.enemyArchetypesById = deepFreeze(
 			Object.fromEntries(
-				worlds.map((world) => [world.id, structuredClone(world)]),
+				frozenManifest.enemyArchetypes.map((archetype) => [
+					archetype.id,
+					archetype,
+				]),
 			),
+		);
+		this.worldDocumentPaths = deepFreeze(
+			Object.fromEntries(
+				frozenManifest.documents.worlds.map((document) => [
+					document.id,
+					document.path,
+				]),
+			),
+		);
+		this.worldStore = Object.fromEntries(
+			worlds.map((world) => [world.id, deepFreeze(structuredClone(world))]),
 		);
 		this.assetsById = deepFreeze(
 			Object.fromEntries(
 				frozenManifest.assets.map((asset) => [asset.id, asset]),
 			),
 		);
-		Object.freeze(this);
+	}
+	get worldsById(): Readonly<Record<string, Action3dWorld>> {
+		return this.worldStore;
+	}
+	hasWorld(id: string): boolean {
+		return Boolean(this.worldStore[id]);
+	}
+	registerWorld(world: Action3dWorld): void {
+		if (!this.worldDocumentPaths[world.id])
+			throw new Error(`Unknown Action3D world document '${world.id}'.`);
+		this.worldStore[world.id] = deepFreeze(structuredClone(world));
 	}
 	getWorld(id: string): Action3dWorld {
 		const world = this.worldsById[id];
@@ -100,6 +138,23 @@ export class Action3dContentRegistry {
 		const asset = this.assetsById[id];
 		if (!asset) throw new Error(`Unknown Action3D asset '${id}'.`);
 		return asset;
+	}
+	getAttack(id: string): Action3dAttackDefinition {
+		const attack = this.attacksById[id];
+		if (!attack) throw new Error(`Unknown Action3D attack '${id}'.`);
+		return attack;
+	}
+	getEnemyArchetype(id: string): Action3dEnemyArchetype {
+		const archetype = this.enemyArchetypesById[id];
+		if (!archetype)
+			throw new Error(`Unknown Action3D enemy archetype '${id}'.`);
+		return archetype;
+	}
+	getWorldDocumentPath(id: string): string {
+		const documentPath = this.worldDocumentPaths[id];
+		if (!documentPath)
+			throw new Error(`Unknown Action3D world document '${id}'.`);
+		return documentPath;
 	}
 	getModelClip(assetId: string, clipId: string) {
 		const asset = this.getAsset(assetId);
@@ -147,23 +202,54 @@ export function parseAction3dBundle(
 		raw.worlds.map((document) => [document.path, document]),
 	);
 	const worlds: Action3dWorld[] = [];
-	for (const path of manifest.documents.worlds) {
+	for (const descriptor of manifest.documents.worlds) {
+		const path = descriptor.path;
 		const document = loaded.get(path);
 		if (!document) {
-			issues.push({
-				documentPath: manifestPath,
-				dataPath: "$.documents.worlds",
-				code: "reference",
-				message: `Referenced world '${path}' was not loaded.`,
-			});
+			if (!raw.allowPartialWorlds)
+				issues.push({
+					documentPath: manifestPath,
+					dataPath: "$.documents.worlds",
+					code: "reference",
+					message: `Referenced world '${path}' was not loaded.`,
+				});
 			continue;
 		}
 		const result = action3dWorldSchema.safeParse(document.data);
 		if (!result.success) issues.push(...zodIssues(path, result.error));
+		else if (result.data.id !== descriptor.id)
+			issues.push({
+				documentPath: path,
+				dataPath: "$.id",
+				code: "reference",
+				message: `World document declares '${result.data.id}' but manifest expects '${descriptor.id}'.`,
+			});
 		else worlds.push(result.data);
 	}
 	duplicates(manifest.assets, manifestPath, "$.assets", issues);
+	duplicates(manifest.attacks, manifestPath, "$.attacks", issues);
+	duplicates(
+		manifest.enemyArchetypes,
+		manifestPath,
+		"$.enemyArchetypes",
+		issues,
+	);
+	duplicates(
+		manifest.documents.worlds,
+		manifestPath,
+		"$.documents.worlds",
+		issues,
+	);
 	duplicates(worlds, manifestPath, "$.documents.worlds", issues);
+	const attackIds = new Set(manifest.attacks.map((attack) => attack.id));
+	for (const attack of manifest.attacks)
+		if (attack.nextAttackId && !attackIds.has(attack.nextAttackId))
+			issues.push({
+				documentPath: manifestPath,
+				dataPath: `$.attacks.${attack.id}.nextAttackId`,
+				code: "reference",
+				message: `Unknown next attack '${attack.nextAttackId}'.`,
+			});
 	for (const asset of manifest.assets) {
 		if (raw.assetExists && !raw.assetExists(asset.url))
 			issues.push({
@@ -310,8 +396,24 @@ export function parseAction3dBundle(
 			}
 		}
 	}
+	for (const archetype of manifest.enemyArchetypes)
+		if (
+			!manifest.assets.some(
+				(asset) =>
+					asset.id === archetype.modelAssetId && asset.type === "model",
+			)
+		)
+			issues.push({
+				documentPath: manifestPath,
+				dataPath: `$.enemyArchetypes.${archetype.id}.modelAssetId`,
+				code: "reference",
+				message: `Unknown model asset '${archetype.modelAssetId}'.`,
+			});
 	const worldIds = new Set(worlds.map((world) => world.id));
-	if (!worldIds.has(manifest.entryPoint.worldId))
+	const declaredWorldIds = new Set(
+		manifest.documents.worlds.map((document) => document.id),
+	);
+	if (!declaredWorldIds.has(manifest.entryPoint.worldId))
 		issues.push({
 			documentPath: manifestPath,
 			dataPath: "$.entryPoint.worldId",
@@ -327,6 +429,7 @@ export function parseAction3dBundle(
 		duplicates(world.surfaces, `${world.id}.json`, "$.surfaces", issues);
 		duplicates(world.enemies, `${world.id}.json`, "$.enemies", issues);
 		duplicates(world.landmarks, `${world.id}.json`, "$.landmarks", issues);
+		duplicates(world.exits, `${world.id}.json`, "$.exits", issues);
 		world.spawnPoints.forEach((spawn) => {
 			spawnIds.add(spawn.id);
 		});
@@ -370,18 +473,18 @@ export function parseAction3dBundle(
 				code: "reference",
 				message: `Unknown model asset '${world.playerModelAssetId}'.`,
 			});
-		if (
-			!manifest.assets.some(
-				(asset) =>
-					asset.id === world.enemyModelAssetId && asset.type === "model",
+		for (const enemy of world.enemies)
+			if (
+				!manifest.enemyArchetypes.some(
+					(archetype) => archetype.id === enemy.archetypeId,
+				)
 			)
-		)
-			issues.push({
-				documentPath: `${world.id}.json`,
-				dataPath: "$.enemyModelAssetId",
-				code: "reference",
-				message: `Unknown model asset '${world.enemyModelAssetId}'.`,
-			});
+				issues.push({
+					documentPath: `${world.id}.json`,
+					dataPath: `$.enemies.${enemy.id}.archetypeId`,
+					code: "reference",
+					message: `Unknown enemy archetype '${enemy.archetypeId}'.`,
+				});
 		const inside = (x: number, z: number) =>
 			x >= world.bounds.minX &&
 			x <= world.bounds.maxX &&
@@ -426,6 +529,42 @@ export function parseAction3dBundle(
 					code: "bounds",
 					message: `Surface '${surface.id}' has invalid bounds.`,
 				});
+		for (const exit of world.exits) {
+			if (!declaredWorldIds.has(exit.destinationWorldId))
+				issues.push({
+					documentPath: `${world.id}.json`,
+					dataPath: `$.exits.${exit.id}.destinationWorldId`,
+					code: "reference",
+					message: `Unknown destination world '${exit.destinationWorldId}'.`,
+				});
+			const destination = worlds.find(
+				(candidate) => candidate.id === exit.destinationWorldId,
+			);
+			if (
+				destination &&
+				!destination.spawnPoints.some(
+					(spawn) => spawn.id === exit.destinationSpawnId,
+				)
+			)
+				issues.push({
+					documentPath: `${world.id}.json`,
+					dataPath: `$.exits.${exit.id}.destinationSpawnId`,
+					code: "reference",
+					message: `Unknown destination spawn '${exit.destinationSpawnId}'.`,
+				});
+			if (
+				exit.bounds.minX >= exit.bounds.maxX ||
+				exit.bounds.minZ >= exit.bounds.maxZ ||
+				!inside(exit.bounds.minX, exit.bounds.minZ) ||
+				!inside(exit.bounds.maxX, exit.bounds.maxZ)
+			)
+				issues.push({
+					documentPath: `${world.id}.json`,
+					dataPath: `$.exits.${exit.id}.bounds`,
+					code: "bounds",
+					message: `Exit '${exit.id}' has invalid bounds.`,
+				});
+		}
 	}
 	if (issues.length) throw new Action3dContentError(issues);
 	return new Action3dContentRegistry(manifest, worlds);
