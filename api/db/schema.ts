@@ -42,6 +42,9 @@ export const refreshTokens = pgTable(
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		familyId: text("family_id"),
+		consumedAt: timestamp("consumed_at", { withTimezone: true }),
+		revokedAt: timestamp("revoked_at", { withTimezone: true }),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -50,6 +53,7 @@ export const refreshTokens = pgTable(
 		tokenIdx: uniqueIndex("refresh_tokens_token_idx").on(table.token),
 		userIdIdx: index("refresh_tokens_user_id_idx").on(table.userId),
 		expiresAtIdx: index("refresh_tokens_expires_at_idx").on(table.expiresAt),
+		familyIdIdx: index("refresh_tokens_family_id_idx").on(table.familyId),
 	}),
 );
 

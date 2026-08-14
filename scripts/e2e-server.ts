@@ -41,7 +41,7 @@ await runMigrations(env);
 
 const dbRuntime = createDbRuntime(env);
 try {
-	const authService = new AuthService(dbRuntime.db, env);
+	const authService = new AuthService(dbRuntime.client, env);
 	const existingAdmin = await authService.findUserByEmail("admin@example.com");
 	if (!existingAdmin) {
 		await authService.createAdmin({
@@ -51,7 +51,7 @@ try {
 		});
 	}
 } finally {
-	dbRuntime.close();
+	await dbRuntime.close();
 }
 
 const { default: app, getAppRuntime } = await import("../api/app/hono");
@@ -67,7 +67,7 @@ console.log(`E2E server listening on http://${env.host}:${server.port}`);
 const shutdown = async () => {
 	server.stop(true);
 	const runtime = await getAppRuntime();
-	runtime.dbRuntime.close();
+	await runtime.dbRuntime.close();
 	process.exit(0);
 };
 
