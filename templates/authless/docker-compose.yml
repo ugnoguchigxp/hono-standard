@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5173:5173"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 5173
+      DATABASE_URL: file:/data/turso.db
+      DATABASE_AUTH_TOKEN: ""
+      APP_URL: http://localhost:5173
+      CORS_ORIGINS: http://localhost:5173
+      SECURITY_HEADERS_MODE: http
+    volumes:
+      - ./data:/data

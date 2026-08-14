@@ -5,12 +5,20 @@ import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { secureHeaders } from "hono/secure-headers";
 import { readAppEnv, type AppEnv } from "./app/env";
+import { HttpError } from "./app/http-error";
+import {
+	createStructuredLogRecord,
+	errorLogFields,
+	writeStructuredLog,
+} from "./app/structured-log";
+import { createSingleWriterClient } from "./db/client";
 import * as schema from "./db/schema";
-import { requireAuth } from "./middleware/auth";
+import { requireAuth, requireRole } from "./middleware/auth";
+import { createRequestLogger } from "./middleware/request-logger";
 import { AuthService } from "./modules/auth/auth.service";
-import { HttpError } from "./modules/auth/errors";
 import { createAuthRoute } from "./routes/auth.route";
 import { createHealthRoute } from "./routes/health.route";
+import { createProtectedRoute } from "./routes/protected.route";
 
 type D1DatabaseBinding = Parameters<typeof drizzle>[0];
 
@@ -29,9 +37,14 @@ function readWorkerEnv(bindings: WorkerBindings): AppEnv {
 function createWorkerApp(bindings: WorkerBindings) {
 	const env = readWorkerEnv(bindings);
 	const db = drizzle(bindings.DB, { schema });
-	const authService = new AuthService(db as never, env);
+	const database = {
+		read: db,
+		write: createSingleWriterClient(db),
+	};
+	const authService = new AuthService(database as never, env);
 	const app = new Hono<{ Bindings: WorkerBindings }>();
 
+	app.use("*", createRequestLogger());
 	app.use("*", secureHeaders({ contentSecurityPolicy: undefined }));
 	app.use(
 		"/api/*",
@@ -48,21 +61,58 @@ function createWorkerApp(bindings: WorkerBindings) {
 	);
 	app.use("/api/*", csrf());
 
-	app.onError((error, c) => {
+	app.onError(async (error, c) => {
 		if (error instanceof HttpError) {
+			if (error.status >= 500) {
+				writeStructuredLog(
+					createStructuredLogRecord("error", "request_error", {
+						requestId: c.get("requestId"),
+						status: error.status,
+						...errorLogFields(error),
+					}),
+				);
+			}
 			return c.json(
 				{ message: error.message },
-				error.status as 400 | 401 | 403 | 404 | 409 | 500,
+				error.status as 400 | 401 | 403 | 404 | 409 | 429 | 500,
 			);
 		}
 		if (error instanceof HTTPException) {
-			return c.json({ message: error.message }, error.status as 400 | 500);
+			const response = error.getResponse();
+			const message =
+				(await response
+					.clone()
+					.text()
+					.catch(() => "")) ||
+				error.message ||
+				response.statusText ||
+				"Request failed";
+			return c.json(
+				{ message },
+				error.status as 400 | 401 | 403 | 404 | 409 | 429 | 500,
+			);
 		}
+		writeStructuredLog(
+			createStructuredLogRecord("error", "request_error", {
+				requestId: c.get("requestId"),
+				status: 500,
+				...errorLogFields(error),
+			}),
+		);
 		return c.json({ message: "Internal server error" }, 500);
 	});
 
 	const apiRoutes = new Hono()
 		.route("/health", createHealthRoute())
+		.use(
+			"/protected/*",
+			requireAuth({
+				env,
+				authService,
+			}),
+		)
+		.use("/protected/admin", requireRole("admin"))
+		.route("/protected", createProtectedRoute())
 		.use(
 			"/auth/me",
 			requireAuth({

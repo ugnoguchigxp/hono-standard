@@ -10,3 +10,12 @@ export const protectedProfileResponseSchema = z.object({
 export type ProtectedProfileResponse = z.infer<
 	typeof protectedProfileResponseSchema
 >;
+
+export const protectedAdminResponseSchema = z.object({
+	admin: z.object({
+		email: z.string().email(),
+	}),
+});
+export type ProtectedAdminResponse = z.infer<
+	typeof protectedAdminResponseSchema
+>;

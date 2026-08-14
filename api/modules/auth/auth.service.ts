@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { AppEnv } from "../../app/env";
-import type { AppDatabase } from "../../db";
+import type { AppDatabaseClient } from "../../db";
 import { users } from "../../db/schema";
-import { HttpError } from "./errors";
+import { HttpError } from "../../app/http-error";
 import { hashPassword, verifyPassword } from "./password";
 import {
 	consumeRefreshToken,
@@ -56,25 +56,28 @@ const toSessionUser = (user: AuthUser): AuthSessionUser => ({
 
 export class AuthService {
 	constructor(
-		private readonly db: AppDatabase,
+		private readonly database: AppDatabaseClient,
 		private readonly env: AppEnv,
 	) {}
 
 	async findUserById(userId: string): Promise<AuthUser | null> {
-		const row = await this.db.query.users.findFirst({
+		const row = await this.database.read.query.users.findFirst({
 			where: eq(users.id, userId),
 		});
 		return row ? toAuthUser(row) : null;
 	}
 
 	async findUserByEmail(email: string): Promise<AuthUser | null> {
-		const row = await this.db.query.users.findFirst({
+		const row = await this.database.read.query.users.findFirst({
 			where: eq(users.email, email.toLowerCase()),
 		});
 		return row ? toAuthUser(row) : null;
 	}
 
-	private async issueTokens(user: AuthUser): Promise<AuthTokensResult> {
+	private async issueTokens(
+		user: AuthUser,
+		refreshTokenFamilyId?: string,
+	): Promise<AuthTokensResult> {
 		const accessToken = await generateAccessToken(
 			{
 				userId: user.id,
@@ -89,8 +92,9 @@ export class AuthService {
 				email: user.email,
 				role: user.role,
 			},
-			this.db,
+			this.database.write,
 			this.env,
+			refreshTokenFamilyId,
 		);
 		return {
 			accessToken,
@@ -112,10 +116,12 @@ export class AuthService {
 			throw new HttpError(401, "Invalid email or password.");
 		}
 		const now = new Date();
-		await this.db
-			.update(users)
-			.set({ lastLoginAt: now, updatedAt: now })
-			.where(eq(users.id, user.id));
+		await this.database.write.execute((db) =>
+			db
+				.update(users)
+				.set({ lastLoginAt: now, updatedAt: now })
+				.where(eq(users.id, user.id)),
+		);
 		const refreshed = await this.findUserById(user.id);
 		if (!refreshed) {
 			throw new HttpError(404, "User not found.");
@@ -124,17 +130,21 @@ export class AuthService {
 	}
 
 	async refresh(refreshToken: string): Promise<AuthTokensResult> {
-		const payload = await consumeRefreshToken(refreshToken, this.db, this.env);
-		const user = await this.findUserById(payload.userId);
+		const consumed = await consumeRefreshToken(
+			refreshToken,
+			this.database.write,
+			this.env,
+		);
+		const user = await this.findUserById(consumed.payload.userId);
 		if (!user?.isActive) {
 			throw new HttpError(401, "User account is inactive or deleted.");
 		}
-		return this.issueTokens(user);
+		return this.issueTokens(user, consumed.familyId);
 	}
 
 	async logout(refreshToken?: string): Promise<void> {
 		if (!refreshToken) return;
-		await revokeRefreshToken(refreshToken, this.db);
+		await revokeRefreshToken(refreshToken, this.database.write);
 	}
 
 	async createAdmin(input: Omit<CreateUserInput, "role">): Promise<AuthUser> {
@@ -143,16 +153,18 @@ export class AuthService {
 			throw new HttpError(409, "Email already in use.");
 		}
 		const passwordHash = await hashPassword(input.password);
-		const [created] = await this.db
-			.insert(users)
-			.values({
-				email: input.email.toLowerCase(),
-				passwordHash,
-				displayName: input.displayName,
-				role: "admin",
-				isActive: true,
-			})
-			.returning();
+		const [created] = await this.database.write.execute((db) =>
+			db
+				.insert(users)
+				.values({
+					email: input.email.toLowerCase(),
+					passwordHash,
+					displayName: input.displayName,
+					role: "admin",
+					isActive: true,
+				})
+				.returning(),
+		);
 		return toAuthUser(created);
 	}
 }

@@ -4,19 +4,24 @@ import { serveStatic } from "hono/bun";
 import { csrf } from "hono/csrf";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { HTTPException } from "hono/http-exception";
 import { secureHeaders } from "hono/secure-headers";
 import type { DbRuntime } from "../db";
 import { createDbRuntime } from "../db";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireRole } from "../middleware/auth";
+import { createRequestLogger } from "../middleware/request-logger";
 import { AuthService } from "../modules/auth/auth.service";
-import { HttpError } from "../modules/auth/errors";
+import { HttpError } from "./http-error";
 import { createAuthRoute } from "../routes/auth.route";
 import { createHealthRoute } from "../routes/health.route";
 import { createProtectedRoute } from "../routes/protected.route";
 import { readAppEnv, type AppEnv } from "./env";
 import { appContentSecurityPolicy } from "./security-headers";
+import {
+	createStructuredLogRecord,
+	errorLogFields,
+	writeStructuredLog,
+} from "./structured-log";
 
 export type AppDeps = {
 	env: AppEnv;
@@ -30,8 +35,8 @@ declare global {
 
 export async function createDefaultAppDeps(): Promise<AppDeps> {
 	const env = readAppEnv();
-	const dbRuntime = createDbRuntime(env);
-	const authService = new AuthService(dbRuntime.db, env);
+	const dbRuntime = await createDbRuntime(env);
+	const authService = new AuthService(dbRuntime.client, env);
 	return { env, dbRuntime, authService };
 }
 
@@ -60,6 +65,7 @@ export function createApiRoutes(deps: AppDeps) {
 				authService: deps.authService,
 			}),
 		)
+		.use("/protected/admin", requireRole("admin"))
 		.route("/protected", createProtectedRoute())
 		.use(
 			"/auth/me",
@@ -91,7 +97,7 @@ export function createApp(deps: AppDeps) {
 				strictTransportSecurity: false,
 			};
 
-	app.use("*", logger());
+	app.use("*", createRequestLogger());
 	app.use("*", secureHeaders(secureHeaderOptions));
 	app.use(
 		"/api/*",
@@ -111,17 +117,29 @@ export function createApp(deps: AppDeps) {
 	app.onError(async (error, c) => {
 		if (error instanceof HttpError) {
 			if (error.status >= 500) {
-				console.error(error);
+				writeStructuredLog(
+					createStructuredLogRecord("error", "request_error", {
+						requestId: c.get("requestId"),
+						status: error.status,
+						...errorLogFields(error),
+					}),
+				);
 			}
 			return c.json(
 				{ message: error.message },
-				error.status as 400 | 401 | 403 | 404 | 409 | 500,
+				error.status as 400 | 401 | 403 | 404 | 409 | 429 | 500,
 			);
 		}
 		if (error instanceof HTTPException) {
 			const response = error.getResponse();
 			if (response.status >= 500) {
-				console.error(error);
+				writeStructuredLog(
+					createStructuredLogRecord("error", "request_error", {
+						requestId: c.get("requestId"),
+						status: response.status,
+						...errorLogFields(error),
+					}),
+				);
 			}
 			const message =
 				(await response
@@ -133,7 +151,7 @@ export function createApp(deps: AppDeps) {
 				"Request failed";
 			return c.json(
 				{ message },
-				error.status as 400 | 401 | 403 | 404 | 409 | 500,
+				error.status as 400 | 401 | 403 | 404 | 409 | 429 | 500,
 			);
 		}
 		const message =
@@ -142,7 +160,13 @@ export function createApp(deps: AppDeps) {
 				: error instanceof Error
 					? error.message
 					: "Internal server error";
-		console.error(error);
+		writeStructuredLog(
+			createStructuredLogRecord("error", "request_error", {
+				requestId: c.get("requestId"),
+				status: 500,
+				...errorLogFields(error),
+			}),
+		);
 		return c.json({ message }, 500);
 	});
 

@@ -30,6 +30,13 @@ const optionalPort = z.preprocess((value) => {
 	return trimmed.length > 0 ? Number(trimmed) : undefined;
 }, z.number().int().min(1).max(65535).optional());
 
+const optionalPositiveInteger = z.preprocess((value) => {
+	if (typeof value === "number") return value;
+	if (typeof value !== "string") return value;
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? Number(trimmed) : undefined;
+}, z.number().int().min(1).optional());
+
 const optionalCookieSameSite = z.preprocess((value) => {
 	if (typeof value !== "string") return value;
 	const normalized = value.trim().toLowerCase();
@@ -63,6 +70,8 @@ const EnvSchema = z.object({
 		const trimmed = value.trim();
 		return trimmed.length > 0 ? trimmed : undefined;
 	}, z.string().min(32).optional()),
+	LOGIN_RATE_LIMIT_MAX_ATTEMPTS: optionalPositiveInteger,
+	LOGIN_RATE_LIMIT_WINDOW_SECONDS: optionalPositiveInteger,
 });
 
 export type AppEnv = {
@@ -74,6 +83,8 @@ export type AppEnv = {
 	jwtSecret: string;
 	jwtAccessExpiresIn: string;
 	jwtRefreshExpiresIn: string;
+	loginRateLimitMaxAttempts: number;
+	loginRateLimitWindowSeconds: number;
 	appUrl: string;
 	corsOrigins: string[];
 	trustProxy: boolean;
@@ -135,6 +146,12 @@ export function readAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
 		jwtSecret: parsed.JWT_SECRET ?? APP_CONFIG_DEFAULTS.jwtSecret,
 		jwtAccessExpiresIn: APP_CONFIG_DEFAULTS.jwtAccessExpiresIn,
 		jwtRefreshExpiresIn: APP_CONFIG_DEFAULTS.jwtRefreshExpiresIn,
+		loginRateLimitMaxAttempts:
+			parsed.LOGIN_RATE_LIMIT_MAX_ATTEMPTS ??
+			APP_CONFIG_DEFAULTS.loginRateLimitMaxAttempts,
+		loginRateLimitWindowSeconds:
+			parsed.LOGIN_RATE_LIMIT_WINDOW_SECONDS ??
+			APP_CONFIG_DEFAULTS.loginRateLimitWindowSeconds,
 		appUrl,
 		corsOrigins,
 		trustProxy: APP_CONFIG_DEFAULTS.trustProxy,

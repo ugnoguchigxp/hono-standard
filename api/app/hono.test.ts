@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import fs from "node:fs/promises";
-import { HttpError } from "../modules/auth/errors";
+import { HttpError } from "./http-error";
 import { HTTPException } from "hono/http-exception";
 
 // Mock environment and DB connection before importing app
@@ -32,6 +32,8 @@ vi.mock("./env", () => ({
 		jwtSecret: "x".repeat(32),
 		jwtAccessExpiresIn: "15m",
 		jwtRefreshExpiresIn: "7d",
+		loginRateLimitMaxAttempts: 5,
+		loginRateLimitWindowSeconds: 300,
 		appUrl: "http://localhost:5173",
 		corsOrigins: ["http://localhost:5173"],
 		trustProxy: true,
@@ -117,6 +119,44 @@ describe("hono app entry", () => {
 		expect(res.headers.get("Content-Security-Policy")).toContain(
 			"default-src 'self'",
 		);
+	});
+
+	it("applies the admin role middleware in the composed API router", async () => {
+		const runtime = await getAppRuntime();
+		const { generateAccessToken } = await import("../modules/auth/token.service");
+		const token = await generateAccessToken(
+			{
+				userId: "a1a1a1a1-a1a1-41a1-a1a1-a1a1a1a1a1a1",
+				email: "user@example.com",
+				role: "member",
+			},
+			runtime.env,
+		);
+		const findUserById = vi.fn().mockResolvedValue({
+			id: "a1a1a1a1-a1a1-41a1-a1a1-a1a1a1a1a1a1",
+			email: "user@example.com",
+			displayName: "User",
+			role: "member",
+			isActive: true,
+		});
+		const composedApp = createApp({
+			...runtime,
+			authService: { findUserById } as unknown as typeof runtime.authService,
+		});
+		const request = () =>
+			composedApp.request("/api/protected/admin", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+		expect((await request()).status).toBe(403);
+		findUserById.mockResolvedValue({
+			id: "a1a1a1a1-a1a1-41a1-a1a1-a1a1a1a1a1a1",
+			email: "user@example.com",
+			displayName: "User",
+			role: "admin",
+			isActive: true,
+		});
+		expect((await request()).status).toBe(200);
 	});
 
 	it("should handle CORS origins", async () => {
