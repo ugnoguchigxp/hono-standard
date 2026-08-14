@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { HttpError } from "./errors";
+import { HttpError } from "../../app/http-error";
 import type { UserRole } from "./types";
 
 export type AuthContextUser = {

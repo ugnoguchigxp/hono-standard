@@ -49,6 +49,44 @@ export default defineConfig(({ mode, isSsrBuild }) => {
 		build: {
 			outDir: isSsrBuild ? "../dist-server" : "../dist-web",
 			emptyOutDir: true,
+			rolldownOptions: {
+				output: {
+					codeSplitting: {
+						groups: [
+							{
+								name: "react-runtime",
+								test: /node_modules[\\/](?:react|react-dom|scheduler)[\\/]/,
+								priority: 50,
+							},
+							{
+								name: "tanstack-table",
+								test: /node_modules[\\/]@tanstack[\\/](?:react-table|table-core)[\\/]/,
+								priority: 40,
+							},
+							{
+								name: "tanstack-router",
+								test: /node_modules[\\/]@tanstack[\\/](?:react-router|router-core|history|react-store|store)[\\/]/,
+								priority: 40,
+							},
+							{
+								name: "tanstack-query",
+								test: /node_modules[\\/]@tanstack[\\/](?:react-query|query-core)[\\/]/,
+								priority: 40,
+							},
+							{
+								name: "icons",
+								test: /node_modules[\\/]lucide-react[\\/]/,
+								priority: 30,
+							},
+							{
+								name: "vendor",
+								test: /node_modules/,
+								priority: 10,
+							},
+						],
+					},
+				},
+			},
 		},
 	};
 });

@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-Hono backend と React + Vite frontend を同一 origin で動かす、SSR overlay template です。PostgreSQL + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase、production SSR fallback を含みます。
+Hono backend と React + Vite frontend を同一 origin で動かす、SSR overlay template です。SQLite + Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase、production SSR fallback を含みます。
 
 ## 構成
 
@@ -64,10 +64,11 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 
 ```bash
 bun run verify
+bun run audit
 bun run verify:e2e
 ```
 
-認証を使う app では `auth:create-admin` または `seed:dev` で admin を作成してから `/login` を確認します。認証を使わない app では、この README 後半の auth removal checklist に沿って auth route、DB table、login/protected screen、E2E scope をまとめて削ります。
+認証を使う app では `auth:create-admin` または `seed:dev` で admin を作成してから `/login` を確認します。認証を使わない app は `bun run template:authless -- ../my-authless-app` で、SSR entry を維持した軽量コピーを生成できます。
 
 ## 生成物と管理対象
 
@@ -80,7 +81,7 @@ bun run verify:e2e
 | `.env*` | local secret / runtime env。`.env.example` 以外は commit しない |
 | `data/`, `*.db`, `*.sqlite`, `*.sqlite3` | local SQLite database。commit しない |
 | `coverage/`, `playwright-report/`, `test-results/` | verification output。commit しない |
-| `dist/`, `dist-web/`, `build/`, `*.tgz` | build / archive output。commit しない |
+| `dist/`, `dist-web/`, `dist-server/`, `build/`, `*.tgz` | build / archive output。commit しない |
 
 ## 環境変数
 
@@ -98,6 +99,8 @@ bun run verify:e2e
 | `AUTH_COOKIE_SECURE` | no | auth cookie に `Secure` を付けるか | production/HTTPS では `true` |
 | `AUTH_COOKIE_SAME_SITE` | no | auth cookie SameSite | `lax` |
 | `SECURITY_HEADERS_MODE` | no | HTTPS 前提 header の有効化方針。`auto` / `http` / `https` | `auto` |
+| `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | no | email単位のlogin失敗許容回数 | `5` |
+| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | no | login rate limitの集計期間（秒） | `300` |
 
 `AUTH_COOKIE_SAME_SITE=none` を使う場合は、HTTPS の `APP_URL` または `AUTH_COOKIE_SECURE=true` が必要です。
 
@@ -120,6 +123,8 @@ bun run verify:e2e
 | `bun run test` | Vitest |
 | `bun run test:coverage` | Vitest coverage。global threshold 80% を検証 |
 | `bun run test:e2e` | Playwright smoke test。login と protected route を検証 |
+| `bun run audit` | lockfile 上の dependency vulnerability を検証 |
+| `bun run template:authless -- <new-directory>` | auth / protected sample / showcase を除いたSSR対応コピーを生成 |
 | `bun run build` | Vite production build |
 | `bun run build:ssr` | SSR server bundle build |
 | `bun run verify` | typecheck、lint、format:check、test、coverage、build |
@@ -186,6 +191,7 @@ compose は `./data` を永続 volume として mount し、container 起動時�
 
 ```bash
 bun run verify
+bun run audit
 bun run verify:e2e
 ```
 
@@ -203,7 +209,7 @@ Delivery の必須 Gate、リスクに応じて追加する mutation / performan
 - `/protected` と `/api/protected/profile` は protected route の最小サンプルです。新しい login-required 画面や API を追加するときの起点にしてください。
 - SQLite は auth user と refresh token 保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。
-- さらに小さい starter が必要な場合は、この branch を直接削るより `variant/minimal` または `overlay/authless` として auth/showcase removal を固定化してください。
+- さらに小さい starter が必要な場合は `bun run template:authless -- <new-directory>` で、元checkoutを変更せずに生成してください。
 
 ## Template Usage Checklist
 
@@ -226,9 +232,7 @@ protected API を追加する最小手順:
 5. React route / view を `web/src/routes/` と `web/src/views/` に追加する。
 6. unit test と E2E smoke の必要箇所を追加する。
 
-auth を使わない template にする場合は、`api/modules/auth/`、`api/routes/auth.route.ts`、`api/middleware/auth.ts`、auth cookies/token schema、login/protected route、admin CLI、auth DB tables をまとめて削ります。削除後は `bun run verify` と `bun run verify:e2e` の smoke scope を更新してください。
-
-auth/showcase を削った軽量 variant を保守する場合は、削除差分を `variant/minimal` または `overlay/authless` に固定し、次を最低限の完了条件にします。
+生成したauthless templateを保守対象へ昇格する場合は、次を最低限の完了条件にします。
 
 - `bun run bootstrap` が fresh clone で通る。
 - `bun run verify` が通る。

@@ -105,3 +105,9 @@ route filesはURL/search/guardとviewの対応を表す。共通transportはcred
 DB driver、migration、deploy runtime、RAG/AI機能、SSR/SSGの差分は `variant/*` または `overlay/*` branchに分かれる。各branchでは `api/db/`、runtime entry、固有module、build entryの構成がこのbaselineと異なる。
 
 variantの管理方法と配布形式は `docs/template-variant-management.md`、起動方法とpackage scriptsは `README.md` と `package.json` に記載されている。
+
+## Verification Contract
+
+- 正本品質ゲートは `bun run verify` で、typecheck、Biome、unit test、coverage、client build、SSR buildを含む。
+- dependency変更時とrelease前は `bun run audit`、browser確認は `bun run verify:e2e` を実行する。
+- authless生成物もSSR entryとhydration contractを維持し、同じgateで検証する。

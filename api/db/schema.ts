@@ -44,6 +44,9 @@ export const refreshTokens = sqliteTable(
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+		familyId: text("family_id"),
+		consumedAt: integer("consumed_at", { mode: "timestamp" }),
+		revokedAt: integer("revoked_at", { mode: "timestamp" }),
 		createdAt: integer("created_at", { mode: "timestamp" })
 			.$defaultFn(() => new Date())
 			.notNull(),
@@ -52,5 +55,6 @@ export const refreshTokens = sqliteTable(
 		tokenIdx: uniqueIndex("refresh_tokens_token_idx").on(table.token),
 		userIdIdx: index("refresh_tokens_user_id_idx").on(table.userId),
 		expiresAtIdx: index("refresh_tokens_expires_at_idx").on(table.expiresAt),
+		familyIdIdx: index("refresh_tokens_family_id_idx").on(table.familyId),
 	}),
 );

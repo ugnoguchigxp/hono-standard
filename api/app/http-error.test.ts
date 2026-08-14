@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { HttpError } from "./errors";
+import { HttpError } from "./http-error";
 
 describe("HttpError", () => {
-	it("should correctly store status and message", () => {
+	it("stores an HTTP status and message", () => {
 		const error = new HttpError(400, "Bad Request");
 		expect(error.status).toBe(400);
 		expect(error.message).toBe("Bad Request");

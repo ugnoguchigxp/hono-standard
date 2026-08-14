@@ -4,7 +4,7 @@ import { createAuthRoute } from "./auth.route";
 import { requireAuth } from "../middleware/auth";
 import type { AppEnv } from "../app/env";
 import type { AuthService } from "../modules/auth/auth.service";
-import { HttpError } from "../modules/auth/errors";
+import { HttpError } from "../app/http-error";
 import {
 	ACCESS_TOKEN_COOKIE_NAME,
 	REFRESH_TOKEN_COOKIE_NAME,
@@ -28,6 +28,8 @@ describe("auth route", () => {
 			jwtSecret: "x".repeat(32),
 			jwtAccessExpiresIn: "15m",
 			jwtRefreshExpiresIn: "7d",
+			loginRateLimitMaxAttempts: 2,
+			loginRateLimitWindowSeconds: 60,
 			secureCookie: true,
 			cookieSameSite: "lax",
 		} as unknown as AppEnv;
@@ -117,6 +119,58 @@ describe("auth route", () => {
 			});
 
 			expect(res.status).toBe(400); // Validation error
+		});
+
+		it("rate limits repeated login attempts and returns Retry-After", async () => {
+			mockAuthService.login.mockRejectedValue(
+				new HttpError(401, "Invalid email or password."),
+			);
+			const request = () =>
+				app.request("/auth/login", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						email: "blocked@example.com",
+						password: "wrong",
+					}),
+				});
+
+			expect((await request()).status).toBe(401);
+			expect((await request()).status).toBe(401);
+			const blocked = await request();
+			expect(blocked.status).toBe(429);
+			expect(blocked.headers.get("Retry-After")).toBe("60");
+			expect(mockAuthService.login).toHaveBeenCalledTimes(2);
+		});
+
+		it("resets the account limit after a successful login", async () => {
+			const successfulLogin = {
+				accessToken: "access-token-123",
+				refreshToken: "refresh-token-456",
+				user: {
+					id: testUser.id,
+					email: testUser.email,
+					displayName: testUser.displayName,
+					role: testUser.role,
+				},
+			};
+			mockAuthService.login
+				.mockRejectedValueOnce(new HttpError(401, "Invalid email or password."))
+				.mockResolvedValueOnce(successfulLogin)
+				.mockRejectedValueOnce(new HttpError(401, "Invalid email or password."));
+			const request = () =>
+				app.request("/auth/login", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						email: "reset@example.com",
+						password: "password123",
+					}),
+				});
+
+			expect((await request()).status).toBe(401);
+			expect((await request()).status).toBe(200);
+			expect((await request()).status).toBe(401);
 		});
 	});
 

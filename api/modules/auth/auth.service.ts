@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { AppEnv } from "../../app/env";
 import type { AppDatabaseClient } from "../../db";
 import { users } from "../../db/schema";
-import { HttpError } from "./errors";
+import { HttpError } from "../../app/http-error";
 import { hashPassword, verifyPassword } from "./password";
 import {
 	consumeRefreshToken,
@@ -74,7 +74,10 @@ export class AuthService {
 		return row ? toAuthUser(row) : null;
 	}
 
-	private async issueTokens(user: AuthUser): Promise<AuthTokensResult> {
+	private async issueTokens(
+		user: AuthUser,
+		refreshTokenFamilyId?: string,
+	): Promise<AuthTokensResult> {
 		const accessToken = await generateAccessToken(
 			{
 				userId: user.id,
@@ -91,6 +94,7 @@ export class AuthService {
 			},
 			this.database.write,
 			this.env,
+			refreshTokenFamilyId,
 		);
 		return {
 			accessToken,
@@ -126,16 +130,16 @@ export class AuthService {
 	}
 
 	async refresh(refreshToken: string): Promise<AuthTokensResult> {
-		const payload = await consumeRefreshToken(
+		const consumed = await consumeRefreshToken(
 			refreshToken,
 			this.database.write,
 			this.env,
 		);
-		const user = await this.findUserById(payload.userId);
+		const user = await this.findUserById(consumed.payload.userId);
 		if (!user?.isActive) {
 			throw new HttpError(401, "User account is inactive or deleted.");
 		}
-		return this.issueTokens(user);
+		return this.issueTokens(user, consumed.familyId);
 	}
 
 	async logout(refreshToken?: string): Promise<void> {
