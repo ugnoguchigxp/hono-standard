@@ -65,7 +65,7 @@ bun run verify
 bun run verify:e2e
 ```
 
-認証を使う app では `auth:create-admin` または `seed:dev` で admin を作成してから `/login` を確認します。認証を使わない app では、この README 後半の auth removal checklist に沿って auth route、DB table、login/protected screen、E2E scope をまとめて削ります。
+認証を使う app では `auth:create-admin` または `seed:dev` で admin を作成してから `/login` を確認します。認証を使わない app は、このREADME後半の`template:authless`で別directoryへ生成します。
 
 ## 生成物と管理対象
 
@@ -91,6 +91,8 @@ bun run verify:e2e
 | `PORT` | no | HTTP server port | `5173` |
 | `DATABASE_URL` | no | SQLite database file path | `data/sqlite.db` |
 | `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
+| `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | no | 1アカウント・1windowあたりのlogin試行上限 | `5` |
+| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | no | login試行上限を保持する秒数 | `300` |
 | `APP_URL` | no | public origin。cookie secure 既定値と CORS に使う | `http://localhost:5173` |
 | `CORS_ORIGINS` | no | 追加許可 origin。カンマ区切り | `http://localhost:5173` |
 | `AUTH_COOKIE_SECURE` | no | auth cookie に `Secure` を付けるか | production/HTTPS では `true` |
@@ -105,6 +107,7 @@ bun run verify:e2e
 | --- | --- |
 | `bun run bootstrap` | clone 後の初期化。`.env` を用意し、SQLite database に migration を適用 |
 | `bun run seed:dev` | development 専用の demo admin 作成。production では失敗 |
+| `bun run template:authless -- <new-directory>` | auth / protected sample / showcaseを除いた新規コピーを生成 |
 | `bun run dev` | Vite + Hono dev server |
 | `bun run start` | Bun server を直接起動 |
 | `bun run auth:create-admin -- --email <email> --name "<name>"` | admin user 作成 |
@@ -118,7 +121,9 @@ bun run verify:e2e
 | `bun run test` | Vitest。Node backend test と jsdom React component/hook test を一括実行 |
 | `bun run test:coverage` | Vitest coverage。React TSX を含む global threshold 95% を検証 |
 | `bun run test:e2e` | Playwright smoke test。login と protected route を検証 |
+| `bun run audit` | lockfile上のproduction / development dependencyの脆弱性監査 |
 | `bun run build` | Vite production build |
+| `bun run verify:commit` | commit前のtypecheck、lint、format check |
 | `bun run verify` | typecheck、lint、format:check、test、coverage、build |
 | `bun run verify:e2e` | Playwright smoke test |
 | `bun run verify:all` | `verify` と `verify:e2e` |
@@ -129,10 +134,11 @@ bun run verify:e2e
 | --- | --- | --- |
 | `GET` | `/api/health` | health check |
 | `POST` | `/api/auth/login` | email/password login。httpOnly cookie を設定 |
-| `POST` | `/api/auth/refresh` | refresh token rotation |
+| `POST` | `/api/auth/refresh` | refresh token rotation。使用済みtokenの再提示時はtoken familyを失効 |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
 | `GET` | `/api/auth/me` | 現在の login user |
 | `GET` | `/api/protected/profile` | `requireAuth` を通る protected API sample |
+| `GET` | `/api/protected/admin` | `requireAuth` と `requireRole("admin")` を通る role authorization sample |
 
 `/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
 
@@ -159,6 +165,8 @@ NODE_ENV=production JWT_SECRET='<32+ random chars>' bun run start
 
 production では `JWT_SECRET` を必ず強いランダム値に変更してください。未設定または dev default のままの場合、アプリは起動時に失敗します。HTTPS で公開する場合は `APP_URL=https://...` とし、必要に応じて `AUTH_COOKIE_SECURE=true`、`SECURITY_HEADERS_MODE=https` を明示します。
 
+server lifecycle、request summary、server errorは1行JSONで標準出力または標準エラーへ記録します。request logは`requestId`、method、path、status、durationを含み、受信した安全な`X-Request-Id`を引き継ぎます。
+
 SQLite baseline では `DATABASE_URL` は永続化される file path にしてください。container や VM で動かす場合は、DB file を volume に置き、起動前に `bun run db:migrate` を実行します。`PORT` は platform 側が指定する値に合わせて上書きできます。
 
 ### SQLite concurrency contract
@@ -175,7 +183,7 @@ SQLite baseline を container で試す場合:
 COMPOSE_JWT_SECRET='<32+ random chars>' docker compose up --build
 ```
 
-compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。production 公開時は `COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header mode を必ず環境に合わせて変更してください。
+compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。Docker HEALTHCHECKはcontainer内から`/api/health`を確認します。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。production 公開時は `COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header mode を必ず環境に合わせて変更してください。
 
 ## 品質ゲート
 
@@ -188,7 +196,13 @@ bun run verify:e2e
 
 `verify` は `typecheck`、Biome `lint`、`format:check`、Vitest、coverage threshold、production build を含みます。`verify:e2e` は Playwright smoke で public screens、login、protected route、logout を確認します。
 
+dependency auditはnetworkを使うためlocalの`verify`には含めず、GitHub Actionsで`bun run audit`を必須実行します。
+
+pre-commitは`verify:commit`（typecheck / lint / format check）に限定し、test / coverage / buildを含む完全な`verify`はpre-pushとCIで実行します。
+
 Delivery の必須 Gate、リスクに応じて追加する mutation / performance / vulnWorkbench security diagnostics、結果と証拠の扱いは [`docs/delivery-quality-gates.md`](docs/delivery-quality-gates.md) を参照してください。
+
+変更への参加手順は [`CONTRIBUTING.md`](CONTRIBUTING.md)、利用者に影響する変更は [`CHANGELOG.md`](CHANGELOG.md)、脆弱性の非公開報告手順は [`SECURITY.md`](SECURITY.md) を参照してください。
 
 ## Template Notes
 
@@ -200,7 +214,7 @@ Delivery の必須 Gate、リスクに応じて追加する mutation / performan
 - `/protected` と `/api/protected/profile` は protected route の最小サンプルです。新しい login-required 画面や API を追加するときの起点にしてください。
 - SQLite は auth user と refresh token 保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。
-- さらに小さい starter が必要な場合は、この branch を直接削るより `variant/minimal` または `overlay/authless` として auth/showcase removal を固定化してください。
+- さらに小さいstarterが必要な場合は、`bun run template:authless -- ../my-app`でauth/showcaseを除いた新規コピーを生成してください。元のcheckoutは変更しません。
 
 ## Template Usage Checklist
 
@@ -223,9 +237,21 @@ protected API を追加する最小手順:
 5. React route / view を `web/src/routes/` と `web/src/views/` に追加する。
 6. unit test と E2E smoke の必要箇所を追加する。
 
-auth を使わない template にする場合は、`api/modules/auth/`、`api/routes/auth.route.ts`、`api/middleware/auth.ts`、auth cookies/token schema、login/protected route、admin CLI、auth DB tables をまとめて削ります。削除後は `bun run verify` と `bun run verify:e2e` の smoke scope を更新してください。
+roleで制限するAPIは`requireAuth`の後に`requireRole("admin")`などを適用します。baselineのlogin rate limitはアカウント単位・プロセス内の固定windowです。複数process / hostやIP単位の制限が必要な公開環境では、共有storeまたはedge / reverse proxy側のrate limitを追加してください。
 
-auth/showcase を削った軽量 variant を保守する場合は、削除差分を `variant/minimal` または `overlay/authless` に固定し、次を最低限の完了条件にします。
+authを使わないtemplateは、手作業で削除対象を追従する代わりに次のgeneratorを使います。
+
+```bash
+bun run template:authless -- ../my-authless-app
+cd ../my-authless-app
+bun install --frozen-lockfile
+bun run verify
+bun run verify:e2e
+```
+
+generatorは現在のworktreeにあるGit管理対象と未追跡・非ignoreのsourceを新規directoryへコピーし、`api/modules/auth/`、auth/protected route、login/protected/showcase UI、admin CLI、auth migrationと関連dependencyを除去します。既存directoryへの上書きと元checkoutの変更は拒否し、生成途中で失敗した場合は不完全な出力先を削除します。
+
+生成したauthless templateを保守対象へ昇格する場合は、次を最低限の完了条件にします。
 
 - `bun run bootstrap` が fresh clone で通る。
 - `bun run verify` が通る。
