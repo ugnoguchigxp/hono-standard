@@ -31,6 +31,11 @@ test("login unlocks the protected route and logout clears the session", async ({
 	await expect(page).toHaveURL(/\/protected$/);
 	await expect(page.getByRole("heading", { name: "Protected route" })).toBeVisible();
 	await expect(page.getByText("Server confirmed admin@example.com as admin.")).toBeVisible();
+	const adminResponse = await page.request.get("/api/protected/admin");
+	expect(adminResponse.status()).toBe(200);
+	expect(await adminResponse.json()).toEqual({
+		admin: { email: "admin@example.com" },
+	});
 
 	await page.getByRole("button", { name: "Logout" }).click();
 	await expect(page.getByRole("heading", { name: "Login required" })).toBeVisible();

@@ -1,7 +1,7 @@
 import { readAppEnv } from "../api/app/env";
+import { HttpError } from "../api/app/http-error";
 import { createDbRuntime } from "../api/db";
 import { AuthService } from "../api/modules/auth/auth.service";
-import { HttpError } from "../api/modules/auth/errors";
 
 const email = process.env.DEV_ADMIN_EMAIL ?? "admin@example.com";
 const displayName = process.env.DEV_ADMIN_NAME ?? "Admin User";

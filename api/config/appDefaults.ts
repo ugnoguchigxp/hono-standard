@@ -6,6 +6,8 @@ export const APP_CONFIG_DEFAULTS = {
 	jwtSecret: "hono-standard-dev-jwt-secret-change-this-for-production",
 	jwtAccessExpiresIn: "15m",
 	jwtRefreshExpiresIn: "7d",
+	loginRateLimitMaxAttempts: 5,
+	loginRateLimitWindowSeconds: 300,
 	appUrl: "http://localhost:5173",
 	corsOrigins: ["http://localhost:5173"],
 	trustProxy: true,
