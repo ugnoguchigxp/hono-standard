@@ -2,9 +2,11 @@ import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "../app/env";
 import { ACCESS_TOKEN_COOKIE_NAME } from "../modules/auth/auth-cookies";
+import { getAuthContextUser } from "../modules/auth/context";
 import { verifyAccessToken } from "../modules/auth/token.service";
-import { HttpError } from "../modules/auth/errors";
+import { HttpError } from "../app/http-error";
 import type { AuthService } from "../modules/auth/auth.service";
+import type { UserRole } from "../modules/auth/types";
 
 type AuthMiddlewareDeps = {
 	env: AppEnv;
@@ -48,3 +50,14 @@ export const requireAuth = (deps: AuthMiddlewareDeps) =>
 		});
 		await next();
 	});
+
+export const requireRole = (role: UserRole, ...additionalRoles: UserRole[]) => {
+	const allowedRoles = new Set([role, ...additionalRoles]);
+	return createMiddleware(async (c, next) => {
+		const authUser = getAuthContextUser(c);
+		if (!allowedRoles.has(authUser.role)) {
+			throw new HttpError(403, "Forbidden");
+		}
+		await next();
+	});
+};

@@ -10,21 +10,41 @@ import {
 	setAuthCookies,
 } from "../modules/auth/auth-cookies";
 import { getAuthContextUser } from "../modules/auth/context";
-import { HttpError } from "../modules/auth/errors";
+import { HttpError } from "../app/http-error";
+import {
+	InMemoryLoginRateLimiter,
+	loginRateLimitKey,
+	type LoginRateLimiter,
+} from "../modules/auth/login-rate-limiter";
 
 type AuthRouteDeps = {
 	authService: AuthService;
 	env: AppEnv;
+	loginRateLimiter?: LoginRateLimiter;
 };
 
 export function createAuthRoute(deps: AuthRouteDeps) {
+	const loginRateLimiter =
+		deps.loginRateLimiter ??
+		new InMemoryLoginRateLimiter({
+			maxAttempts: deps.env.loginRateLimitMaxAttempts,
+			windowMs: deps.env.loginRateLimitWindowSeconds * 1000,
+		});
+
 	return new Hono()
 		.post("/login", zValidator("json", loginSchema), async (c) => {
 			const body = c.req.valid("json");
+			const rateLimitKey = loginRateLimitKey(body.email);
+			const decision = loginRateLimiter.consume(rateLimitKey);
+			if (!decision.allowed) {
+				c.header("Retry-After", String(decision.retryAfterSeconds));
+				throw new HttpError(429, "Too many login attempts. Try again later.");
+			}
 			const result = await deps.authService.login({
 				email: body.email,
 				password: body.password,
 			});
+			loginRateLimiter.reset(rateLimitKey);
 			setAuthCookies(c, deps.env, result);
 			return c.json({ user: result.user });
 		})

@@ -3,7 +3,7 @@ import type { AppDatabase, AppDatabaseClient } from "../../db";
 import { createSingleWriterClient } from "../../db/client";
 import type { AppEnv } from "../../app/env";
 import { AuthService } from "./auth.service";
-import { HttpError } from "./errors";
+import { HttpError } from "../../app/http-error";
 import { hashPassword } from "./password";
 
 describe("AuthService", () => {
@@ -34,6 +34,9 @@ describe("AuthService", () => {
 		mockDb = {
 			query: {
 				users: {
+					findFirst: vi.fn(),
+				},
+				refreshTokens: {
 					findFirst: vi.fn(),
 				},
 			},
@@ -167,6 +170,9 @@ describe("AuthService", () => {
 			// We can generate one using token.service or we can just mock consumeRefreshToken.
 			// Let's import token.service and mock the db response so we can call authService.refresh.
 			const mockInsertDb = {
+				query: { refreshTokens: { findFirst: vi.fn() } },
+				delete: vi.fn().mockReturnThis(),
+				where: vi.fn().mockResolvedValue(undefined),
 				insert: vi.fn().mockReturnThis(),
 				values: vi.fn().mockResolvedValue(undefined),
 			};
@@ -182,13 +188,16 @@ describe("AuthService", () => {
 				mockEnv,
 			);
 
-			// Mock consumeRefreshToken db delete
-			mockDb.returning.mockResolvedValueOnce([
-				{
+			mockDb.query.refreshTokens.findFirst
+				.mockResolvedValueOnce({
+					id: "refresh-row-id",
 					userId: testUserRow.id,
+					familyId: null,
+					consumedAt: null,
+					revokedAt: null,
 					expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-				},
-			]);
+				})
+				.mockResolvedValueOnce(undefined);
 
 			// Mock findUserById
 			mockDb.query.users.findFirst.mockResolvedValue(testUserRow);
@@ -207,18 +216,23 @@ describe("AuthService", () => {
 					role: "member",
 				},
 				createSingleWriterClient({
+					query: { refreshTokens: { findFirst: vi.fn() } },
+					delete: vi.fn().mockReturnThis(),
+					where: vi.fn().mockResolvedValue(undefined),
 					insert: vi.fn().mockReturnThis(),
 					values: vi.fn().mockResolvedValue(undefined),
 				} as any),
 				mockEnv,
 			);
 
-			mockDb.returning.mockResolvedValueOnce([
-				{
-					userId: testUserRow.id,
-					expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-				},
-			]);
+			mockDb.query.refreshTokens.findFirst.mockResolvedValue({
+				id: "refresh-row-id",
+				userId: testUserRow.id,
+				familyId: null,
+				consumedAt: null,
+				revokedAt: null,
+				expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+			});
 
 			// Inactive user
 			const inactiveUser = { ...testUserRow, isActive: false };
@@ -232,13 +246,17 @@ describe("AuthService", () => {
 
 	describe("logout", () => {
 		it("should revoke refresh token if provided", async () => {
+			mockDb.query.refreshTokens.findFirst.mockResolvedValue({
+				id: "refresh-row-id",
+				familyId: "a2a2a2a2-a2a2-42a2-a2a2-a2a2a2a2a2a2",
+			});
 			await authService.logout("refresh-token");
-			expect(mockDb.delete).toHaveBeenCalled();
+			expect(mockDb.update).toHaveBeenCalled();
 		});
 
 		it("should do nothing when token is not provided", async () => {
 			await authService.logout(undefined);
-			expect(mockDb.delete).not.toHaveBeenCalled();
+			expect(mockDb.query.refreshTokens.findFirst).not.toHaveBeenCalled();
 		});
 	});
 
