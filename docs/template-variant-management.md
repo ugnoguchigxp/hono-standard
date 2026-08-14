@@ -24,7 +24,7 @@
 
 | Branch | 用途 |
 | --- | --- |
-| `main` | SQLite baseline。Hono + React + Vite + Tailwind CSS + design tokens + Drizzle を Docker なしで起動できる最小構成。 |
+| `main` | SQLite baseline。Hono + React + Vite + Tailwind CSS + design tokens + Drizzle を Docker なしで起動できる標準構成。 |
 | `variant/sqlite` | `main` と同じ SQLite baseline を明示 branch として残す。既存 clone / tag / archive 利用者向けの互換入口。 |
 | `variant/postgres` | 通常の Web app 向け。PostgreSQL を既定にする。 |
 | `variant/pgvector` | RAG、embedding、AI 検索向け。PostgreSQL + pgvector を既定にする。 |
@@ -66,7 +66,7 @@ tag は「固定して clone できるリリース地点」として使う。bra
 <variant>-v<major>.<minor>.<patch>
 ```
 
-公開タグは各系列につき最新版を1つだけ維持する。新しいリリースタグを公開したら、同じ系列の旧タグは削除する。
+公開済みtagは利用者が固定cloneできる不変のリリース記録として保持し、移動・上書き・削除しない。利用者には各系列でsemantic versionが最も新しいtagを案内する。誤ってsecretや破損成果物を公開した場合など、削除が必要な例外では影響範囲と代替tagをrelease noteへ記録する。
 
 例:
 
@@ -164,7 +164,7 @@ clone 後に必ず変更する項目:
 - README のプロジェクト名と起動手順
 - `.env.example` と実際の `.env`
 - DB 接続先、migration、seed
-- auth provider、cookie、CORS、CSRF、CSP、rate limit の本番設定
+- auth provider、cookie、CORS、CSRF、CSP、login rate limit（複数processでは共有storeまたはedge側）の本番設定
 - サンプル機能を残すか削るか
 - license / author / repository metadata
 
@@ -252,7 +252,7 @@ git switch -c variant/sqlite
 ```bash
 bun run typecheck
 bun run lint
-bun run test run
+bun run test
 bun run build
 ```
 
@@ -293,7 +293,7 @@ bun run build
 - `docs/delivery-quality-gates.md` の Delivery 判定基準。
 - `docs/template-variant-management.md` の branch / tag / snapshot 方針。
 
-variant は `main` に全 driver を詰め込んで runtime switch する形にしない。`main` は SQLite で動く最小 baseline を保ち、Turso / PostgreSQL / pgvector は branch ごとに driver、schema、migration、docs を差し替える。
+variant は `main` に全 driver を詰め込んで runtime switch する形にしない。`main` は SQLite で動く標準 baseline を保ち、Turso / PostgreSQL / pgvector は branch ごとに driver、schema、migration、docs を差し替える。
 
 7. tag を作成する。
 

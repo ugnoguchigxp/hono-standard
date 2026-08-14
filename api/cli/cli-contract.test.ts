@@ -55,6 +55,8 @@ describeWithDatabase("CLI contract", () => {
 		expect(parseLastJsonObject(firstRun.stdout)).toMatchObject({
 			ok: true,
 			total: 2,
+			applied: 2,
+			skipped: 0,
 		});
 
 		const secondRun = runBunScript(["api/cli/migrate.ts"], databaseUrl);

@@ -16,61 +16,56 @@
 | Path | Responsibility |
 | --- | --- |
 | `api/app/` | application composition、runtime env、server bootstrap、security headers |
-| `api/modules/<domain>/` | backendのドメイン単位の実装 |
+| `api/modules/<domain>/` | backendのservice、domain type、補助ロジック |
 | `api/db/` | DB runtime、schema、migration境界 |
 | `api/middleware/` | 複数routeに適用されるHono middleware |
-| `api/routes/` | 現行実装に残るHono route modules |
+| `api/routes/` | Hono route、validation、HTTP request/response変換 |
 | `shared/schemas/` | APIとfrontendが共有するvalidation/contract |
-| `web/src/modules/<domain>/` | frontendのドメイン単位の実装領域 |
+| `web/src/domains/<domain>/` | frontendのドメイン固有UIとフォームロジック |
 | `web/src/routes/` | URL、search parameter、route guard |
-| `web/src/views/` | 現行のpage-level UI |
+| `web/src/views/` | page-level UI |
 | `web/src/styles.css` | Tailwind v4、global token、共通class |
 | `drizzle/` | SQL migrations |
-| `scripts/` | bootstrap、seed、build、quality関連script |
+| `scripts/` | bootstrap、seed、authless copy生成、build、quality関連script |
 | `tests/e2e/` | Playwright browser smoke tests |
 
 ## Backend Architecture
 
-Backendはドメイン指向のmodular monolithとして構成される。ドメイン実装の配置単位は `api/modules/<domain>/` で、永続化を持つドメインは次の3層で表現される。
+Backendはcomposition、HTTP route、domain service、DB境界を分離する。現行baselineで新しいAPI機能を追加するときは、HTTP境界を`api/routes/<domain>.route.ts`へ置き、routeから再利用する業務ロジックを`api/modules/<domain>/`へ置く。
 
 ```text
+api/routes/<domain>.route.ts
 api/modules/<domain>/
-  routing.ts
   service.ts
-  repository.ts
   types.ts
-  index.ts
+  errors.ts
 ```
 
 | Layer | Responsibility | Main dependencies |
 | --- | --- | --- |
-| routing | Hono route、validation、HTTP request/response、cookie/status変換 | service、shared contract |
-| service | use case、業務ルール、ドメイン上の判断 | repository、domain types |
-| repository | query、永続化、DB rowとの変換 | `api/db/`、Drizzle、DB schema |
+| route | Hono route、validation、HTTP request/response、cookie/status変換 | service、shared contract |
+| service | use case、業務ルール、ドメイン上の判断 | `api/db/` public contract、domain types |
+| DB boundary | query、migration、DB rowとの変換 | `api/db/`、Drizzle、DB schema |
 
-基本の依存方向は `api/app/hono.ts → routing → service → repository → api/db`。`index.ts`はドメイン外へ公開する境界を表す。DBを持たないドメインではrepository層は存在しない。
+基本の依存方向は `api/app/hono.ts → api/routes → api/modules → api/db`。単純なread-only sampleはrouteから`api/db`を直接利用してもよいが、認証・状態遷移・複数routeで共有する判断はserviceへ置く。新しい`routing.ts`やrepository層を一律には作らない。
 
 ## Frontend Architecture
 
-Frontendのドメイン実装領域は `web/src/modules/<domain>/` で、APIアクセス、server state、ドメインUIを同じ機能境界にまとめる構成を取る。
+Frontendはroute、page view、ドメイン固有UIを分離する。現行baselineでは共通transportとserver state hookを`web/src/api.ts`、URL/search/guardを`web/src/routes/`、page-level UIを`web/src/views/`、フォームなどのドメイン固有UIを`web/src/domains/<domain>/`へ置く。
 
 ```text
-web/src/modules/<domain>/
-  api.ts
-  hooks/
-  components/
-  views/
-  types.ts
-  index.ts
+web/src/api.ts
+web/src/routes/<feature>-route.tsx
+web/src/views/<feature>-view.tsx
+web/src/domains/<domain>/
 ```
 
 | Area | Responsibility |
 | --- | --- |
-| `api.ts` | `hc<AppType>`を利用する型付きendpoint access |
-| `hooks/` | React Queryのquery、mutation、cache state |
-| `components/` | ドメイン固有UI |
-| `views/` | hooksとcomponentsから構成されるpage-level UI |
-| `index.ts` | ドメイン外へ公開するfrontend API |
+| `web/src/api.ts` | `hc<AppType>`を利用する型付きendpoint access、React Query hook、401 refresh |
+| `web/src/routes/` | URL、search parameter、route guardとviewの対応 |
+| `web/src/views/` | hookとcomponentから構成されるpage-level UI |
+| `web/src/domains/` | ドメイン固有のフォーム、表示部品、UIロジック |
 
 route filesはURL/search/guardとviewの対応を表す。共通transportはcredential、401 refresh、error変換を担い、request/response contractは `AppType` と `shared/schemas/` に由来する。
 
@@ -87,16 +82,13 @@ route filesはURL/search/guardとviewの対応を表す。共通transportはcred
 | PostgreSQL | `api/db/index.ts`, `api/db/schema.ts`, `api/db/migrate.ts`, `drizzle/`, `docker-compose.yml` |
 | Runtime configuration | `api/app/env.ts`, `api/config/appDefaults.ts`, `.env.example`, `drizzle.config.ts` |
 
-## Current Layout Notes
+## Placement Contract
 
-現在のコードには、ドメイン配置へ移行する以前の構造が残っている。
-
-- Hono routingの一部は `api/routes/` に配置されている。
-- Auth serviceは `api/modules/auth/` にある一方、routingは `api/routes/auth.route.ts` に分かれている。
-- Frontendのauth UIは `web/src/domains/auth/`、page UIは `web/src/views/` に配置されている。
-- `web/src/api.ts` は共通transportとfeature固有API/hooksの両方を含む。
-
-これらは現在の実装配置を示すもので、`api/modules/<domain>/` と `web/src/modules/<domain>/` がドメイン単位のアーキテクチャ境界として定義されている。
+- Backendの新規Hono routeは`api/routes/`へ置き、`api/app/hono.ts`で登録する。
+- Backendの共有業務ロジックは`api/modules/<domain>/`へ置く。
+- Frontendの共通API transport / hookは、規模が小さい間は`web/src/api.ts`へ追加する。
+- Frontendのrouteとpage viewは`web/src/routes/`、`web/src/views/`へ分ける。
+- 1ファイルが複数の独立したfeatureを抱える段階になった場合だけ、別タスクでmodule境界を導入し、この文書とREADMEを同時に更新する。
 
 ## Verification Contract
 

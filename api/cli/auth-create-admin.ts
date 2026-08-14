@@ -70,7 +70,7 @@ async function main() {
 	const env = readAppEnv();
 	const dbRuntime = createDbRuntime(env);
 	try {
-		const authService = new AuthService(dbRuntime.db, env);
+		const authService = new AuthService(dbRuntime.client, env);
 		const user = await authService.createAdmin({
 			email: args.email,
 			displayName: args.name,
@@ -92,7 +92,7 @@ async function main() {
 			),
 		);
 	} finally {
-		dbRuntime.close();
+		await dbRuntime.close();
 	}
 }
 

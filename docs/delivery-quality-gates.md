@@ -57,6 +57,7 @@
 | `DQ-BASE-001` | Static checks / unit and contract tests / build | 必須 | 必須 |
 | `DQ-COV-001` | Coverage threshold | 必須 | 必須 |
 | `DQ-SMOKE-001` | API / browser smoke | 必須 | 必須 |
+| `DQ-DEP-001` | Dependency vulnerability audit | 必須 | 必須 |
 | `DQ-MUT-001` | Mutation testing | 条件付き必須 | 条件付き必須 |
 | `DQ-PERF-001` | Performance verification | 条件付き必須 | 条件付き必須 |
 | `DQ-SEC-001` | vulnWorkbench security diagnostic | 推奨 | 公開 Delivery では推奨、security-sensitive change では必須 |
@@ -148,6 +149,22 @@ Template Snapshot の最小 smoke scope:
 - fresh environment で主要導線が成功する。
 - test artifact に secret や認証情報を残さない。
 - auth、route、runtime を削除した variant では、残存機能に合わせて smoke scope も更新する。
+
+### `DQ-DEP-001`: Dependency vulnerability audit
+
+基本コマンド:
+
+```bash
+bun run audit
+```
+
+合格基準:
+
+- lockfileに解決されたproduction / development dependencyに既知の脆弱性が報告されない。
+- direct dependencyの安全な更新を優先し、transitive dependencyをoverrideする場合は修正版へ限定する。
+- auditをignoreする場合はadvisory、影響評価、期限、解除条件をDelivery記録へ残す。
+
+auditはregistry advisory取得のためnetworkを必要とするので、localの`verify`には含めずCIの必須stepとして実行する。
 
 ## リスクに応じて実行する Gate
 

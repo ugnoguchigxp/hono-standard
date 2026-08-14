@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { protectedProfileResponseSchema } from "./protected.schema";
+import {
+	protectedAdminResponseSchema,
+	protectedProfileResponseSchema,
+} from "./protected.schema";
 
 describe("protectedProfileResponseSchema", () => {
 	it("accepts a valid protected profile response", () => {
@@ -22,5 +25,15 @@ describe("protectedProfileResponseSchema", () => {
 		});
 
 		expect(result.success).toBe(false);
+	});
+});
+
+describe("protectedAdminResponseSchema", () => {
+	it("accepts the minimal admin response", () => {
+		expect(
+			protectedAdminResponseSchema.parse({
+				admin: { email: "admin@example.com" },
+			}),
+		).toEqual({ admin: { email: "admin@example.com" } });
 	});
 });

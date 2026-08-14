@@ -1,7 +1,7 @@
 import { readAppEnv } from "../api/app/env";
+import { HttpError } from "../api/app/http-error";
 import { createDbRuntime } from "../api/db";
 import { AuthService } from "../api/modules/auth/auth.service";
-import { HttpError } from "../api/modules/auth/errors";
 
 const email = process.env.DEV_ADMIN_EMAIL ?? "admin@example.com";
 const displayName = process.env.DEV_ADMIN_NAME ?? "Admin User";
@@ -14,7 +14,7 @@ if (env.nodeEnv === "production") {
 
 const dbRuntime = createDbRuntime(env);
 try {
-	const authService = new AuthService(dbRuntime.db, env);
+	const authService = new AuthService(dbRuntime.client, env);
 	const user = await authService.createAdmin({
 		email,
 		displayName,
@@ -53,5 +53,5 @@ try {
 		throw error;
 	}
 } finally {
-	dbRuntime.close();
+	await dbRuntime.close();
 }
