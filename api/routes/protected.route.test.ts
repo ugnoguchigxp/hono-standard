@@ -24,4 +24,23 @@ describe("protected route", () => {
 			role: "member",
 		});
 	});
+
+	it("returns the role-protected admin sample response", async () => {
+		const app = new Hono();
+		app.use("/protected/*", async (c, next) => {
+			c.set("authUser", {
+				userId: "a1a1a1a1-a1a1-41a1-a1a1-a1a1a1a1a1a1",
+				email: "admin@example.com",
+				role: "admin",
+			});
+			await next();
+		});
+		app.route("/protected", createProtectedRoute());
+
+		const res = await app.request("/protected/admin");
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual({
+			admin: { email: "admin@example.com" },
+		});
+	});
 });

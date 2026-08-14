@@ -12,6 +12,9 @@ describe("readAppEnv", () => {
 		expect(env.appUrl).toBe(APP_CONFIG_DEFAULTS.appUrl);
 		expect(env.corsOrigins).toEqual(APP_CONFIG_DEFAULTS.corsOrigins);
 		expect(env.cookieSameSite).toBe(APP_CONFIG_DEFAULTS.cookieSameSite);
+		expect(env.loginRateLimitMaxAttempts).toBe(
+			APP_CONFIG_DEFAULTS.loginRateLimitMaxAttempts,
+		);
 	});
 
 	it("accepts database and auth runtime overrides", () => {
@@ -25,6 +28,8 @@ describe("readAppEnv", () => {
 			AUTH_COOKIE_SECURE: "true",
 			AUTH_COOKIE_SAME_SITE: "none",
 			SECURITY_HEADERS_MODE: "https",
+			LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "8",
+			LOGIN_RATE_LIMIT_WINDOW_SECONDS: "120",
 		});
 
 		expect(env.host).toBe("0.0.0.0");
@@ -39,6 +44,8 @@ describe("readAppEnv", () => {
 		expect(env.secureCookie).toBe(true);
 		expect(env.cookieSameSite).toBe("none");
 		expect(env.securityHeadersMode).toBe("https");
+		expect(env.loginRateLimitMaxAttempts).toBe(8);
+		expect(env.loginRateLimitWindowSeconds).toBe(120);
 	});
 
 	it("falls back to the SQLite default when a dev shell provides a connection URL", () => {
@@ -75,6 +82,59 @@ describe("readAppEnv", () => {
 				AUTH_COOKIE_SECURE: "invalid-boolean-string",
 			}),
 		).toThrow();
+	});
+
+	it("rejects invalid login rate limit values", () => {
+		expect(() =>
+			readAppEnv({ LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "0" }),
+		).toThrow();
+		expect(() =>
+			readAppEnv({ LOGIN_RATE_LIMIT_WINDOW_SECONDS: "not-a-number" }),
+		).toThrow();
+	});
+
+	it("normalizes blank optional values", () => {
+		const env = readAppEnv({
+			HOST: "   ",
+			PORT: "   ",
+			APP_URL: "   ",
+			AUTH_COOKIE_SECURE: "   ",
+			AUTH_COOKIE_SAME_SITE: "   ",
+			SECURITY_HEADERS_MODE: "   ",
+			JWT_SECRET: "   ",
+		});
+
+		expect(env.host).toBe(APP_CONFIG_DEFAULTS.host);
+		expect(env.port).toBe(APP_CONFIG_DEFAULTS.port);
+		expect(env.appUrl).toBe(APP_CONFIG_DEFAULTS.appUrl);
+		expect(env.securityHeadersMode).toBe("auto");
+	});
+
+	it("accepts primitive values from programmatic callers", () => {
+		const env = readAppEnv({
+			PORT: 5175,
+			AUTH_COOKIE_SECURE: true,
+		} as unknown as NodeJS.ProcessEnv);
+
+		expect(env.port).toBe(5175);
+		expect(env.secureCookie).toBe(true);
+	});
+
+	it("requires a non-default JWT secret in production", () => {
+		expect(() => readAppEnv({ NODE_ENV: "production" })).toThrow(
+			/production JWT_SECRET/,
+		);
+		expect(() =>
+			readAppEnv({
+				NODE_ENV: "production",
+				JWT_SECRET: APP_CONFIG_DEFAULTS.jwtSecret,
+			}),
+		).toThrow(/production JWT_SECRET/);
+
+		expect(
+			readAppEnv({ NODE_ENV: "production", JWT_SECRET: "x".repeat(32) })
+				.nodeEnv,
+		).toBe("production");
 	});
 
 	it("automatically includes APP_URL origin in CORS_ORIGINS", () => {
