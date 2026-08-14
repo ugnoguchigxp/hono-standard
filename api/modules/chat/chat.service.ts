@@ -8,7 +8,7 @@ import {
 	messages as messageTable,
 	retrievalLogs,
 } from "../../db/schema";
-import { HttpError } from "../auth/errors";
+import { HttpError } from "../../app/http-error";
 import type { LlmProvider } from "../../providers/types";
 import type { ChatMessage } from "../../types/llm";
 import { extractArtifactsFromText } from "../artifacts/extract";

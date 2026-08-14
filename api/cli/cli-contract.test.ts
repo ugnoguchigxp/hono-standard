@@ -60,9 +60,9 @@ describeWithDatabase("CLI contract", () => {
 		expectSuccess(secondRun);
 		expect(parseLastJsonObject(secondRun.stdout)).toMatchObject({
 			ok: true,
-			total: 1,
+			total: 4,
 			applied: 0,
-			skipped: 1,
+			skipped: 4,
 		});
 	});
 

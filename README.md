@@ -80,6 +80,8 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `AUTH_COOKIE_SECURE` | no | auth cookie に `Secure` を付けるか | production/HTTPS では `true` |
 | `AUTH_COOKIE_SAME_SITE` | no | auth cookie SameSite | `lax` |
 | `SECURITY_HEADERS_MODE` | no | HTTPS 前提 header の有効化方針。`auto` / `http` / `https` | `auto` |
+| `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | no | email単位のlogin失敗許容回数 | `5` |
+| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | no | login rate limitの集計期間（秒） | `300` |
 
 `AUTH_COOKIE_SAME_SITE=none` を使う場合は、HTTPS の `APP_URL` または `AUTH_COOKIE_SECURE=true` が必要です。
 
@@ -101,6 +103,7 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `bun run test` | Vitest。Node backend test と jsdom React component/hook test を一括実行 |
 | `bun run test:coverage` | Vitest coverage。React TSX を含む global threshold 95% を検証 |
 | `bun run test:e2e` | Playwright smoke test。login と protected route を検証 |
+| `bun run audit` | lockfile 上の dependency vulnerability を検証 |
 | `bun run build` | Vite production build |
 | `bun run verify` | typecheck、lint、format:check、test、build |
 
@@ -138,6 +141,7 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 ```bash
 bun run verify
+bun run audit
 bun run verify:e2e
 ```
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Context } from "hono";
 import { getAuthContextUser } from "./context";
-import { HttpError } from "./errors";
+import { HttpError } from "../../app/http-error";
 
 describe("getAuthContextUser", () => {
 	it("should return authUser when context has a valid authUser", () => {

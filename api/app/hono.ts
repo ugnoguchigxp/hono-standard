@@ -4,11 +4,10 @@ import { serveStatic } from "hono/bun";
 import { csrf } from "hono/csrf";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { HTTPException } from "hono/http-exception";
 import { secureHeaders } from "hono/secure-headers";
-import type { DbConnection } from "../db";
-import { createDbConnection } from "../db";
+import type { DbRuntime } from "../db";
+import { createDbRuntime } from "../db";
 import { SourceRetriever } from "../modules/rag/retriever";
 import { AgenticSearchService } from "../modules/agentic-search/agentic-search.service";
 import { OpenAiResponsesAdapter } from "../modules/agentic-search/llm/openai-responses-adapter";
@@ -16,7 +15,7 @@ import { AgenticSearchRunner } from "../modules/agentic-search/runner";
 import { AgenticToolRegistry } from "../modules/agentic-search/tools/registry";
 import type { AgenticSearchResult } from "../modules/agentic-search/types";
 import { AuthService } from "../modules/auth/auth.service";
-import { HttpError } from "../modules/auth/errors";
+import { HttpError } from "./http-error";
 import { SearchEvidenceCollector } from "../modules/rag/search-evidence";
 import { SettingsRepository } from "../modules/settings/settings.repository";
 import { SourceRepository } from "../modules/sources/source.repository";
@@ -26,6 +25,7 @@ import {
 } from "../modules/sources/wiki/blob-sync";
 import { readPage } from "../modules/sources/wiki/content-repo";
 import { requireAdmin, requireAuth } from "../middleware/auth";
+import { createRequestLogger } from "../middleware/request-logger";
 import { rateLimiter } from "../middleware/rate-limiter";
 import { createAzureOpenAiProviderFromAppEnv } from "../providers/azureOpenAiProviderFactory";
 import type {
@@ -44,10 +44,15 @@ import { createSearchRoute } from "../routes/search.route";
 import { createSettingsRoute } from "../routes/settings.route";
 import { createSourcesRoute } from "../routes/sources.route";
 import { readAppEnv, type AppEnv } from "./env";
+import {
+	createStructuredLogRecord,
+	errorLogFields,
+	writeStructuredLog,
+} from "./structured-log";
 
 type AppRuntime = {
 	env: AppEnv;
-	dbConnection: DbConnection;
+	dbRuntime: DbRuntime;
 	llmProvider: LlmProvider;
 	embeddingProvider: EmbeddingProvider;
 	webSearchProvider?: WebSearchProvider;
@@ -124,7 +129,7 @@ function isRuntimeShape(value: unknown): value is AppRuntime {
 		| undefined;
 	return (
 		Boolean(obj.env) &&
-		Boolean(obj.dbConnection) &&
+		Boolean(obj.dbRuntime) &&
 		Boolean(obj.llmProvider) &&
 		Boolean(obj.embeddingProvider) &&
 		Object.hasOwn(obj, "webSearchProviderName") &&
@@ -150,7 +155,7 @@ function isUnconfiguredAgenticService(value: unknown): boolean {
 
 async function createRuntime(): Promise<AppRuntime> {
 	const env = readAppEnv();
-	const dbConnection = createDbConnection(env.databaseUrl);
+	const dbRuntime = createDbRuntime(env);
 	const wikiBlobSyncer = createWikiBlobSyncer(env);
 	await wikiBlobSyncer?.pull({ force: true });
 
@@ -165,15 +170,15 @@ async function createRuntime(): Promise<AppRuntime> {
 		);
 	}
 
-	const sourceRepository = new SourceRepository(dbConnection.db, provider);
+	const sourceRepository = new SourceRepository(dbRuntime.db, provider);
 	const retriever = new SourceRetriever(sourceRepository, provider);
 	const configuredWebSearch = createConfiguredWebSearchProvider(env);
 	const evidenceCollector = new SearchEvidenceCollector({
 		retriever,
 		webSearchProvider: configuredWebSearch.provider,
 	});
-	const authService = new AuthService(dbConnection.db, env);
-	const settingsRepository = new SettingsRepository(dbConnection.db);
+	const authService = new AuthService(dbRuntime.client, env);
+	const settingsRepository = new SettingsRepository(dbRuntime.db);
 
 	const agenticLogger = createAgenticLogger(env.openAiAgenticSearchDebug);
 	const agenticDisabledReason = !env.openAiApiKey
@@ -240,7 +245,7 @@ async function createRuntime(): Promise<AppRuntime> {
 
 	return {
 		env,
-		dbConnection,
+		dbRuntime,
 		llmProvider: provider,
 		embeddingProvider: provider,
 		webSearchProvider: configuredWebSearch.provider,
@@ -307,7 +312,7 @@ const secureHeaderOptions = useHttpsSecurityHeaders
 			strictTransportSecurity: false,
 		};
 
-app.use("*", logger());
+app.use("*", createRequestLogger());
 app.use("*", secureHeaders(secureHeaderOptions));
 app.use(
 	"/api/*",
@@ -354,7 +359,13 @@ app.onError(async (error, c) => {
 		typeof dbError.message === "string" &&
 		dbError.message.includes("category")
 	) {
-		console.error(error);
+		writeStructuredLog(
+			createStructuredLogRecord("error", "request_error", {
+				requestId: c.get("requestId"),
+				status: 500,
+				...errorLogFields(error),
+			}),
+		);
 		return c.json(
 			{
 				message:
@@ -364,13 +375,31 @@ app.onError(async (error, c) => {
 		);
 	}
 	if (error instanceof HttpError) {
+		if (error.status >= 500) {
+			writeStructuredLog(
+				createStructuredLogRecord("error", "request_error", {
+					requestId: c.get("requestId"),
+					status: error.status,
+					...errorLogFields(error),
+				}),
+			);
+		}
 		return c.json(
 			{ message: error.message },
-			error.status as 400 | 401 | 403 | 404 | 409 | 500,
+			error.status as 400 | 401 | 403 | 404 | 409 | 429 | 500,
 		);
 	}
 	if (error instanceof HTTPException) {
 		const response = error.getResponse();
+		if (response.status >= 500) {
+			writeStructuredLog(
+				createStructuredLogRecord("error", "request_error", {
+					requestId: c.get("requestId"),
+					status: response.status,
+					...errorLogFields(error),
+				}),
+			);
+		}
 		const message =
 			(await response
 				.clone()
@@ -381,7 +410,7 @@ app.onError(async (error, c) => {
 			"Request failed";
 		return c.json(
 			{ message },
-			error.status as 400 | 401 | 403 | 404 | 409 | 500,
+			error.status as 400 | 401 | 403 | 404 | 409 | 429 | 500,
 		);
 	}
 	if (error instanceof Error && error.message === "Unauthorized") {
@@ -390,7 +419,13 @@ app.onError(async (error, c) => {
 	if (error instanceof Error && error.message === "Forbidden") {
 		return c.json({ message: "Forbidden" }, 403);
 	}
-	console.error(error);
+	writeStructuredLog(
+		createStructuredLogRecord("error", "request_error", {
+			requestId: c.get("requestId"),
+			status: 500,
+			...errorLogFields(error),
+		}),
+	);
 	const message =
 		runtime.env.nodeEnv === "production"
 			? "Internal server error"
@@ -543,7 +578,7 @@ app.route(
 app.route(
 	"/api/chat",
 	createChatRoute({
-		db: runtime.dbConnection.db,
+		db: runtime.dbRuntime.db,
 		llmProvider: runtime.llmProvider,
 		evidenceCollector: runtime.evidenceCollector,
 		settingsRepository: runtime.settingsRepository,
@@ -552,7 +587,7 @@ app.route(
 app.route(
 	"/api/artifacts",
 	createArtifactsRoute({
-		db: runtime.dbConnection.db,
+		db: runtime.dbRuntime.db,
 	}),
 );
 

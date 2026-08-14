@@ -103,24 +103,22 @@ try {
 
 const { readAppEnv } = await import("../api/app/env");
 const { runMigrations } = await import("../api/db/migrate");
-const { createDbConnection } = await import("../api/db");
+const { createDbRuntime } = await import("../api/db");
 const { AuthService } = await import("../api/modules/auth/auth.service");
 
 const env = readAppEnv();
 await runMigrations(env);
 
-const seedConnection = createDbConnection(env.databaseUrl);
+const seedRuntime = createDbRuntime(env);
 try {
-	const authService = new AuthService(seedConnection.db, env);
+	const authService = new AuthService(seedRuntime.client, env);
 	await authService.createAdmin({
 		email: "admin@example.com",
 		displayName: "Admin User",
 		password: "password123456",
 	});
 } finally {
-	if ("end" in seedConnection.pgClient) {
-		await seedConnection.pgClient.end();
-	}
+	await seedRuntime.close();
 }
 
 const { default: app, getAppRuntime } = await import("../api/app/hono");
@@ -140,12 +138,7 @@ const shutdown = async () => {
 	server.stop(true);
 	try {
 		const runtime = await getAppRuntime();
-		if (
-			runtime.dbConnection.ownsConnection &&
-			"end" in runtime.dbConnection.pgClient
-		) {
-			await runtime.dbConnection.pgClient.end();
-		}
+		await runtime.dbRuntime.close();
 	} finally {
 		stopDatabase();
 		rmSync(contentRoot, { force: true, recursive: true });

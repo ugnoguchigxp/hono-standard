@@ -1,22 +1,29 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import fs from "node:fs/promises";
-import { HttpError } from "../modules/auth/errors";
+import { HttpError } from "./http-error";
 import { HTTPException } from "hono/http-exception";
 
 // Mock environment and DB connection before importing app
 vi.mock("../db", () => ({
-	createDbConnection: vi.fn().mockReturnValue({
-		db: {
+	createDbRuntime: vi.fn().mockImplementation(() => {
+		const db = {
 			query: {
 				users: {
 					findFirst: vi.fn(),
 				},
 			},
-		},
-		pgClient: {
-			end: vi.fn(),
-		},
-		ownsConnection: false,
+		};
+		return {
+			db,
+			client: {
+				read: db,
+				write: {
+					execute: vi.fn(async (operation) => operation(db)),
+					close: vi.fn(),
+				},
+			},
+			close: vi.fn(),
+		};
 	}),
 }));
 
@@ -35,6 +42,8 @@ vi.mock("./env", () => ({
 		secureCookie: false,
 		cookieSameSite: "lax",
 		securityHeadersMode: "auto",
+		loginRateLimitMaxAttempts: 5,
+		loginRateLimitWindowSeconds: 300,
 	}),
 }));
 

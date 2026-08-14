@@ -1,5 +1,10 @@
 import app, { getAppRuntime } from "./hono";
 import { readAppEnv } from "./env";
+import {
+	createStructuredLogRecord,
+	errorLogFields,
+	writeStructuredLog,
+} from "./structured-log";
 
 const env = readAppEnv();
 
@@ -9,27 +14,33 @@ const server = Bun.serve({
 	port: env.port,
 });
 
-console.log(
-	`Hono Standard server listening on http://${env.host}:${server.port}`,
+writeStructuredLog(
+	createStructuredLogRecord("info", "server_started", {
+		host: env.host,
+		port: server.port,
+	}),
 );
 
 const shutdown = async (signal: string) => {
-	console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+	writeStructuredLog(
+		createStructuredLogRecord("info", "server_stopping", { signal }),
+	);
 	server.stop(true);
 
 	try {
 		const runtime = await getAppRuntime();
-		if (runtime?.dbConnection?.ownsConnection) {
-			const client = runtime.dbConnection.pgClient;
-			if ("end" in client && typeof client.end === "function") {
-				console.log("Closing database connection pool...");
-				await client.end();
-			}
-		}
-		console.log("Shutdown complete.");
+		await runtime.dbRuntime.close();
+		writeStructuredLog(
+			createStructuredLogRecord("info", "server_stopped", { signal }),
+		);
 		process.exit(0);
 	} catch (error) {
-		console.error("Error during shutdown:", error);
+		writeStructuredLog(
+			createStructuredLogRecord("error", "server_shutdown_failed", {
+				signal,
+				...errorLogFields(error),
+			}),
+		);
 		process.exit(1);
 	}
 };

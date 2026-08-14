@@ -12,6 +12,9 @@ describe("readAppEnv", () => {
 		expect(env.appUrl).toBe(APP_CONFIG_DEFAULTS.appUrl);
 		expect(env.corsOrigins).toEqual(APP_CONFIG_DEFAULTS.corsOrigins);
 		expect(env.cookieSameSite).toBe(APP_CONFIG_DEFAULTS.cookieSameSite);
+		expect(env.loginRateLimitMaxAttempts).toBe(
+			APP_CONFIG_DEFAULTS.loginRateLimitMaxAttempts,
+		);
 	});
 
 	it("accepts database and auth runtime overrides", () => {
@@ -23,6 +26,8 @@ describe("readAppEnv", () => {
 			AUTH_COOKIE_SECURE: "true",
 			AUTH_COOKIE_SAME_SITE: "none",
 			SECURITY_HEADERS_MODE: "https",
+			LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "8",
+			LOGIN_RATE_LIMIT_WINDOW_SECONDS: "120",
 		});
 
 		expect(env.databaseUrl).toBe("postgres://example");
@@ -35,6 +40,8 @@ describe("readAppEnv", () => {
 		expect(env.secureCookie).toBe(true);
 		expect(env.cookieSameSite).toBe("none");
 		expect(env.securityHeadersMode).toBe("https");
+		expect(env.loginRateLimitMaxAttempts).toBe(8);
+		expect(env.loginRateLimitWindowSeconds).toBe(120);
 	});
 
 	it("rejects SameSite none without secure cookies", () => {
@@ -52,6 +59,15 @@ describe("readAppEnv", () => {
 			readAppEnv({
 				AUTH_COOKIE_SECURE: "invalid-boolean-string",
 			}),
+		).toThrow();
+	});
+
+	it("rejects invalid login rate limit values", () => {
+		expect(() =>
+			readAppEnv({ LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "0" }),
+		).toThrow();
+		expect(() =>
+			readAppEnv({ LOGIN_RATE_LIMIT_WINDOW_SECONDS: "not-a-number" }),
 		).toThrow();
 	});
 

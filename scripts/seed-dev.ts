@@ -1,7 +1,7 @@
 import { readAppEnv } from "../api/app/env";
-import { createDbConnection } from "../api/db";
+import { createDbRuntime } from "../api/db";
 import { AuthService } from "../api/modules/auth/auth.service";
-import { HttpError } from "../api/modules/auth/errors";
+import { HttpError } from "../api/app/http-error";
 
 const email = process.env.DEV_ADMIN_EMAIL ?? "admin@example.com";
 const displayName = process.env.DEV_ADMIN_NAME ?? "Admin User";
@@ -12,9 +12,9 @@ if (env.nodeEnv === "production") {
 	throw new Error("seed:dev cannot run in production.");
 }
 
-const dbConnection = createDbConnection(env.databaseUrl);
+const dbRuntime = createDbRuntime(env);
 try {
-	const authService = new AuthService(dbConnection.db, env);
+	const authService = new AuthService(dbRuntime.client, env);
 	const user = await authService.createAdmin({
 		email,
 		displayName,
@@ -53,7 +53,5 @@ try {
 		throw error;
 	}
 } finally {
-	if ("end" in dbConnection.pgClient) {
-		await dbConnection.pgClient.end();
-	}
+	await dbRuntime.close();
 }

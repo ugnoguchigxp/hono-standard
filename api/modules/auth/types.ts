@@ -13,6 +13,7 @@ export const jwtPayloadSchema = z.object({
 	role: userRoleSchema,
 	type: z.enum(["access", "refresh"]),
 	jti: z.string().optional(),
+	familyId: z.string().uuid().optional(),
 });
 export type JwtPayload = z.infer<typeof jwtPayloadSchema>;
 
