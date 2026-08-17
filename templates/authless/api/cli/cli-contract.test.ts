@@ -14,7 +14,9 @@ afterEach(() => {
 
 describe("CLI contract", () => {
 	it("runs an empty initial migration set idempotently", () => {
-		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hono-authless-cli-"));
+		const tempRoot = fs.mkdtempSync(
+			path.join(os.tmpdir(), "hono-authless-cli-"),
+		);
 		tempRoots.push(tempRoot);
 		const databaseUrl = path.join(tempRoot, "data", "sqlite.db");
 		const result = spawnSync("bun", ["api/cli/migrate.ts"], {
@@ -23,7 +25,9 @@ describe("CLI contract", () => {
 			env: { ...process.env, DATABASE_URL: databaseUrl },
 		});
 		expect(result.status, result.stderr).toBe(0);
-		expect(JSON.parse(result.stdout.slice(result.stdout.lastIndexOf("{")))).toMatchObject({
+		expect(
+			JSON.parse(result.stdout.slice(result.stdout.lastIndexOf("{"))),
+		).toMatchObject({
 			ok: true,
 			total: 0,
 			applied: 0,

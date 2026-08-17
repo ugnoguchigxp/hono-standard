@@ -7,7 +7,9 @@ import { ensureEnvFile } from "./bootstrap";
 const tempRoots: string[] = [];
 
 function makeTempRoot(): string {
-	const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hono-authless-boot-"));
+	const tempRoot = fs.mkdtempSync(
+		path.join(os.tmpdir(), "hono-authless-boot-"),
+	);
 	tempRoots.push(tempRoot);
 	return tempRoot;
 }
@@ -32,7 +34,10 @@ describe("authless bootstrap env setup", () => {
 
 	it("preserves an existing local database path", () => {
 		const tempRoot = makeTempRoot();
-		fs.writeFileSync(path.join(tempRoot, ".env.example"), "DATABASE_URL=data/sqlite.db\n");
+		fs.writeFileSync(
+			path.join(tempRoot, ".env.example"),
+			"DATABASE_URL=data/sqlite.db\n",
+		);
 		fs.writeFileSync(
 			path.join(tempRoot, ".env"),
 			'DATABASE_URL="data/custom.sqlite"\n',
@@ -43,7 +48,10 @@ describe("authless bootstrap env setup", () => {
 
 	it("uses the SQLite default when DATABASE_URL is absent", () => {
 		const tempRoot = makeTempRoot();
-		fs.writeFileSync(path.join(tempRoot, ".env.example"), "NODE_ENV=development\n");
+		fs.writeFileSync(
+			path.join(tempRoot, ".env.example"),
+			"NODE_ENV=development\n",
+		);
 
 		expect(ensureEnvFile(tempRoot)).toBe("data/sqlite.db");
 	});
