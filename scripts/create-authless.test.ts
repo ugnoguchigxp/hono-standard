@@ -24,30 +24,35 @@ describe("createAuthlessTemplate", () => {
 		});
 
 		expect(fs.existsSync(path.join(target, "api/modules/auth"))).toBe(false);
-		expect(fs.existsSync(path.join(target, "web/src/views/showcase-view.tsx"))).toBe(
-			false,
-		);
-		expect(fs.readFileSync(path.join(target, "api/app/hono.ts"), "utf8")).not.toContain(
-			"createAuthRoute",
-		);
+		expect(
+			fs.existsSync(path.join(target, "web/src/views/showcase-view.tsx")),
+		).toBe(false);
+		expect(
+			fs.readFileSync(path.join(target, "api/app/hono.ts"), "utf8"),
+		).not.toContain("createAuthRoute");
 		const manifest = JSON.parse(
 			fs.readFileSync(path.join(target, "package.json"), "utf8"),
-		) as { scripts: Record<string, string>; dependencies: Record<string, string> };
+		) as {
+			scripts: Record<string, string>;
+			dependencies: Record<string, string>;
+		};
 		expect(manifest.scripts["auth:create-admin"]).toBeUndefined();
 		expect(manifest.dependencies.jose).toBeUndefined();
 		expect(
 			fs.readFileSync(path.join(target, "CONTRIBUTING.md"), "utf8"),
 		).not.toContain("template-variant-management");
-		expect(fs.readFileSync(path.join(target, "CHANGELOG.md"), "utf8")).not.toContain(
-			"refresh token",
-		);
+		expect(
+			fs.readFileSync(path.join(target, "CHANGELOG.md"), "utf8"),
+		).not.toContain("refresh token");
 		expect(
 			fs.readFileSync(path.join(target, "scripts/bootstrap.ts"), "utf8"),
 		).not.toMatch(/JWT|auth/i);
 	});
 
 	it("refuses to overwrite an existing target", () => {
-		const target = fs.mkdtempSync(path.join(os.tmpdir(), "hono-authless-existing-"));
+		const target = fs.mkdtempSync(
+			path.join(os.tmpdir(), "hono-authless-existing-"),
+		);
 		tempRoots.push(target);
 		expect(() =>
 			createAuthlessTemplate(target, { updateLockfile: false }),

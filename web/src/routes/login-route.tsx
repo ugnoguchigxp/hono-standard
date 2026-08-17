@@ -1,6 +1,6 @@
 import { createRoute } from "@tanstack/react-router";
-import { parseLoginSearch } from "./login-search";
 import { LoginView } from "../views/login-view";
+import { parseLoginSearch } from "./login-search";
 import { rootRoute } from "./root-route";
 
 export const loginRoute = createRoute({
