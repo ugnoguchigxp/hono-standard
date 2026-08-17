@@ -24,12 +24,12 @@ describe("createAuthlessTemplate", () => {
 		});
 
 		expect(fs.existsSync(path.join(target, "api/modules/auth"))).toBe(false);
-		expect(fs.existsSync(path.join(target, "web/src/views/showcase-view.tsx"))).toBe(
-			false,
-		);
-		expect(fs.readFileSync(path.join(target, "api/app/hono.ts"), "utf8")).not.toContain(
-			"createAuthRoute",
-		);
+		expect(
+			fs.existsSync(path.join(target, "web/src/views/showcase-view.tsx")),
+		).toBe(false);
+		expect(
+			fs.readFileSync(path.join(target, "api/app/hono.ts"), "utf8"),
+		).not.toContain("createAuthRoute");
 		expect(
 			fs.readFileSync(path.join(target, "api/worker.ts"), "utf8"),
 		).not.toContain("AuthService");
@@ -38,7 +38,10 @@ describe("createAuthlessTemplate", () => {
 		).not.toMatch(/JWT|AUTH_COOKIE/);
 		const manifest = JSON.parse(
 			fs.readFileSync(path.join(target, "package.json"), "utf8"),
-		) as { scripts: Record<string, string>; dependencies: Record<string, string> };
+		) as {
+			scripts: Record<string, string>;
+			dependencies: Record<string, string>;
+		};
 		expect(manifest.scripts["auth:create-admin"]).toBeUndefined();
 		expect(manifest.dependencies.jose).toBeUndefined();
 		expect(

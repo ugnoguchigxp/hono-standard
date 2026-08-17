@@ -34,7 +34,10 @@ function readWorkerEnv(bindings: WorkerBindings): AppEnv {
 	});
 }
 
-function createWorkerApp(bindings: WorkerBindings) {
+export function createWorkerApp(
+	bindings: WorkerBindings,
+	configure?: (app: Hono<{ Bindings: WorkerBindings }>) => void,
+) {
 	const env = readWorkerEnv(bindings);
 	const db = drizzle(bindings.DB, { schema });
 	const database = {
@@ -129,6 +132,7 @@ function createWorkerApp(bindings: WorkerBindings) {
 		);
 
 	app.route("/api", apiRoutes);
+	configure?.(app);
 	return app;
 }
 
