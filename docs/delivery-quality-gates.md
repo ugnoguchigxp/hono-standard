@@ -100,8 +100,7 @@ bun run verify
 - TypeScript typecheck。
 - Biome lint。
 - format check。
-- Vitest unit / contract / integration tests。
-- coverage threshold。
+- Vitest coverage（unit / contract / integration tests と threshold）。
 - production build。
 
 合格基準:
@@ -125,7 +124,7 @@ bun run verify
 - coverage 対象範囲が README または test config と一致する。
 - entrypoint、generated code、薄い adapter などを除外する場合は、除外理由を test config に残す。
 
-テンプレートの unit coverage は `api/**/*.ts`、`shared/**/*.ts`、`web/src/**/*.{ts,tsx}` のテスト可能なロジックを対象とします。React component / hook は jsdom と Testing Library で利用者操作および状態遷移を検証します。browser entrypoint、provider/route composition、variant 固有のdriverやCLIなど、薄い配線を除外する場合は `vitest.config.ts` に理由を残し、主要導線は Playwright smoke testで補完します。
+テンプレートの unit coverage は `api/**/*.ts`、`shared/**/*.ts`、`web/src/**/*.{ts,tsx}` を対象とします。React component / hook / route は jsdom と Testing Library で利用者操作および状態遷移を検証します。CLI と HTTP server の process 起動は `import.meta.main` で隔離し、導出可能な関数を unit test します。Playwright smoke はブラウザ導線の補完であり、unit coverage から db / server / web routes を除外する理由にはしません。entrypoint や generated code を除外する場合だけ、除外理由を `vitest.config.ts` に残します。
 
 coverage は未実行コードを発見するための下限であり、仕様の正しさや assertion の有効性を単独では保証しません。
 

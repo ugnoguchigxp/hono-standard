@@ -1,19 +1,35 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { SignJWT } from "jose";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppEnv } from "../../app/env";
+import { HttpError } from "../../app/http-error";
 import type { AppDatabase, DatabaseWriter } from "../../db";
 import { createSingleWriterClient } from "../../db/client";
-import type { AppEnv } from "../../app/env";
-import { SignJWT } from "jose";
-import { HttpError } from "../../app/http-error";
 import {
+	consumeRefreshToken,
 	generateAccessToken,
 	generateRefreshToken,
-	verifyAccessToken,
-	consumeRefreshToken,
 	revokeRefreshToken,
+	verifyAccessToken,
 } from "./token.service";
 
+function createMockDb() {
+	return {
+		query: {
+			refreshTokens: {
+				findFirst: vi.fn(),
+			},
+		},
+		insert: vi.fn().mockReturnThis(),
+		values: vi.fn().mockResolvedValue(undefined),
+		delete: vi.fn().mockReturnThis(),
+		update: vi.fn().mockReturnThis(),
+		set: vi.fn().mockReturnThis(),
+		where: vi.fn().mockReturnThis(),
+	};
+}
+
 describe("token.service", () => {
-	let mockDb: any;
+	let mockDb: ReturnType<typeof createMockDb>;
 	let mockWriter: DatabaseWriter<AppDatabase>;
 	let mockEnv: AppEnv;
 	const testPayload = {
@@ -29,22 +45,8 @@ describe("token.service", () => {
 			jwtRefreshExpiresIn: "7d",
 		} as unknown as AppEnv;
 
-		mockDb = {
-			query: {
-				refreshTokens: {
-					findFirst: vi.fn(),
-				},
-			},
-			insert: vi.fn().mockReturnThis(),
-			values: vi.fn().mockResolvedValue(undefined),
-			delete: vi.fn().mockReturnThis(),
-			update: vi.fn().mockReturnThis(),
-			set: vi.fn().mockReturnThis(),
-			where: vi.fn().mockReturnThis(),
-		};
-		mockWriter = createSingleWriterClient(
-			mockDb as unknown as AppDatabase,
-		);
+		mockDb = createMockDb();
+		mockWriter = createSingleWriterClient(mockDb as unknown as AppDatabase);
 	});
 
 	describe("AccessToken", () => {
@@ -139,11 +141,7 @@ describe("token.service", () => {
 				expiresAt: oneHourInFuture,
 			});
 
-			const consumed = await consumeRefreshToken(
-				token,
-				mockWriter,
-				mockEnv,
-			);
+			const consumed = await consumeRefreshToken(token, mockWriter, mockEnv);
 
 			expect(consumed.payload.userId).toBe(testPayload.userId);
 			expect(consumed.payload.type).toBe("refresh");
@@ -182,11 +180,7 @@ describe("token.service", () => {
 			});
 
 			await expect(
-				consumeRefreshToken(
-					token,
-					mockWriter,
-					mockEnv,
-				),
+				consumeRefreshToken(token, mockWriter, mockEnv),
 			).rejects.toThrowError(new HttpError(401, "Refresh token expired."));
 		});
 
@@ -208,11 +202,7 @@ describe("token.service", () => {
 			});
 
 			await expect(
-				consumeRefreshToken(
-					token,
-					mockWriter,
-					mockEnv,
-				),
+				consumeRefreshToken(token, mockWriter, mockEnv),
 			).rejects.toThrowError(new HttpError(401, "Invalid refresh token."));
 		});
 

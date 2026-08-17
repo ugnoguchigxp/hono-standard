@@ -7,7 +7,9 @@ import { ensureEnvFile } from "./bootstrap";
 const tempRoots: string[] = [];
 
 function makeTempRoot(): string {
-	const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hono-standard-boot-"));
+	const tempRoot = fs.mkdtempSync(
+		path.join(os.tmpdir(), "hono-standard-boot-"),
+	);
 	tempRoots.push(tempRoot);
 	return tempRoot;
 }

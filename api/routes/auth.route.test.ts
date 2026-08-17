@@ -1,18 +1,24 @@
 import { Hono } from "hono";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { createAuthRoute } from "./auth.route";
-import { requireAuth } from "../middleware/auth";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../app/env";
-import type { AuthService } from "../modules/auth/auth.service";
 import { HttpError } from "../app/http-error";
+import { requireAuth } from "../middleware/auth";
+import type { AuthService } from "../modules/auth/auth.service";
 import {
 	ACCESS_TOKEN_COOKIE_NAME,
 	REFRESH_TOKEN_COOKIE_NAME,
 } from "../modules/auth/auth-cookies";
+import { createAuthRoute } from "./auth.route";
 
 describe("auth route", () => {
 	let app: Hono;
-	let mockAuthService: any;
+	let mockAuthService: {
+		login: ReturnType<typeof vi.fn>;
+		refresh: ReturnType<typeof vi.fn>;
+		logout: ReturnType<typeof vi.fn>;
+		findUserById: ReturnType<typeof vi.fn>;
+	};
 	let mockEnv: AppEnv;
 
 	const testUser = {
@@ -44,8 +50,8 @@ describe("auth route", () => {
 		app = new Hono();
 		// Set error handler to prevent throwing unhandled exceptions in tests
 		app.onError((err, c) => {
-			const status = (err as HttpError).status || 500;
-			return c.json({ message: err.message }, status as any);
+			const status = err instanceof HttpError ? err.status : 500;
+			return c.json({ message: err.message }, status as ContentfulStatusCode);
 		});
 
 		app.use(
@@ -157,7 +163,9 @@ describe("auth route", () => {
 			mockAuthService.login
 				.mockRejectedValueOnce(new HttpError(401, "Invalid email or password."))
 				.mockResolvedValueOnce(successfulLogin)
-				.mockRejectedValueOnce(new HttpError(401, "Invalid email or password."));
+				.mockRejectedValueOnce(
+					new HttpError(401, "Invalid email or password."),
+				);
 			const request = () =>
 				app.request("/auth/login", {
 					method: "POST",
@@ -231,7 +239,9 @@ describe("auth route", () => {
 
 			// Cookies should be cleared (max-age=0 or expires in past)
 			const cookies = res.headers.getSetCookie();
-			expect(cookies.some((c) => c.includes("Max-Age=0") || c.includes("1970"))).toBe(true);
+			expect(
+				cookies.some((c) => c.includes("Max-Age=0") || c.includes("1970")),
+			).toBe(true);
 		});
 	});
 

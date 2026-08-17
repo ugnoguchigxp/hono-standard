@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { serveStatic } from "hono/bun";
-import { csrf } from "hono/csrf";
 import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
+import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { secureHeaders } from "hono/secure-headers";
 import type { DbRuntime } from "../db";
@@ -11,12 +11,12 @@ import { createDbRuntime } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { createRequestLogger } from "../middleware/request-logger";
 import { AuthService } from "../modules/auth/auth.service";
-import { HttpError } from "./http-error";
 import { createAuthRoute } from "../routes/auth.route";
 import { createDocumentsRoute } from "../routes/documents.route";
 import { createHealthRoute } from "../routes/health.route";
 import { createProtectedRoute } from "../routes/protected.route";
-import { readAppEnv, type AppEnv } from "./env";
+import { type AppEnv, readAppEnv } from "./env";
+import { HttpError } from "./http-error";
 import { appContentSecurityPolicy } from "./security-headers";
 import {
 	createStructuredLogRecord,

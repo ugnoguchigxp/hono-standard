@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { AppEnv } from "../../app/env";
+import { HttpError } from "../../app/http-error";
 import type { AppDatabaseClient } from "../../db";
 import { users } from "../../db/schema";
-import { HttpError } from "../../app/http-error";
 import { hashPassword, verifyPassword } from "./password";
 import {
 	consumeRefreshToken,
@@ -11,10 +11,10 @@ import {
 	revokeRefreshToken,
 } from "./token.service";
 import {
-	userRoleSchema,
 	type AuthSessionUser,
 	type AuthUser,
 	type UserRole,
+	userRoleSchema,
 } from "./types";
 
 type AuthTokensResult = {

@@ -40,10 +40,13 @@ describe("web API client", () => {
 			}),
 		).resolves.toEqual({ user });
 
-		const [input, init] = fetchMock.mock.calls[0]!;
-		expect(getRequestPath(input)).toBe("/api/auth/login");
+		const firstCall = fetchMock.mock.calls[0];
+		expect(firstCall).toBeDefined();
+		const [input, init] = firstCall ?? [];
+		expect(input).toBeDefined();
+		expect(getRequestPath(input ?? "")).toBe("/api/auth/login");
 		expect(init?.method).toBe("POST");
-		expect(JSON.parse(init?.body as string)).toEqual({
+		expect(JSON.parse(String(init?.body))).toEqual({
 			email: user.email,
 			password: "password123456",
 		});
@@ -57,20 +60,26 @@ describe("web API client", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		await expect(logout()).resolves.toBeUndefined();
-		expect(getRequestPath(fetchMock.mock.calls[0]![0])).toBe(
+		expect(getRequestPath(fetchMock.mock.calls[0]?.[0] ?? "")).toBe(
 			"/api/auth/logout",
 		);
 	});
 
 	it("returns the current user from a successful session response", async () => {
-		vi.stubGlobal("fetch", vi.fn(async () => Response.json({ user })));
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => Response.json({ user })),
+		);
 
 		await expect(fetchMe()).resolves.toEqual(user);
 	});
 
 	it("returns a protected profile", async () => {
 		const profile = { email: user.email, role: user.role };
-		vi.stubGlobal("fetch", vi.fn(async () => Response.json({ profile })));
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => Response.json({ profile })),
+		);
 
 		await expect(fetchProtectedProfile()).resolves.toEqual(profile);
 	});
@@ -136,7 +145,9 @@ describe("web API client", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		await expect(fetchProtectedProfile()).resolves.toEqual(profile);
-		expect(fetchMock.mock.calls.map(([input]) => getRequestPath(input))).toEqual([
+		expect(
+			fetchMock.mock.calls.map(([input]) => getRequestPath(input)),
+		).toEqual([
 			"/api/protected/profile",
 			"/api/auth/refresh",
 			"/api/protected/profile",

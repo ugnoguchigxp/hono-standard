@@ -1,12 +1,12 @@
 import {
+	type DefaultOptions,
 	QueryClient,
 	QueryClientProvider,
-	type DefaultOptions,
 } from "@tanstack/react-query";
 import {
-	render,
 	type RenderOptions,
 	type RenderResult,
+	render,
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactElement, ReactNode } from "react";

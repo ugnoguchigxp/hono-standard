@@ -3,15 +3,23 @@ import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
 import { ShowcaseSettingsProvider } from "./showcase-settings-context";
 
-const queryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			retry: false,
+export function createAppQueryClient() {
+	return new QueryClient({
+		defaultOptions: {
+			queries: {
+				retry: false,
+			},
 		},
-	},
-});
+	});
+}
 
-export function App() {
+const defaultQueryClient = createAppQueryClient();
+
+export function App({
+	queryClient = defaultQueryClient,
+}: {
+	queryClient?: QueryClient;
+} = {}) {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<ShowcaseSettingsProvider>

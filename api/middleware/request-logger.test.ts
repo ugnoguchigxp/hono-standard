@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it } from "vitest";
-import type { StructuredLogRecord } from "../app/structured-log";
 import { HttpError } from "../app/http-error";
+import type { StructuredLogRecord } from "../app/structured-log";
 import { createRequestLogger } from "./request-logger";
 
 describe("createRequestLogger", () => {

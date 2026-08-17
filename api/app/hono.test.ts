@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import fs from "node:fs/promises";
-import { HttpError } from "./http-error";
 import { HTTPException } from "hono/http-exception";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HttpError } from "./http-error";
 
 // Mock environment and DB connection before importing app
 vi.mock("../db", () => ({
@@ -44,11 +44,13 @@ vi.mock("./env", () => ({
 }));
 
 // Mock Bun global variable before importing hono/bun dependent code
-(globalThis as any).Bun = {
-	file: (path: string) => ({
-		exists: () => Promise.resolve(true),
-	}),
-};
+Object.assign(globalThis, {
+	Bun: {
+		file: () => ({
+			exists: () => Promise.resolve(true),
+		}),
+	},
+});
 
 // Dynamically import app so globalThis.Bun is defined first
 const { default: app, createApp, getAppRuntime } = await import("./hono");
@@ -64,6 +66,14 @@ app.post("/api/test-hono-http-exception", () => {
 
 app.post("/api/test-generic-error", () => {
 	throw new Error("Something blew up");
+});
+
+app.post("/api/test-http-error-500", () => {
+	throw new HttpError(500, "Persisted write failed");
+});
+
+app.post("/api/test-hono-http-exception-500", () => {
+	throw new HTTPException(500, { message: "Upstream failed" });
 });
 
 describe("hono app entry", () => {
@@ -123,7 +133,9 @@ describe("hono app entry", () => {
 
 	it("applies the admin role middleware in the composed API router", async () => {
 		const runtime = await getAppRuntime();
-		const { generateAccessToken } = await import("../modules/auth/token.service");
+		const { generateAccessToken } = await import(
+			"../modules/auth/token.service"
+		);
 		const token = await generateAccessToken(
 			{
 				userId: "a1a1a1a1-a1a1-41a1-a1a1-a1a1a1a1a1a1",
@@ -165,7 +177,9 @@ describe("hono app entry", () => {
 				Origin: "http://localhost:5173",
 			},
 		});
-		expect(res.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:5173");
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+			"http://localhost:5173",
+		);
 		expect(res.headers.get("Access-Control-Allow-Credentials")).toBe("true");
 
 		const resInvalid = await app.request("/api/health", {
@@ -208,13 +222,18 @@ describe("hono app entry", () => {
 	// Error Handler integration tests
 	describe("Error Handler", () => {
 		it("should handle HttpError and return custom status and message", async () => {
-			const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-			const res = await app.request("http://localhost:5173/api/test-http-error", {
-				method: "POST",
-				headers: {
-					Origin: "http://localhost:5173",
+			const consoleError = vi
+				.spyOn(console, "error")
+				.mockImplementation(() => {});
+			const res = await app.request(
+				"http://localhost:5173/api/test-http-error",
+				{
+					method: "POST",
+					headers: {
+						Origin: "http://localhost:5173",
+					},
 				},
-			});
+			);
 			expect(res.status).toBe(400);
 			const body = await res.json();
 			expect(body.message).toBe("Bad Parameters");
@@ -222,27 +241,70 @@ describe("hono app entry", () => {
 		});
 
 		it("should handle HTTPException and return custom status and message", async () => {
-			const res = await app.request("http://localhost:5173/api/test-hono-http-exception", {
-				method: "POST",
-				headers: {
-					Origin: "http://localhost:5173",
+			const res = await app.request(
+				"http://localhost:5173/api/test-hono-http-exception",
+				{
+					method: "POST",
+					headers: {
+						Origin: "http://localhost:5173",
+					},
 				},
-			});
+			);
 			expect(res.status).toBe(403);
 			const body = await res.json();
 			expect(body.message).toBe("Access Forbidden");
 		});
 
 		it("should handle generic errors as 500 Internal Server Error", async () => {
-			const res = await app.request("http://localhost:5173/api/test-generic-error", {
-				method: "POST",
-				headers: {
-					Origin: "http://localhost:5173",
+			const res = await app.request(
+				"http://localhost:5173/api/test-generic-error",
+				{
+					method: "POST",
+					headers: {
+						Origin: "http://localhost:5173",
+					},
 				},
-			});
+			);
 			expect(res.status).toBe(500);
 			const body = await res.json();
 			expect(body.message).toBe("Something blew up");
+		});
+
+		it("logs HttpError responses with status 500", async () => {
+			const consoleError = vi
+				.spyOn(console, "error")
+				.mockImplementation(() => {});
+			const res = await app.request(
+				"http://localhost:5173/api/test-http-error-500",
+				{
+					method: "POST",
+					headers: {
+						Origin: "http://localhost:5173",
+					},
+				},
+			);
+			expect(res.status).toBe(500);
+			expect(consoleError).toHaveBeenCalled();
+			consoleError.mockRestore();
+		});
+
+		it("logs HTTPException responses with status 500", async () => {
+			const consoleError = vi
+				.spyOn(console, "error")
+				.mockImplementation(() => {});
+			const res = await app.request(
+				"http://localhost:5173/api/test-hono-http-exception-500",
+				{
+					method: "POST",
+					headers: {
+						Origin: "http://localhost:5173",
+					},
+				},
+			);
+			expect(res.status).toBe(500);
+			expect(await res.json()).toEqual({ message: "Upstream failed" });
+			expect(consoleError).toHaveBeenCalled();
+			consoleError.mockRestore();
 		});
 	});
 });
