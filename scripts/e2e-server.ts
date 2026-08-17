@@ -1,5 +1,5 @@
-import { rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 
 const databasePath = "data/e2e.sqlite";
 const databaseUrl = `file:${databasePath}`;

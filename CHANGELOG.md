@@ -15,6 +15,8 @@
 
 ### Changed
 
+- `verify` が test と coverage を二重実行しないよう、テスト工程を `test:coverage` に一本化。
+- unit coverage から db / server / web routes を除外しないよう対象を広げ、Biome でテストファイルも lint / format する。
 - `LLM_CONTEXT.md` の directory contract を現行実装へ同期。
 - pre-commit を typecheck、lint、format check に限定し、完全な検証は pre-push と CI で実行。
 - 公開済み tag を不変のリリース記録として保持する方針へ明確化。

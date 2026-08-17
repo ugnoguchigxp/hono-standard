@@ -1,15 +1,21 @@
 import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import { App } from "./App";
 import "./styles.css";
 
-const root = document.getElementById("root");
-if (!root) {
-	throw new Error("Root element not found");
+export function mountApp(doc: Document = document): Root {
+	const root = doc.getElementById("root");
+	if (!root) {
+		throw new Error("Root element not found");
+	}
+
+	const reactRoot = createRoot(root);
+	reactRoot.render(
+		<StrictMode>
+			<App />
+		</StrictMode>,
+	);
+	return reactRoot;
 }
 
-createRoot(root).render(
-	<StrictMode>
-		<App />
-	</StrictMode>,
-);
+export const webRoot = mountApp();

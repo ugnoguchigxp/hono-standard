@@ -1,11 +1,11 @@
 import {
+	type CSSProperties,
 	createContext,
+	type ReactNode,
 	useContext,
 	useEffect,
 	useMemo,
 	useState,
-	type CSSProperties,
-	type ReactNode,
 } from "react";
 
 const STORAGE_KEY = "hono-standard.showcase.settings.v1";

@@ -2,15 +2,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
 	createContext,
+	type ReactNode,
 	useContext,
 	useEffect,
 	useMemo,
 	useState,
-	type ReactNode,
 } from "react";
 import {
-	authMeQueryKey,
 	type AuthUser,
+	authMeQueryKey,
 	UNAUTHORIZED_EVENT_NAME,
 	useCurrentUserQuery,
 	useLoginMutation,

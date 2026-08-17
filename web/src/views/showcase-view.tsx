@@ -1,21 +1,21 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
+	type ColumnDef,
 	flexRender,
 	getCoreRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
-	useReactTable,
-	type ColumnDef,
 	type SortingState,
+	useReactTable,
 } from "@tanstack/react-table";
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
 	Bell,
 	Calendar,
 	Check,
 	ChevronDown,
-	ArrowDown,
-	ArrowUp,
-	ArrowUpDown,
 	Copy,
 	CreditCard,
 	FileText,
@@ -34,22 +34,22 @@ import {
 	Star,
 	X,
 } from "lucide-react";
-import { useMemo, useState, type CSSProperties } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import {
-	showcaseDensityOptions,
-	showcaseFontSizeOptions,
-	showcaseRadiusOptions,
-	showcaseThemeOptions,
 	type ShowcaseDensity,
 	type ShowcaseFontSize,
 	type ShowcaseRadius,
 	type ShowcaseTheme,
+	showcaseDensityOptions,
+	showcaseFontSizeOptions,
+	showcaseRadiusOptions,
+	showcaseThemeOptions,
 	useShowcaseSettings,
 } from "../showcase-settings-context";
 import {
 	isShowcaseSortField,
-	showcaseTablePageSizes,
 	type ShowcaseTableSearch,
+	showcaseTablePageSizes,
 } from "../showcase-table-search";
 
 type ShowcaseRow = {
