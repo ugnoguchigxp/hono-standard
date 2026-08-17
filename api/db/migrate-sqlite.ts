@@ -1,6 +1,6 @@
+import { Database } from "bun:sqlite";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { Database } from "bun:sqlite";
 import type { AppEnv } from "../app/env";
 import { ensureDatabaseParentDirectory } from "./path";
 

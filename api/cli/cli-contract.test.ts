@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
 import type { SpawnSyncReturns } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";

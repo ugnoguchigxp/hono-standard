@@ -1,13 +1,13 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Context } from "hono";
-import { setCookie, deleteCookie } from "hono/cookie";
-import {
-	setAuthCookies,
-	clearAuthCookies,
-	ACCESS_TOKEN_COOKIE_NAME,
-	REFRESH_TOKEN_COOKIE_NAME,
-} from "./auth-cookies";
+import { deleteCookie, setCookie } from "hono/cookie";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../../app/env";
+import {
+	ACCESS_TOKEN_COOKIE_NAME,
+	clearAuthCookies,
+	REFRESH_TOKEN_COOKIE_NAME,
+	setAuthCookies,
+} from "./auth-cookies";
 
 // Mock hono/cookie
 vi.mock("hono/cookie", () => ({

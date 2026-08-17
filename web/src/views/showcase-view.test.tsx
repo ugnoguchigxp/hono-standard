@@ -6,8 +6,8 @@ import {
 	within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ShowcaseSettingsProvider } from "../showcase-settings-context";
 import { renderWithProviders } from "../../test/render-with-providers";
+import { ShowcaseSettingsProvider } from "../showcase-settings-context";
 import { ShowcaseView } from "./showcase-view";
 
 const routerMocks = vi.hoisted(() => ({

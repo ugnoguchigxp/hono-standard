@@ -44,16 +44,18 @@ describe("createAuthlessTemplate", () => {
 		expect(
 			fs.readFileSync(path.join(target, "CONTRIBUTING.md"), "utf8"),
 		).not.toContain("template-variant-management");
-		expect(fs.readFileSync(path.join(target, "CHANGELOG.md"), "utf8")).not.toContain(
-			"refresh token",
-		);
+		expect(
+			fs.readFileSync(path.join(target, "CHANGELOG.md"), "utf8"),
+		).not.toContain("refresh token");
 		expect(
 			fs.readFileSync(path.join(target, "scripts/bootstrap.ts"), "utf8"),
 		).not.toMatch(/JWT|auth/i);
 	});
 
 	it("refuses to overwrite an existing target", () => {
-		const target = fs.mkdtempSync(path.join(os.tmpdir(), "hono-authless-existing-"));
+		const target = fs.mkdtempSync(
+			path.join(os.tmpdir(), "hono-authless-existing-"),
+		);
 		tempRoots.push(target);
 		expect(() =>
 			createAuthlessTemplate(target, { updateLockfile: false }),

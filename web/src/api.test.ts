@@ -23,8 +23,8 @@ describe("auth api", () => {
 		await expect(fetchMe()).resolves.toBeNull();
 
 		expect(fetchMock).toHaveBeenCalledTimes(1);
-		expect(fetchMock.mock.calls.map(([input]) => getRequestPath(input))).toEqual([
-			"/api/auth/me",
-		]);
+		expect(
+			fetchMock.mock.calls.map(([input]) => getRequestPath(input)),
+		).toEqual(["/api/auth/me"]);
 	});
 });

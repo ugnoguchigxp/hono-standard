@@ -94,8 +94,8 @@ route filesはURL/search/guardとviewの対応を表す。共通transportはcred
 
 ## Verification Contract
 
-- 正本品質ゲートは`bun run verify`であり、typecheck、Biome lint/format check、Vitest unit/contract/integration test、coverage threshold、production buildを内包する。
-- 内包scriptを事前検証として重ねず、失敗工程の診断・修正に限って個別commandを使う。source変更後は`bun run verify`全体を再実行し、その成功だけを完了の証跡とする。
+- 正本品質ゲートは`bun run verify`であり、typecheck、Biome lint/format check（テストファイルを含む）、Vitest coverage（unit/contract/integration test と threshold）、production buildを内包する。
+- 内包scriptを事前検証として重ねず、失敗工程の診断・修正に限って個別commandを使う。`bun run test`はcoverageなしの局所確認用であり、`verify`は`test:coverage`だけをテスト工程とする。source変更後は`bun run verify`全体を再実行し、その成功だけを完了の証跡とする。
 - `bun run format`は修正操作であり検証証跡ではない。E2Eは通常の`verify`に含めず、要求された場合だけ`bun run verify:e2e`または`bun run verify:all`を使う。
 
 ## Variant Boundary

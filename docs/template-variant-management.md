@@ -252,7 +252,7 @@ git switch -c variant/sqlite
 ```bash
 bun run typecheck
 bun run lint
-bun run test
+bun run test:coverage
 bun run build
 ```
 

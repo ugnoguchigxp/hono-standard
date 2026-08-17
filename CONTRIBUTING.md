@@ -21,7 +21,7 @@ bun run audit
 bun run verify:e2e
 ```
 
-- `verify` は typecheck、lint、format、unit test、coverage、production build を確認します。
+- `verify` は typecheck、lint、format、coverage（unit test を含む）、production build を確認します。
 - `audit` は lockfile 上の production / development dependency を確認します。
 - `verify:e2e` は public route、login、protected route、logout の smoke test を実行します。
 - migration を追加した場合は、空の database へ全 migration を順に適用できることを確認します。
