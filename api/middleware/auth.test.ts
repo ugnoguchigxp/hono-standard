@@ -1,16 +1,16 @@
 import { Hono } from "hono";
-import { getCookie } from "hono/cookie";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { requireAuth, requireRole } from "./auth";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../app/env";
-import type { AuthService } from "../modules/auth/auth.service";
-import { generateAccessToken } from "../modules/auth/token.service";
-import { ACCESS_TOKEN_COOKIE_NAME } from "../modules/auth/auth-cookies";
 import { HttpError } from "../app/http-error";
+import type { AuthService } from "../modules/auth/auth.service";
+import { ACCESS_TOKEN_COOKIE_NAME } from "../modules/auth/auth-cookies";
+import { generateAccessToken } from "../modules/auth/token.service";
+import { requireAuth, requireRole } from "./auth";
 
 describe("requireAuth middleware", () => {
 	let app: Hono;
-	let mockAuthService: any;
+	let mockAuthService: { findUserById: ReturnType<typeof vi.fn> };
 	let mockEnv: AppEnv;
 
 	const testUser = {
@@ -46,8 +46,8 @@ describe("requireAuth middleware", () => {
 
 		// Global error handler mock to prevent vitest output pollution
 		app.onError((err, c) => {
-			const status = (err as any).status || 500;
-			return c.json({ error: err.message }, status);
+			const status = err instanceof HttpError ? err.status : 500;
+			return c.json({ error: err.message }, status as ContentfulStatusCode);
 		});
 	});
 

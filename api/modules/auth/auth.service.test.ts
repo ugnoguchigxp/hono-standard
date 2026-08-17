@@ -1,13 +1,33 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppEnv } from "../../app/env";
+import { HttpError } from "../../app/http-error";
 import type { AppDatabase, AppDatabaseClient } from "../../db";
 import { createSingleWriterClient } from "../../db/client";
-import type { AppEnv } from "../../app/env";
 import { AuthService } from "./auth.service";
-import { HttpError } from "../../app/http-error";
 import { hashPassword } from "./password";
 
+function createMockDb() {
+	return {
+		query: {
+			users: {
+				findFirst: vi.fn(),
+			},
+			refreshTokens: {
+				findFirst: vi.fn(),
+			},
+		},
+		update: vi.fn().mockReturnThis(),
+		set: vi.fn().mockReturnThis(),
+		where: vi.fn().mockReturnThis(),
+		insert: vi.fn().mockReturnThis(),
+		values: vi.fn().mockReturnThis(),
+		returning: vi.fn(),
+		delete: vi.fn().mockReturnThis(),
+	};
+}
+
 describe("AuthService", () => {
-	let mockDb: any;
+	let mockDb: ReturnType<typeof createMockDb>;
 	let mockDatabaseClient: AppDatabaseClient;
 	let mockEnv: AppEnv;
 	let authService: AuthService;
@@ -31,23 +51,7 @@ describe("AuthService", () => {
 			jwtRefreshExpiresIn: "7d",
 		} as unknown as AppEnv;
 
-		mockDb = {
-			query: {
-				users: {
-					findFirst: vi.fn(),
-				},
-				refreshTokens: {
-					findFirst: vi.fn(),
-				},
-			},
-			update: vi.fn().mockReturnThis(),
-			set: vi.fn().mockReturnThis(),
-			where: vi.fn().mockReturnThis(),
-			insert: vi.fn().mockReturnThis(),
-			values: vi.fn().mockReturnThis(),
-			returning: vi.fn(),
-			delete: vi.fn().mockReturnThis(),
-		};
+		mockDb = createMockDb();
 
 		const database = mockDb as unknown as AppDatabase;
 		mockDatabaseClient = {
@@ -88,7 +92,9 @@ describe("AuthService", () => {
 				role: "legacy-role",
 			});
 
-			await expect(authService.findUserById(testUserRow.id)).resolves.toMatchObject({
+			await expect(
+				authService.findUserById(testUserRow.id),
+			).resolves.toMatchObject({
 				role: "member",
 			});
 		});
@@ -184,7 +190,7 @@ describe("AuthService", () => {
 					email: testUserRow.email,
 					role: "member",
 				},
-				createSingleWriterClient(mockInsertDb as any),
+				createSingleWriterClient(mockInsertDb as unknown as AppDatabase),
 				mockEnv,
 			);
 
@@ -221,7 +227,7 @@ describe("AuthService", () => {
 					where: vi.fn().mockResolvedValue(undefined),
 					insert: vi.fn().mockReturnThis(),
 					values: vi.fn().mockResolvedValue(undefined),
-				} as any),
+				} as unknown as AppDatabase),
 				mockEnv,
 			);
 

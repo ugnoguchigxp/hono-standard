@@ -26,12 +26,7 @@
 	},
 	"overrides": [
 		{
-			"includes": [
-				"dist/**",
-				"node_modules/**",
-				"**/*.test.ts",
-				"**/*.spec.ts"
-			],
+			"includes": ["dist/**", "dist-web/**", "coverage/**", "node_modules/**"],
 			"linter": {
 				"enabled": false
 			},

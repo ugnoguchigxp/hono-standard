@@ -64,8 +64,7 @@ describe("InMemoryLoginRateLimiter", () => {
 
 	it("rejects invalid configuration and normalizes account keys", () => {
 		expect(
-			() =>
-				new InMemoryLoginRateLimiter({ maxAttempts: 0, windowMs: 1_000 }),
+			() => new InMemoryLoginRateLimiter({ maxAttempts: 0, windowMs: 1_000 }),
 		).toThrow(/positive/);
 		expect(
 			() => new InMemoryLoginRateLimiter({ maxAttempts: 1, windowMs: 0 }),

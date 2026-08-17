@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, isNotNull, lt } from "drizzle-orm";
-import type { AppDatabase, DatabaseWriter } from "../../db";
-import { SignJWT, jwtVerify } from "jose";
-import { refreshTokens } from "../../db/schema";
+import { jwtVerify, SignJWT } from "jose";
 import type { AppEnv } from "../../app/env";
 import { HttpError } from "../../app/http-error";
-import { jwtPayloadSchema, type JwtPayload } from "./types";
+import type { AppDatabase, DatabaseWriter } from "../../db";
+import { refreshTokens } from "../../db/schema";
+import { type JwtPayload, jwtPayloadSchema } from "./types";
 
 const hashToken = (token: string): string =>
 	createHash("sha256").update(token).digest("hex");

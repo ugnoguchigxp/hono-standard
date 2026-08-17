@@ -1,16 +1,17 @@
 import type { AppEnv } from "../app/env";
 import * as schema from "./schema";
 import { createSqliteDbRuntime, type DbRuntime } from "./sqlite";
+
 export {
 	createSingleWriterClient,
 	type DatabaseClient,
 	type DatabaseWriter,
 } from "./client";
 export {
-	connectDb,
-	createSqliteDbRuntime,
 	type AppDatabase,
 	type AppDatabaseClient,
+	connectDb,
+	createSqliteDbRuntime,
 	type DbRuntime,
 } from "./sqlite";
 

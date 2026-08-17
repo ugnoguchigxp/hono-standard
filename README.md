@@ -31,7 +31,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 | `web/src/` | React frontend |
 | `shared/schemas/` | frontend/backend で共有する Zod schema と API object type |
 | `drizzle/` | SQL migrations |
-| `scripts/verify.ts` | typecheck / lint / format / test / coverage / build の検証 pipeline |
+| `scripts/verify.ts` | typecheck / lint / format / test:coverage / build の検証 pipeline |
 
 ## 前提
 
@@ -118,13 +118,13 @@ bun run verify:e2e
 | `bun run lint` | Biome lint |
 | `bun run format` | Biome format write |
 | `bun run format:check` | Biome format check |
-| `bun run test` | Vitest。Node backend test と jsdom React component/hook test を一括実行 |
-| `bun run test:coverage` | Vitest coverage。React TSX を含む global threshold 95% を検証 |
+| `bun run test` | Vitest。Node backend test と jsdom React component/hook test を一括実行。coverage なしの局所確認用 |
+| `bun run test:coverage` | Vitest。全 test を実行し、React TSX を含む global threshold 95% を検証 |
 | `bun run test:e2e` | Playwright smoke test。login と protected route を検証 |
 | `bun run audit` | lockfile上のproduction / development dependencyの脆弱性監査 |
 | `bun run build` | Vite production build |
 | `bun run verify:commit` | commit前のtypecheck、lint、format check |
-| `bun run verify` | typecheck、lint、format:check、test、coverage、build |
+| `bun run verify` | typecheck、lint、format:check、test:coverage、build |
 | `bun run verify:e2e` | Playwright smoke test |
 | `bun run verify:all` | `verify` と `verify:e2e` |
 
@@ -194,11 +194,11 @@ bun run verify
 bun run verify:e2e
 ```
 
-`verify` は `typecheck`、Biome `lint`、`format:check`、Vitest、coverage threshold、production build を含みます。`verify:e2e` は Playwright smoke で public screens、login、protected route、logout を確認します。
+`verify` は `typecheck`、Biome `lint`、`format:check`、Vitest coverage（unit test と threshold）、production build を含みます。test を coverage とは別に重ねて実行しません。`verify:e2e` は Playwright smoke で public screens、login、protected route、logout を確認します。
 
 dependency auditはnetworkを使うためlocalの`verify`には含めず、GitHub Actionsで`bun run audit`を必須実行します。
 
-pre-commitは`verify:commit`（typecheck / lint / format check）に限定し、test / coverage / buildを含む完全な`verify`はpre-pushとCIで実行します。
+pre-commitは`verify:commit`（typecheck / lint / format check）に限定し、test:coverage / buildを含む完全な`verify`はpre-pushとCIで実行します。
 
 Delivery の必須 Gate、リスクに応じて追加する mutation / performance / vulnWorkbench security diagnostics、結果と証拠の扱いは [`docs/delivery-quality-gates.md`](docs/delivery-quality-gates.md) を参照してください。
 

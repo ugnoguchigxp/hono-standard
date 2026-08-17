@@ -1,11 +1,4 @@
-import {
-	useMutation,
-	useQuery,
-	useQueryClient,
-	type UseMutationOptions,
-} from "@tanstack/react-query";
 import type { AppType } from "@api/app/hono";
-import { hc } from "hono/client";
 import type {
 	AuthResponse,
 	AuthSessionUser,
@@ -13,6 +6,13 @@ import type {
 	LogoutResponse,
 } from "@shared/schemas/auth.schema";
 import type { ProtectedProfileResponse } from "@shared/schemas/protected.schema";
+import {
+	type UseMutationOptions,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import { hc } from "hono/client";
 
 export type AuthUser = AuthSessionUser;
 export type LoginParams = LoginInput & {

@@ -7,19 +7,25 @@ test("public screens render", async ({ page }) => {
 	).toBeVisible();
 
 	await page.goto("/login");
-	await expect(page.getByRole("heading", { name: "Hono Standard" })).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Hono Standard" }),
+	).toBeVisible();
 	await expect(page.getByLabel("Email")).toBeVisible();
 	await expect(page.getByLabel("Password")).toBeVisible();
 
 	await page.goto("/showcase?page=1&pageSize=10");
-	await expect(page.getByRole("heading", { name: "Component Showcase" })).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Component Showcase" }),
+	).toBeVisible();
 });
 
 test("login unlocks the protected route and logout clears the session", async ({
 	page,
 }) => {
 	await page.goto("/protected");
-	await expect(page.getByRole("heading", { name: "Login required" })).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Login required" }),
+	).toBeVisible();
 
 	await page.getByRole("main").getByRole("link", { name: "Login" }).click();
 	await expect(page).toHaveURL(/\/login\?redirect=%2Fprotected/);
@@ -29,8 +35,12 @@ test("login unlocks the protected route and logout clears the session", async ({
 	await page.getByRole("button", { name: /ログイン/ }).click();
 
 	await expect(page).toHaveURL(/\/protected$/);
-	await expect(page.getByRole("heading", { name: "Protected route" })).toBeVisible();
-	await expect(page.getByText("Server confirmed admin@example.com as admin.")).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Protected route" }),
+	).toBeVisible();
+	await expect(
+		page.getByText("Server confirmed admin@example.com as admin."),
+	).toBeVisible();
 	const adminResponse = await page.request.get("/api/protected/admin");
 	expect(adminResponse.status()).toBe(200);
 	expect(await adminResponse.json()).toEqual({
@@ -38,5 +48,7 @@ test("login unlocks the protected route and logout clears the session", async ({
 	});
 
 	await page.getByRole("button", { name: "Logout" }).click();
-	await expect(page.getByRole("heading", { name: "Login required" })).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Login required" }),
+	).toBeVisible();
 });
