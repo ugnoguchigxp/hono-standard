@@ -1,24 +1,47 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 import type { AppEnv } from "../app/env";
-
-const runSqliteMigrations = vi.fn();
-
-vi.mock("./migrate-sqlite", () => ({
-	runSqliteMigrations,
-}));
+import { runMigrations } from "./migrate";
 
 describe("runMigrations", () => {
-	beforeEach(() => {
-		runSqliteMigrations.mockReset();
+	const temporaryDirectories: string[] = [];
+
+	afterEach(() => {
+		for (const directory of temporaryDirectories.splice(0)) {
+			rmSync(directory, { recursive: true, force: true });
+		}
 	});
 
-	it("delegates to the SQLite migration runner", async () => {
-		const result = { ok: true as const, total: 2, applied: 2, skipped: 0 };
-		runSqliteMigrations.mockResolvedValue(result);
-		const { runMigrations } = await import("./migrate");
-		const env = { databaseUrl: ":memory:" } as AppEnv;
+	it("applies libSQL migrations once and records subsequent runs", async () => {
+		const directory = mkdtempSync(
+			path.join(tmpdir(), "hono-libsql-migrations-"),
+		);
+		temporaryDirectories.push(directory);
+		const env = {
+			databaseUrl: `file:${path.join(directory, "app.sqlite")}`,
+		} as AppEnv;
 
-		await expect(runMigrations(env)).resolves.toEqual(result);
-		expect(runSqliteMigrations).toHaveBeenCalledWith(env);
+		await expect(runMigrations(env)).resolves.toMatchObject({
+			ok: true,
+			applied: 2,
+			skipped: 0,
+		});
+		await expect(runMigrations(env)).resolves.toMatchObject({
+			ok: true,
+			applied: 0,
+			skipped: 2,
+		});
+	});
+
+	it("supports in-memory databases without a local path", async () => {
+		await expect(
+			runMigrations({ databaseUrl: ":memory:" } as AppEnv),
+		).resolves.toMatchObject({
+			ok: true,
+			applied: 2,
+			skipped: 0,
+		});
 	});
 });

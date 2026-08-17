@@ -1,26 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { AppEnv } from "../app/env";
-
-const createSqliteDbRuntime = vi.fn();
-
-vi.mock("./sqlite", () => ({
-	createSqliteDbRuntime,
-	connectDb: vi.fn(),
-}));
+import { createDbRuntime, schema } from "./index";
 
 describe("createDbRuntime", () => {
-	beforeEach(() => {
-		createSqliteDbRuntime.mockReset();
-	});
+	it("initializes the authless in-memory libSQL runtime", async () => {
+		const runtime = await createDbRuntime({ databaseUrl: ":memory:" } as AppEnv);
 
-	it("delegates to the SQLite runtime factory without application tables", async () => {
-		const runtime = { close: vi.fn() };
-		createSqliteDbRuntime.mockReturnValue(runtime);
-		const { createDbRuntime, schema } = await import("./index");
-		const env = { databaseUrl: ":memory:" } as AppEnv;
-
-		expect(createDbRuntime(env)).toBe(runtime);
-		expect(createSqliteDbRuntime).toHaveBeenCalledWith(env);
 		expect(Object.keys(schema)).toEqual([]);
+		await runtime.close();
 	});
 });
