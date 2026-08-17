@@ -14,7 +14,9 @@ afterEach(() => {
 
 describe("CLI contract", () => {
 	it("runs an empty initial migration set idempotently", () => {
-		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hono-authless-cli-"));
+		const tempRoot = fs.mkdtempSync(
+			path.join(os.tmpdir(), "hono-authless-cli-"),
+		);
 		tempRoots.push(tempRoot);
 		const databaseUrl = `file:${path.join(tempRoot, "data", "sqlite.db")}`;
 		const result = spawnSync("bun", ["api/cli/migrate.ts"], {
