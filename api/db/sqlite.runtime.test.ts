@@ -1,116 +1,60 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../app/env";
 
 const { databases, FakeDatabase } = vi.hoisted(() => {
 	const databases: FakeSqlite[] = [];
-
 	class FakeSqlite {
 		closed = false;
-		runs: string[] = [];
+		queries: string[] = [];
 
-		constructor(
-			readonly filename: string,
-			readonly options?: { create?: boolean; readonly?: boolean },
-		) {
+		constructor(readonly filename: string) {
 			databases.push(this);
-		}
-
-		run(sql: string) {
-			this.runs.push(sql);
-		}
-
-		query(sql: string) {
-			this.runs.push(sql);
-			return {
-				get: () => 1,
-				all: () => [],
-				run: () => undefined,
-			};
 		}
 
 		close() {
 			this.closed = true;
 		}
-	}
 
+		query(sql: string) {
+			this.queries.push(sql);
+			return { get: () => 1 };
+		}
+	}
 	return { databases, FakeDatabase: FakeSqlite };
 });
 
-vi.mock("bun:sqlite", () => ({
-	Database: FakeDatabase,
-}));
-
+vi.mock("bun:sqlite", () => ({ Database: FakeDatabase }));
 vi.mock("drizzle-orm/bun-sqlite", () => ({
 	drizzle: (client: InstanceType<typeof FakeDatabase>) => ({ client }),
 }));
 
-describe("createSqliteDbRuntime wiring", () => {
-	const temporaryDirectories: string[] = [];
-
-	afterEach(() => {
-		databases.length = 0;
-		for (const directory of temporaryDirectories.splice(0)) {
-			rmSync(directory, { recursive: true, force: true });
-		}
-	});
-
-	it("shares the writer connection for in-memory databases", async () => {
-		const { createSqliteDbRuntime, connectDb } = await import("./sqlite");
+describe("SQLite compatibility runtime", () => {
+	it("owns created connections and leaves wrapped external connections open", async () => {
+		const { connectDb, createSqliteDbRuntime, wrapExternalClient } =
+			await import("./sqlite");
 		const runtime = createSqliteDbRuntime({
 			databaseUrl: ":memory:",
 		} as AppEnv);
+		const owned = databases[0];
+		expect(owned).toBeDefined();
+		if (!owned) throw new Error("expected an owned SQLite connection");
 
-		expect(databases).toHaveLength(1);
-		expect(databases[0]?.runs).toEqual(
-			expect.arrayContaining([
-				"PRAGMA journal_mode = WAL;",
-				"PRAGMA busy_timeout = 5000;",
-				"PRAGMA foreign_keys = ON;",
-			]),
-		);
+		await connectDb(owned as unknown as import("bun:sqlite").Database);
+		expect(owned.queries).toContain("SELECT 1");
+		runtime.close();
+		expect(owned.closed).toBe(true);
 
-		const writer = databases[0];
-		expect(writer).toBeDefined();
-		if (!writer) throw new Error("expected writer database");
-		await connectDb(writer as unknown as import("bun:sqlite").Database);
-		await runtime.close();
-		await runtime.close();
-		expect(writer.closed).toBe(true);
-	});
-
-	it("opens a dedicated readonly reader for file databases", async () => {
-		const directory = mkdtempSync(path.join(tmpdir(), "hono-sqlite-runtime-"));
-		temporaryDirectories.push(directory);
-		const { createSqliteDbRuntime } = await import("./sqlite");
-		const runtime = createSqliteDbRuntime({
-			databaseUrl: path.join(directory, "app.sqlite"),
+		const unownedRuntime = createSqliteDbRuntime({
+			databaseUrl: ":memory:",
 		} as AppEnv);
+		unownedRuntime.connection.ownsConnection = false;
+		unownedRuntime.close();
+		expect(databases[1]?.closed).toBe(false);
 
-		expect(databases).toHaveLength(2);
-		expect(databases[0]?.options).toEqual({ create: true });
-		expect(databases[1]?.options).toEqual({ readonly: true });
-		expect(databases[1]?.runs).toEqual(
-			expect.arrayContaining([
-				"PRAGMA busy_timeout = 5000;",
-				"PRAGMA foreign_keys = ON;",
-			]),
+		const external = new FakeDatabase(":memory:");
+		const wrapped = wrapExternalClient(
+			external as unknown as import("bun:sqlite").Database,
 		);
-
-		await runtime.close();
-		expect(databases[0]?.closed).toBe(true);
-		expect(databases[1]?.closed).toBe(true);
-	});
-
-	it("treats file::memory: URLs as in-memory databases", async () => {
-		const { createSqliteDbRuntime } = await import("./sqlite");
-		const runtime = createSqliteDbRuntime({
-			databaseUrl: "file::memory:?cache=shared",
-		} as AppEnv);
-
-		expect(databases).toHaveLength(1);
-		await runtime.close();
+		expect(wrapped.ownsConnection).toBe(false);
 	});
 });

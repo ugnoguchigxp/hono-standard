@@ -1,9 +1,9 @@
-import { getTableConfig } from "drizzle-orm/sqlite-core";
+import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { refreshTokens, users } from "./schema";
 
 describe("database schema", () => {
-	it("defines users and refresh token tables with expected keys", () => {
+	it("defines PostgreSQL users and refresh token tables with expected keys", () => {
 		const usersTable = getTableConfig(users);
 		const refreshTable = getTableConfig(refreshTokens);
 
