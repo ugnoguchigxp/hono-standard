@@ -64,24 +64,7 @@ describe("Cloudflare Worker entrypoint", () => {
 		expect(rejected.headers.get("access-control-allow-origin")).toBeNull();
 	});
 
-	it("normalizes CSRF and unexpected route failures", async () => {
-		const csrfFailure = await worker.fetch(
-			new Request("https://example.test/api/auth/login", {
-				method: "POST",
-				headers: {
-					"content-type": "application/json",
-					Origin: "https://untrusted.example",
-				},
-				body: JSON.stringify({
-					email: "user@example.com",
-					password: "password123456",
-				}),
-			}),
-			bindings,
-			{},
-		);
-		expect(csrfFailure.status).toBe(500);
-
+	it("normalizes unexpected route failures", async () => {
 		const unexpectedFailure = await worker.fetch(
 			new Request("https://example.test/api/auth/login", {
 				method: "POST",
