@@ -42,6 +42,9 @@ describe("createAuthlessTemplate", () => {
 		expect(manifest.scripts["auth:create-admin"]).toBeUndefined();
 		expect(manifest.dependencies.jose).toBeUndefined();
 		expect(
+			fs.existsSync(path.join(target, "api/cli/auth-create-admin.test.ts")),
+		).toBe(false);
+		expect(
 			fs.readFileSync(path.join(target, "CONTRIBUTING.md"), "utf8"),
 		).not.toContain("template-variant-management");
 		expect(

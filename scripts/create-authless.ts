@@ -7,6 +7,7 @@ const REMOVED_PATHS = [
 	"CONTRIBUTING.md",
 	"SECURITY.md",
 	"api/cli/auth-create-admin.ts",
+	"api/cli/auth-create-admin.test.ts",
 	"api/middleware/auth.test.ts",
 	"api/middleware/auth.ts",
 	"api/modules/auth",
