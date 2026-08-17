@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

@@ -7,8 +7,7 @@ const steps: VerifyStep[] = [
 	{ label: "typecheck", command: ["bun", "run", "typecheck"] },
 	{ label: "lint", command: ["bun", "run", "lint"] },
 	{ label: "format", command: ["bun", "run", "format:check"] },
-	{ label: "test", command: ["bun", "run", "test"] },
-	{ label: "coverage", command: ["bun", "run", "test:coverage"] },
+	{ label: "test:coverage", command: ["bun", "run", "test:coverage"] },
 	{ label: "build", command: ["bun", "run", "build"] },
 ];
 

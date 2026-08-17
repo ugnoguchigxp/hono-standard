@@ -1,39 +1,58 @@
+import { type AppEnv, readAppEnv } from "./env";
 import app, { getAppRuntime } from "./hono";
-import { readAppEnv } from "./env";
 import {
 	createStructuredLogRecord,
 	errorLogFields,
 	writeStructuredLog,
 } from "./structured-log";
 
-const env = readAppEnv();
+export type HttpServer = {
+	port: number;
+	stop: (closeActiveConnections?: boolean) => void;
+};
 
-const server = Bun.serve({
-	fetch: app.fetch,
-	hostname: env.host,
-	port: env.port,
-});
+export type ServeHttp = (options: {
+	fetch: typeof app.fetch;
+	hostname: string;
+	port: number;
+}) => HttpServer;
 
-writeStructuredLog(
-	createStructuredLogRecord("info", "server_started", {
-		host: env.host,
-		port: server.port,
-	}),
-);
+export function toHttpServer(
+	server: {
+		port?: number;
+		stop: (closeActiveConnections?: boolean) => void;
+	},
+	fallbackPort: number,
+): HttpServer {
+	return {
+		port: server.port ?? fallbackPort,
+		stop: (closeActiveConnections) => server.stop(closeActiveConnections),
+	};
+}
 
-const shutdown = async (signal: string) => {
+export async function shutdownHttpServer(
+	server: HttpServer,
+	signal: string,
+	deps: {
+		getRuntime?: typeof getAppRuntime;
+		exit?: (code: number) => void;
+	} = {},
+): Promise<void> {
+	const getRuntime = deps.getRuntime ?? getAppRuntime;
+	const exit = deps.exit ?? ((code) => process.exit(code));
+
 	writeStructuredLog(
 		createStructuredLogRecord("info", "server_stopping", { signal }),
 	);
 	server.stop(true);
 
 	try {
-		const runtime = await getAppRuntime();
+		const runtime = await getRuntime();
 		await runtime.dbRuntime.close();
 		writeStructuredLog(
 			createStructuredLogRecord("info", "server_stopped", { signal }),
 		);
-		process.exit(0);
+		exit(0);
 	} catch (error) {
 		writeStructuredLog(
 			createStructuredLogRecord("error", "server_shutdown_failed", {
@@ -41,9 +60,50 @@ const shutdown = async (signal: string) => {
 				...errorLogFields(error),
 			}),
 		);
-		process.exit(1);
+		exit(1);
 	}
-};
+}
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+export function startHttpServer(env: AppEnv, serve: ServeHttp): HttpServer {
+	const server = serve({
+		fetch: app.fetch,
+		hostname: env.host,
+		port: env.port,
+	});
+
+	writeStructuredLog(
+		createStructuredLogRecord("info", "server_started", {
+			host: env.host,
+			port: server.port,
+		}),
+	);
+
+	return server;
+}
+
+export function bindHttpServerSignals(
+	server: HttpServer,
+	onShutdown: (signal: string) => Promise<void> = (signal) =>
+		shutdownHttpServer(server, signal),
+): () => void {
+	const onSigint = () => {
+		void onShutdown("SIGINT");
+	};
+	const onSigterm = () => {
+		void onShutdown("SIGTERM");
+	};
+	process.on("SIGINT", onSigint);
+	process.on("SIGTERM", onSigterm);
+	return () => {
+		process.off("SIGINT", onSigint);
+		process.off("SIGTERM", onSigterm);
+	};
+}
+
+if (import.meta.main) {
+	const env = readAppEnv();
+	const server = startHttpServer(env, (options) =>
+		toHttpServer(Bun.serve(options), options.port),
+	);
+	bindHttpServerSignals(server);
+}

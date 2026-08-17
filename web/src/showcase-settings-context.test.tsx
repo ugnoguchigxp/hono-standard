@@ -1,12 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+	ShowcaseSettingsProvider,
 	showcaseDensityOptions,
 	showcaseFontSizeOptions,
 	showcaseRadiusOptions,
 	showcaseThemeOptions,
-	ShowcaseSettingsProvider,
 	useShowcaseSettings,
 } from "./showcase-settings-context";
 

@@ -1,8 +1,8 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from "../test/render-with-providers";
 import { authMeQueryKey, UNAUTHORIZED_EVENT_NAME } from "./api";
 import { AuthProvider, useAuth } from "./auth-context";
-import { renderWithProviders } from "../test/render-with-providers";
 
 const routerMocks = vi.hoisted(() => ({
 	navigate: vi.fn().mockResolvedValue(undefined),
