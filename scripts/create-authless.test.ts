@@ -30,6 +30,12 @@ describe("createAuthlessTemplate", () => {
 		expect(
 			fs.readFileSync(path.join(target, "api/app/hono.ts"), "utf8"),
 		).not.toContain("createAuthRoute");
+		expect(
+			fs.existsSync(path.join(target, "web/src/session-cache.test.ts")),
+		).toBe(false);
+		expect(
+			fs.existsSync(path.join(target, "web/src/session-lock.test.ts")),
+		).toBe(false);
 		const manifest = JSON.parse(
 			fs.readFileSync(path.join(target, "package.json"), "utf8"),
 		) as {

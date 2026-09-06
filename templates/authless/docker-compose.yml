@@ -15,6 +15,7 @@ services:
 
   app:
     build: .
+    stop_grace_period: 15s
     ports:
       - "5173:5173"
     environment:

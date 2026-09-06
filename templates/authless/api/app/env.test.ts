@@ -34,9 +34,7 @@ describe("readAppEnv", () => {
 			NODE_ENV: "production",
 			DATABASE_URL: "postgres://postgres:postgres@db:5432/app",
 		});
-		expect(env.databaseUrl).toBe(
-			"postgres://postgres:postgres@db:5432/app",
-		);
+		expect(env.databaseUrl).toBe("postgres://postgres:postgres@db:5432/app");
 	});
 
 	it("normalizes blank optional values to defaults", () => {

@@ -39,6 +39,8 @@ const REMOVED_PATHS = [
 	"web/src/routes/route-access.test.ts",
 	"web/src/routes/route-access.ts",
 	"web/src/routes/showcase-route.tsx",
+	"web/src/session-cache.test.ts",
+	"web/src/session-lock.test.ts",
 	"web/src/showcase-settings-context.test.tsx",
 	"web/src/showcase-settings-context.tsx",
 	"web/src/showcase-table-search.ts",
