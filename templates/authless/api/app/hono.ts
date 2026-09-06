@@ -47,9 +47,10 @@ const distWebRoot = path.resolve(process.cwd(), "dist-web");
 const distWebIndex = path.resolve(distWebRoot, "index.html");
 
 export function createApiRoutes(deps: AppDeps) {
-	return new Hono()
-		.route("/health", createHealthRoute())
-		.route("/ready", createReadyRoute(() => deps.dbRuntime.checkReady()));
+	return new Hono().route("/health", createHealthRoute()).route(
+		"/ready",
+		createReadyRoute(() => deps.dbRuntime.checkReady()),
+	);
 }
 
 export function createApp(deps: AppDeps) {

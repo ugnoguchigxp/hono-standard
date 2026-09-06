@@ -5,6 +5,7 @@ import { HttpError } from "./http-error";
 
 vi.mock("../db", () => ({
 	createDbRuntime: vi.fn().mockReturnValue({
+		checkReady: vi.fn().mockResolvedValue(undefined),
 		client: { read: {}, write: { execute: vi.fn(), close: vi.fn() } },
 		close: vi.fn(),
 	}),
@@ -60,6 +61,7 @@ describe("authless hono app", () => {
 		expect(response.headers.get("Content-Security-Policy")).toContain(
 			"default-src 'self'",
 		);
+		expect((await app.request("/api/ready")).status).toBe(200);
 	});
 
 	it("reuses runtime dependencies", async () => {
