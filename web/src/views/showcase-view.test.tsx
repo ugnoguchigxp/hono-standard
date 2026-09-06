@@ -60,6 +60,78 @@ afterEach(() => {
 });
 
 describe("ShowcaseView", () => {
+	it.each([
+		["Open Dialog", "Confirm deployment"],
+		["Open Panel", "Settings panel"],
+	])("keeps %s open when an earlier close event arrives after reopening", async (triggerName, dialogName) => {
+		const { user } = renderWithProviders(showcase());
+		const trigger = screen.getByRole("button", { name: triggerName });
+		await user.click(trigger);
+		const dialog = screen.getByRole("dialog", { name: dialogName });
+		fireEvent(dialog, new Event("cancel", { cancelable: true }));
+		expect(dialog).not.toBeVisible();
+		await user.click(trigger);
+		fireEvent(dialog, new Event("close"));
+		expect(dialog).toBeVisible();
+	});
+	it("moves focus and selection together across tabs and skips inactive panels", async () => {
+		const { user } = renderWithProviders(showcase());
+		const account = screen.getByRole("tab", { name: "Account" });
+		account.focus();
+		for (const [key, label] of [
+			["{ArrowRight}", "Password"],
+			["{End}", "Settings"],
+			["{ArrowRight}", "Account"],
+			["{ArrowLeft}", "Settings"],
+			["{Home}", "Account"],
+		]) {
+			await user.keyboard(key);
+			const selected = screen.getByRole("tab", { name: label });
+			expect(selected).toHaveFocus();
+			expect(selected).toHaveAttribute("aria-selected", "true");
+			expect(screen.getByRole("tabpanel", { name: label })).toBeVisible();
+		}
+		await user.keyboard("{ArrowDown}");
+		expect(account).toHaveFocus();
+		await user.tab();
+		expect(screen.getByRole("tabpanel", { name: "Account" })).toHaveFocus();
+	});
+
+	it("wraps drawer focus across buttons and checkboxes", async () => {
+		const { user } = renderWithProviders(showcase());
+		await user.click(screen.getByRole("button", { name: "Open Panel" }));
+		const drawer = screen.getByRole("dialog", { name: "Settings panel" });
+		const close = within(drawer).getByRole("button", { name: "Close panel" });
+		close.focus();
+		await user.tab({ shift: true });
+		expect(within(drawer).getByLabelText("Compact mode")).toHaveFocus();
+		await user.tab();
+		expect(close).toHaveFocus();
+		await user.tab();
+		expect(within(drawer).getByLabelText("Audit log")).toHaveFocus();
+		await user.click(close);
+		expect(drawer).not.toBeVisible();
+	});
+	it("wraps keyboard focus between the first and last dialog actions", async () => {
+		const { user } = renderWithProviders(showcase());
+		await user.click(screen.getByRole("button", { name: "Open Dialog" }));
+		const dialog = screen.getByRole("dialog", { name: "Confirm deployment" });
+		const close = within(dialog).getByRole("button", { name: "Close dialog" });
+		const deploy = within(dialog).getByRole("button", {
+			name: "Deploy",
+		});
+		close.focus();
+		await user.tab({ shift: true });
+		expect(deploy).toHaveFocus();
+		await user.tab();
+		expect(close).toHaveFocus();
+		await user.tab();
+		expect(
+			within(dialog).getByRole("button", { name: "Cancel" }),
+		).toHaveFocus();
+		await user.keyboard("{Enter}");
+		expect(dialog).not.toBeVisible();
+	});
 	it("renders the inventory and exercises appearance and form controls", async () => {
 		const { user } = renderWithProviders(showcase());
 
@@ -158,7 +230,7 @@ describe("ShowcaseView", () => {
 		await user.click(within(dialog).getByRole("button", { name: "Deploy" }));
 
 		await user.click(screen.getByRole("button", { name: "Open Panel" }));
-		const drawer = screen.getByRole("complementary", {
+		const drawer = screen.getByRole("dialog", {
 			name: "Settings panel",
 		});
 		await user.click(

@@ -1,0 +1,230 @@
+{
+  "before": {
+    "passed": true,
+    "measuredAt": "2026-09-06T03:15:03.519Z",
+    "bun": "1.3.14",
+    "platform": "darwin/arm64",
+    "concurrency": 16,
+    "maxP95Ms": 500,
+    "results": [
+      {
+        "workload": "profile-read",
+        "run": 1,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 1.82,
+        "p95Ms": 2.82,
+        "p99Ms": 4.08,
+        "requestsPerSecond": 8449.87,
+        "rssBytes": 179077120
+      },
+      {
+        "workload": "profile-read",
+        "run": 2,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 1.72,
+        "p95Ms": 2.38,
+        "p99Ms": 2.71,
+        "requestsPerSecond": 9469.51,
+        "rssBytes": 185614336
+      },
+      {
+        "workload": "profile-read",
+        "run": 3,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 1.71,
+        "p95Ms": 2.43,
+        "p99Ms": 2.82,
+        "requestsPerSecond": 9348.5,
+        "rssBytes": 188284928
+      },
+      {
+        "workload": "refresh-write",
+        "run": 1,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 6.2,
+        "p95Ms": 11.13,
+        "p99Ms": 11.87,
+        "requestsPerSecond": 2517.81,
+        "rssBytes": 216072192
+      },
+      {
+        "workload": "refresh-write",
+        "run": 2,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 6.1,
+        "p95Ms": 11.74,
+        "p99Ms": 13.95,
+        "requestsPerSecond": 2281.04,
+        "rssBytes": 218513408
+      },
+      {
+        "workload": "refresh-write",
+        "run": 3,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 6.51,
+        "p95Ms": 12.71,
+        "p99Ms": 16.38,
+        "requestsPerSecond": 2103.95,
+        "rssBytes": 221052928
+      }
+    ]
+  },
+  "after": {
+    "passed": true,
+    "measuredAt": "2026-09-06T03:15:08.276Z",
+    "bun": "1.3.14",
+    "platform": "darwin/arm64",
+    "concurrency": 16,
+    "maxP95Ms": 500,
+    "results": [
+      {
+        "workload": "profile-read",
+        "run": 1,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 1.82,
+        "p95Ms": 2.7,
+        "p99Ms": 4.53,
+        "requestsPerSecond": 8482.52,
+        "rssBytes": 172343296
+      },
+      {
+        "workload": "profile-read",
+        "run": 2,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 1.69,
+        "p95Ms": 2.35,
+        "p99Ms": 2.55,
+        "requestsPerSecond": 9594.68,
+        "rssBytes": 177766400
+      },
+      {
+        "workload": "profile-read",
+        "run": 3,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 1.69,
+        "p95Ms": 2.42,
+        "p99Ms": 3.33,
+        "requestsPerSecond": 9467.35,
+        "rssBytes": 182140928
+      },
+      {
+        "workload": "refresh-write",
+        "run": 1,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 6.16,
+        "p95Ms": 10.65,
+        "p99Ms": 11.92,
+        "requestsPerSecond": 2514.37,
+        "rssBytes": 212107264
+      },
+      {
+        "workload": "refresh-write",
+        "run": 2,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 6.18,
+        "p95Ms": 11.9,
+        "p99Ms": 14.54,
+        "requestsPerSecond": 2321.57,
+        "rssBytes": 214663168
+      },
+      {
+        "workload": "refresh-write",
+        "run": 3,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 7.57,
+        "p95Ms": 13.81,
+        "p99Ms": 16.3,
+        "requestsPerSecond": 1980.18,
+        "rssBytes": 217432064
+      }
+    ]
+  },
+  "authless": {
+    "passed": true,
+    "measuredAt": "2026-09-06T03:15:08.851Z",
+    "bun": "1.3.14",
+    "platform": "darwin/arm64",
+    "concurrency": 16,
+    "maxP95Ms": 500,
+    "results": [
+      {
+        "workload": "health",
+        "run": 1,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 0.61,
+        "p95Ms": 1.13,
+        "p99Ms": 2.19,
+        "requestsPerSecond": 22946.49,
+        "rssBytes": 96993280
+      },
+      {
+        "workload": "health",
+        "run": 2,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 0.52,
+        "p95Ms": 0.78,
+        "p99Ms": 1.11,
+        "requestsPerSecond": 29924.4,
+        "rssBytes": 101695488
+      },
+      {
+        "workload": "health",
+        "run": 3,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 0.52,
+        "p95Ms": 0.92,
+        "p99Ms": 1.2,
+        "requestsPerSecond": 28135,
+        "rssBytes": 106692608
+      },
+      {
+        "workload": "ready",
+        "run": 1,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 0.53,
+        "p95Ms": 1.28,
+        "p99Ms": 1.83,
+        "requestsPerSecond": 25692.96,
+        "rssBytes": 111919104
+      },
+      {
+        "workload": "ready",
+        "run": 2,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 0.49,
+        "p95Ms": 0.87,
+        "p99Ms": 1.15,
+        "requestsPerSecond": 29373.41,
+        "rssBytes": 113770496
+      },
+      {
+        "workload": "ready",
+        "run": 3,
+        "requests": 2000,
+        "errors": 0,
+        "p50Ms": 0.54,
+        "p95Ms": 0.92,
+        "p99Ms": 1.36,
+        "requestsPerSecond": 28052.03,
+        "rssBytes": 116113408
+      }
+    ]
+  }
+}

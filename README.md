@@ -48,7 +48,7 @@ bun run auth:create-admin -- --email admin@example.com --name "Admin User"
 bun run dev
 ```
 
-`bootstrap` は `.env` を用意し、dependency が未導入なら `bun install --frozen-lockfile` を実行し、SQLite database に migration を適用します。
+`bootstrap` は `.env` を用意し、dependency が未導入なら `bun install --frozen-lockfile` を実行し、SQLite database に migration を適用します。既存の設定は保持し、必要な場合だけ `DATABASE_URL` の追加・テンプレート既定値の補正を行います。引用符、コメント、秘密値は書き換えません。
 
 `auth:create-admin` は対話で password を読みます。自動化する場合は次のように標準入力から渡せます。
 
@@ -74,6 +74,7 @@ bun run verify:e2e
 | Path / Pattern | 扱い |
 | --- | --- |
 | `drizzle/*.sql` | Drizzle migration source。commit 対象 |
+| `drizzle/meta/*.json` | 差分生成用のsnapshotとjournal。SQLと同じcommitに含める |
 | `.env.example` | local development の雛形。commit 対象 |
 | `.env*` | local secret / runtime env。`.env.example` 以外は commit しない |
 | `data/`, `*.db`, `*.sqlite`, `*.sqlite3` | local SQLite database。commit しない |
@@ -113,7 +114,7 @@ bun run verify:e2e
 | `bun run auth:create-admin -- --email <email> --name "<name>"` | admin user 作成 |
 | `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
 | `bun run db:generate` | Drizzle migration 生成 |
-| `bun run db:migrate:drizzle` | drizzle-kit migration。`DATABASE_URL` は process env または `.env` から読む |
+| `bun run db:migrate:drizzle` | 旧コマンド名の互換alias。`db:migrate`と同じBun用runnerを実行 |
 | `bun run typecheck` | TypeScript check |
 | `bun run lint` | Biome lint |
 | `bun run format` | Biome format write |
@@ -125,14 +126,19 @@ bun run verify:e2e
 | `bun run build` | Vite production build |
 | `bun run verify:commit` | commit前のtypecheck、lint、format check |
 | `bun run verify` | typecheck、lint、format:check、test:coverage、build |
-| `bun run verify:e2e` | Playwright smoke test |
+| `bun run verify:e2e` | Chromium / Firefox / WebKit / mobileのE2E |
+| `bun run verify:load` | 一時DBでprofile読取・refresh書込を3回計測 |
+| `bun run db:backup <new-file>` | WALを含むオンラインスナップショット |
+| `bun run db:verify-backup <file>` | DB整合性・SHA-256の確認 |
+| `bun run db:restore <snapshot> <new-db>` | 検査後に新しいDBへ復元 |
 | `bun run verify:all` | `verify` と `verify:e2e` |
 
 ## API
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/health` | health check |
+| `GET` | `/api/health` | liveness check |
+| `GET` | `/api/ready` | DB接続・書き込み開始・移行・schemaの準備確認（失敗は503） |
 | `POST` | `/api/auth/login` | email/password login。httpOnly cookie を設定 |
 | `POST` | `/api/auth/refresh` | refresh token rotation。使用済みtokenの再提示時はtoken familyを失効 |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
@@ -141,6 +147,12 @@ bun run verify:e2e
 | `GET` | `/api/protected/admin` | `requireAuth` と `requireRole("admin")` を通る role authorization sample |
 
 `/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
+
+セッション確認の`/api/auth/me`も更新対象です。login・logout・refresh自体は自動更新しません。同一ページの並行requestは更新処理を共有します。タブ間では [Web Locks](https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API) でlogin・logout・refreshを直列化し、ロック取得後にセッションを再確認します。別タブが復元済みならrefreshを省略します。自動更新はWeb Locksが利用できるHTTPSまたはlocalhostで有効です。未対応ブラウザーや安全でないHTTP環境では、access token失効時に再ログインが必要です。更新の401は未ログインとして扱い、通信障害・サーバーエラーは表示します。
+
+保護データのquery keyには利用者IDを含めます。login成功・logout成功・セッション失効時に`auth`/`protected`配下の進行中queryを取り消し、`protected`のキャッシュを消去します。新しい保護queryもこのprefixを使用し、query functionでAbortSignalを受け渡してください。logout失敗時は認証状態を保持し、エラーを表示して再試行できるようにします。
+
+パスワードはscrypt（`N=16384, r=8, p=5`）の`s2`形式で保存します。旧`s1`形式（`p=1`）も検証でき、パスワード認証に成功した時点で`s2`へ更新します。利用者によるパスワード再設定やDBの一括書き換えは不要です。
 
 `/api/protected/*` は server-side で `requireAuth` を適用しています。画面だけで保護しているわけではないことを確認するサンプルとして、`/protected` から `/api/protected/profile` を呼び出します。
 
@@ -157,6 +169,8 @@ API request / response の共有 schema は `shared/schemas/` に置きます。
 
 ## Build / Runtime
 
+`bun run build`と`build:web`は、開発用`.env`の`NODE_ENV`にかかわらずproduction bundleを生成します。server起動時の`NODE_ENV`は別に設定してください。
+
 ```bash
 bun run build
 NODE_ENV=production JWT_SECRET='<32+ random chars>' bun run db:migrate
@@ -169,13 +183,28 @@ server lifecycle、request summary、server errorは1行JSONで標準出力ま�
 
 SQLite baseline では `DATABASE_URL` は永続化される file path にしてください。container や VM で動かす場合は、DB file を volume に置き、起動前に `bun run db:migrate` を実行します。`PORT` は platform 側が指定する値に合わせて上書きできます。
 
+### DBスキーマを変更する
+
+1. `api/db/schema.ts`を変更する。
+2. `bun run db:generate`を実行し、生成されたSQLを確認する。
+3. SQLと`drizzle/meta/`の変更を一緒にcommitする。
+4. `bun run db:migrate`で適用する。
+
+スキーマに変更がなければSQLは生成されません。適用済みSQLの名前・内容とsnapshotを削除または書き換えず、新しいmigrationを追加してください。既存の`0001_auth.sql`と`0002_refresh_token_reuse_detection.sql`、およびDB内の`hono_standard_schema_migrations`履歴を維持しています。Drizzle Kitは差分生成に使用し、適用はBun用runnerに統一しています。`drizzle-kit migrate`を別途実行して二重の適用履歴を作らないでください。
+
+マイグレーションはファイルごとのtransactionで適用し、commit前に`PRAGMA foreign_key_check`で整合性を検査します。違反があればデータ変更と適用履歴をともにrollbackします。SQLiteの[テーブル再構築手順](https://www.sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes)に従い、migration専用connectionではforeign key enforcementを無効にして検査するため、親テーブルの作り直しによる意図しないcascade削除も防ぎます。
+
 ### SQLite concurrency contract
 
 SQLite runtime は1プロセスにつき1つの writable connection だけを作り、すべての書き込みを共通の `SingleWriterClient` でFIFO実行します。アプリケーションコードは writable Drizzle database を直接保持せず、`dbRuntime.client.write.execute((db) => ...)` を使って書き込みます。読み取りは `dbRuntime.client.read` を使います。
 
 file database では WAL、`busy_timeout`、foreign key enforcement を有効にし、reader は物理的に read-only で開きます。`:memory:` database はDB自体がconnection単位なので、同じconnectionをreaderとwriterで共有します。SQLite fileを複数のapp processや複数hostから同時利用する構成はこのcontractの対象外です。その場合はTursoやPostgreSQLなど、複数processを前提とするvariantを選んでください。
 
+DBの監視、バックアップ・復元、停止、負荷試験の手順は[運用ガイド](docs/operations.md)を参照してください。
+
 ## Docker
+
+imageには実行・buildに必要なディレクトリだけをコピーします。`.env`、`.env.*`（`.env.example`以外）、`data/`、SQLiteのDB本体・WAL・SHMはbuild contextから除外し、DBとsecretは実行環境から渡します。
 
 SQLite baseline を container で試す場合:
 
@@ -183,7 +212,7 @@ SQLite baseline を container で試す場合:
 COMPOSE_JWT_SECRET='<32+ random chars>' docker compose up --build
 ```
 
-compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。Docker HEALTHCHECKはcontainer内から`/api/health`を確認します。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。production 公開時は `COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header mode を必ず環境に合わせて変更してください。
+compose は `./data` を永続 volume として mount します。先に一度だけ動く`data-init`がrootで保存先ディレクトリとSQLite本体・WAL・SHMの所有者をUID/GID `10001:10001`へ設定します。成功後にappを同UIDの非root userで起動し、migration後にBunサーバーをPID 1として実行します。Linuxホスト側の対象ファイルの所有者も変わります。既存のDBはそのまま利用され、内容やアクセス権の範囲は変更しません。Docker HEALTHCHECKはcontainer内からDBの`/api/ready`を確認します。停止はHTTP完了を10秒待ち、Composeの猶予は15秒です。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。production 公開時は `COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header mode を必ず環境に合わせて変更してください。
 
 ## 品質ゲート
 
@@ -194,7 +223,7 @@ bun run verify
 bun run verify:e2e
 ```
 
-`verify` は `typecheck`、Biome `lint`、`format:check`、Vitest coverage（unit test と threshold）、production build を含みます。test を coverage とは別に重ねて実行しません。`verify:e2e` は Playwright smoke で public screens、login、protected route、logout を確認します。
+`verify` は `typecheck`、Biome `lint`、`format:check`、Vitest coverage（unit test と threshold）、production build を含みます。test を coverage とは別に重ねて実行しません。`verify:e2e` は Playwrightでpublic screens、login、protected route、logout失敗と再試行、アカウント切替、複数タブの更新、Dialog・Drawer・Tabsのキーボード操作とモバイルの横溢れを確認します。対象はChromium・Firefox・WebKitとモバイル2構成です。初回は`bunx playwright install --with-deps chromium firefox webkit`を実行してください。
 
 dependency auditはnetworkを使うためlocalの`verify`には含めず、GitHub Actionsで`bun run audit`を必須実行します。
 

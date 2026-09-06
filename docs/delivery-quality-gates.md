@@ -139,7 +139,8 @@ bun run verify:e2e
 Template Snapshot の最小 smoke scope:
 
 - public screen が表示できる。
-- `/api/health` が成功する。
+- `/api/health` とDB準備確認の `/api/ready` が成功する。
+- Chromium / Firefox / WebKitとモバイル2構成で確認する。
 - auth を含む variant では login、protected route、logout が成立する。
 - variant / overlay 固有の runtime または rendering contract を確認する。
 
@@ -197,6 +198,9 @@ Trigger:
 - 仕様が不明なら合格扱いにせず、仕様判断へ戻す。
 
 ### `DQ-PERF-001`: Performance verification
+
+ローカルの比較用コマンドは`bun run verify:load`です。一時DBで3回計測し、認証付き構成はprofile読取とrefresh書込、認証なし構成はhealth/readinessを測ります。既定値は小規模な動作確認用であり、Delivery対象のSLOを保証しません。引数と測定範囲は[運用ガイド](operations.md)を参照してください。
+
 
 Trigger:
 

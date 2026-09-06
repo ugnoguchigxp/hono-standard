@@ -1,6 +1,19 @@
 services:
+  data-init:
+    build: .
+    user: "0:0"
+    entrypoint: ["sh", "/app/scripts/init-data-dir.sh"]
+    healthcheck:
+      disable: true
+    restart: "no"
+    volumes:
+      - ./data:/data
   app:
     build: .
+    stop_grace_period: 15s
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
     ports:
       - "5173:5173"
     environment:

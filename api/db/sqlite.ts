@@ -1,8 +1,11 @@
 import { Database } from "bun:sqlite";
+import path from "node:path";
+import { getTableColumns, getTableName, is, Table } from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import type { AppEnv } from "../app/env";
 import { createSingleWriterClient, type DatabaseClient } from "./client";
+import { listSqlMigrations, MIGRATIONS_TABLE } from "./migrate-sqlite";
 import { ensureDatabaseParentDirectory } from "./path";
 import * as schema from "./schema";
 
@@ -11,6 +14,7 @@ export type AppDatabaseClient = DatabaseClient<AppDatabase>;
 
 export type DbRuntime = {
 	client: AppDatabaseClient;
+	checkReady: () => Promise<void>;
 	close: () => Promise<void>;
 };
 
@@ -61,8 +65,52 @@ export function createSqliteDbRuntime(env: AppEnv): DbRuntime {
 		: createReaderConnection(env.databaseUrl);
 	const writer = createSingleWriterClient(writerConnection.db);
 	let closed = false;
+	let readiness: Promise<void> | undefined;
+	const checkReady = async () => {
+		if (closed) throw new Error("Database is closing");
+		const migrations = await listSqlMigrations(path.resolve("drizzle"));
+		await writer.execute(async () => {
+			const client = writerConnection.client;
+			client.run("PRAGMA busy_timeout = 0");
+			try {
+				client.run("BEGIN IMMEDIATE");
+				try {
+					const applied = readerConnection.client
+						.query(`SELECT filename FROM ${MIGRATIONS_TABLE}`)
+						.all() as { filename: string }[];
+					const names = new Set(applied.map((row) => row.filename));
+					if (migrations.some((filename) => !names.has(filename))) {
+						throw new Error("Database migrations are pending");
+					}
+					const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
+					for (const table of Object.values(schema)) {
+						if (!is(table, Table)) continue;
+						const columns = Object.values(getTableColumns(table))
+							.map((column) => `t.${quote(column.name)}`)
+							.join(", ");
+						readerConnection.client
+							.query(
+								`SELECT ${columns} FROM ${quote(getTableName(table))} AS t LIMIT 0`,
+							)
+							.all();
+					}
+				} finally {
+					client.run("ROLLBACK");
+				}
+			} finally {
+				client.run("PRAGMA busy_timeout = 5000");
+			}
+		});
+	};
 
 	return {
+		// Reuse a queued probe so timed-out HTTP probes cannot flood the writer.
+		checkReady: () => {
+			readiness ??= checkReady().finally(() => {
+				readiness = undefined;
+			});
+			return readiness;
+		},
 		client: {
 			read: readerConnection.db,
 			write: writer,

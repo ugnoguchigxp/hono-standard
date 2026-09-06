@@ -1,0 +1,84 @@
+{
+  "baseCommit": "98a5d19e3f1808959603589d2372ed50d9a6feb2",
+  "scope": "2026-09-06 uncommitted working tree, following prior fixes",
+  "coverage": {
+    "main": {
+      "statements": 97.93,
+      "branches": 95.27,
+      "functions": 97.19,
+      "lines": 98.04
+    },
+    "authless": {
+      "statements": 97.01,
+      "branches": 96.47,
+      "functions": 96.84,
+      "lines": 97.1
+    }
+  },
+  "e2e": {
+    "main": 50,
+    "authless": 10
+  },
+  "mutations": [
+    {
+      "mutant": "shutdown-await",
+      "detected": true,
+      "exitCode": 1
+    },
+    {
+      "mutant": "readiness-bypass",
+      "detected": true,
+      "exitCode": 1
+    },
+    {
+      "mutant": "snapshot-overwrite",
+      "detected": true,
+      "exitCode": 1
+    }
+  ],
+  "docker": {
+    "readiness": {
+      "status": 200,
+      "body": {
+        "status": "ready",
+        "service": "hono-standard"
+      }
+    },
+    "backup": {
+      "path": "/data/backups/snapshot.sqlite",
+      "bytes": 65536,
+      "sha256": "d447221757030b38729fd11d6bb549391fd69374f57161007201c8838d0b19ef"
+    },
+    "restore": {
+      "path": "/data/restored.sqlite",
+      "bytes": 65536,
+      "sha256": "d447221757030b38729fd11d6bb549391fd69374f57161007201c8838d0b19ef"
+    },
+    "uid": "10001",
+    "exitCode": 0,
+    "stopSeconds": 0.085,
+    "gracefulLog": true
+  },
+  "scans": {
+    "bunAudit": {
+      "findings": 0
+    },
+    "gitleaks": {
+      "findings": 0
+    },
+    "trivy": {
+      "dependencyVulnerabilities": 0,
+      "dockerMisconfigurations": 0
+    },
+    "semgrep": {
+      "findings": 0,
+      "status": "partial",
+      "limitation": "Showcase JSX text containing ampersands produces partial parsing warnings."
+    },
+    "vulnWorkbench": {
+      "status": "unavailable",
+      "limitation": "No callable tool available; individual scanners are supplementary evidence."
+    }
+  },
+  "initialJavaScriptGzipBytes": 119154
+}
