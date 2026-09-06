@@ -114,3 +114,46 @@ describe("bootstrap env setup", () => {
 		);
 	});
 });
+
+it("preserves quoted secrets, comments, and multiline settings when normalizing only DATABASE_URL", () => {
+	const root = makeTempRoot();
+	const unchanged = [
+		"# User configuration",
+		'JWT_SECRET="review-secret-abcdefghijklmnopqrstuvwxyz # suffix"',
+		"LITERAL='dollar $VALUE and # hash'",
+		'MULTILINE="first',
+		'second=value"',
+		'APP_URL="http://localhost:5173" # keep this comment',
+	].join("\r\n");
+	fs.writeFileSync(
+		path.join(root, ".env.example"),
+		"DATABASE_URL=data/sqlite.db\n",
+	);
+	fs.writeFileSync(
+		path.join(root, ".env"),
+		`${unchanged}\r\nDATABASE_URL=sqlite.db\r\n`,
+	);
+	expect(ensureEnvFile(root)).toBe("data/sqlite.db");
+	const normalized = fs.readFileSync(path.join(root, ".env"), "utf8");
+	expect(normalized).toBe(`${unchanged}\r\nDATABASE_URL=data/sqlite.db\r\n`);
+	ensureEnvFile(root);
+	expect(fs.readFileSync(path.join(root, ".env"), "utf8")).toBe(normalized);
+});
+
+it("preserves an exported, quoted SQLite path with a hash and trailing comment", () => {
+	const root = makeTempRoot();
+	const original =
+		'export DATABASE_URL="data/a # b.sqlite" # selected by user\nJWT_SECRET="unchanged # secret"\n\n';
+	fs.writeFileSync(path.join(root, ".env"), original);
+	expect(ensureEnvFile(root)).toBe("data/a # b.sqlite");
+	expect(fs.readFileSync(path.join(root, ".env"), "utf8")).toBe(original);
+});
+
+it("appends a missing database setting without rewriting existing assignments", () => {
+	const root = makeTempRoot();
+	fs.writeFileSync(path.join(root, ".env"), 'JWT_SECRET="keep # value"\n');
+	expect(ensureEnvFile(root)).toBe("data/sqlite.db");
+	expect(fs.readFileSync(path.join(root, ".env"), "utf8")).toContain(
+		'JWT_SECRET="keep # value"',
+	);
+});

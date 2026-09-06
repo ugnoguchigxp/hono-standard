@@ -48,11 +48,16 @@ try {
 		displayName: "Admin User",
 		password: "password123456",
 	});
+	await authService.createAdmin({
+		email: "second@example.com",
+		displayName: "Second User",
+		password: "password123456",
+	});
 } finally {
 	await dbRuntime.close();
 }
 
-const { default: app, getAppRuntime } = await import("../api/app/hono");
+const { default: app } = await import("../api/app/hono");
 
 const server = Bun.serve({
 	fetch: app.fetch,
@@ -62,12 +67,7 @@ const server = Bun.serve({
 
 console.log(`E2E server listening on http://${env.host}:${server.port}`);
 
-const shutdown = async () => {
-	server.stop(true);
-	const runtime = await getAppRuntime();
-	await runtime.dbRuntime.close();
-	process.exit(0);
-};
-
-process.on("SIGINT", () => void shutdown());
-process.on("SIGTERM", () => void shutdown());
+const { bindHttpServerSignals, toHttpServer } = await import(
+	"../api/app/server"
+);
+bindHttpServerSignals(toHttpServer(server, env.port));

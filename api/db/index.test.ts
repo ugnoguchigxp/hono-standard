@@ -4,23 +4,38 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../app/env";
 
-const { clients, createClient, drizzle, writer } = vi.hoisted(() => {
-	const clients: Array<{
-		execute: ReturnType<typeof vi.fn>;
-		close: ReturnType<typeof vi.fn>;
-	}> = [];
-	const createClient = vi.fn(() => {
-		const client = { execute: vi.fn().mockResolvedValue({}), close: vi.fn() };
-		clients.push(client);
-		return client;
-	});
-	return {
-		clients,
-		createClient,
-		drizzle: vi.fn((client) => ({ client })),
-		writer: { close: vi.fn().mockResolvedValue(undefined) },
-	};
-});
+const { clients, createClient, drizzle, transaction, writer } = vi.hoisted(
+	() => {
+		const clients: Array<{
+			execute: ReturnType<typeof vi.fn>;
+			transaction: ReturnType<typeof vi.fn>;
+			close: ReturnType<typeof vi.fn>;
+		}> = [];
+		const transaction = {
+			execute: vi.fn(),
+			rollback: vi.fn().mockResolvedValue(undefined),
+		};
+		const createClient = vi.fn(() => {
+			const client = {
+				execute: vi.fn().mockResolvedValue({}),
+				transaction: vi.fn().mockResolvedValue(transaction),
+				close: vi.fn(),
+			};
+			clients.push(client);
+			return client;
+		});
+		return {
+			clients,
+			createClient,
+			drizzle: vi.fn((client) => ({ client })),
+			transaction,
+			writer: {
+				execute: vi.fn((operation) => operation({})),
+				close: vi.fn().mockResolvedValue(undefined),
+			},
+		};
+	},
+);
 
 vi.mock("@libsql/client", () => ({ createClient }));
 vi.mock("drizzle-orm/libsql", () => ({ drizzle }));
@@ -36,6 +51,25 @@ describe("createDbRuntime", () => {
 		createClient.mockClear();
 		drizzle.mockClear();
 		writer.close.mockClear();
+		writer.execute.mockClear();
+		transaction.execute.mockReset();
+		transaction.rollback.mockClear();
+		transaction.execute.mockImplementation((sql: string) => {
+			if (sql.includes("sqlite_schema")) {
+				return Promise.resolve({
+					rows: [{ name: "users" }, { name: "refresh_tokens" }],
+				});
+			}
+			if (sql.includes("hono_standard_schema_migrations")) {
+				return Promise.resolve({
+					rows: [
+						{ filename: "0001_auth.sql" },
+						{ filename: "0002_refresh_token_reuse_detection.sql" },
+					],
+				});
+			}
+			return Promise.resolve({ rows: [] });
+		});
 	});
 
 	afterEach(() => {
@@ -94,6 +128,40 @@ describe("createDbRuntime", () => {
 
 		expect(clients).toHaveLength(1);
 		expect(clients[0]?.execute).not.toHaveBeenCalled();
+		await runtime.checkReady();
+		expect(clients[0]?.transaction).toHaveBeenCalledWith("write");
+		expect(transaction.rollback).toHaveBeenCalledOnce();
+		await runtime.close();
+		await expect(runtime.checkReady()).rejects.toThrow("closed");
+	});
+
+	it("rejects readiness when a table or migration is missing", async () => {
+		const { createDbRuntime } = await import("./index");
+		const runtime = await createDbRuntime({
+			databaseUrl: "libsql://example.turso.io",
+			databaseAuthToken: "remote-token",
+		} as AppEnv);
+		transaction.execute.mockImplementation((sql: string) => {
+			if (sql.includes("sqlite_schema")) {
+				return Promise.resolve({ rows: [{ name: "users" }] });
+			}
+			return Promise.resolve({ rows: [] });
+		});
+		await expect(runtime.checkReady()).rejects.toThrow("tables are missing");
+		expect(transaction.rollback).toHaveBeenCalledOnce();
+
+		transaction.execute.mockImplementation((sql: string) => {
+			if (sql.includes("sqlite_schema")) {
+				return Promise.resolve({
+					rows: [{ name: "users" }, { name: "refresh_tokens" }],
+				});
+			}
+			if (sql.includes("hono_standard_schema_migrations")) {
+				return Promise.resolve({ rows: [{ filename: "0001_auth.sql" }] });
+			}
+			return Promise.resolve({ rows: [] });
+		});
+		await expect(runtime.checkReady()).rejects.toThrow("pending");
 		await runtime.close();
 	});
 

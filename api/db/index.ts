@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { createClient, type Client } from "@libsql/client";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
@@ -24,8 +25,45 @@ type DbConnection = {
 
 export type DbRuntime = {
 	client: AppDatabaseClient;
+	checkReady: () => Promise<void>;
 	close: () => Promise<void>;
 };
+
+const MIGRATIONS_TABLE = "hono_standard_schema_migrations";
+
+async function expectedMigrations(): Promise<string[]> {
+	const entries = await readdir(path.resolve(process.cwd(), "drizzle"), {
+		withFileTypes: true,
+	});
+	return entries
+		.filter((entry) => entry.isFile() && entry.name.endsWith(".sql"))
+		.map((entry) => entry.name)
+		.sort((a, b) => a.localeCompare(b));
+}
+
+async function probeConnection(client: Client): Promise<void> {
+	const expected = await expectedMigrations();
+	const transaction = await client.transaction("write");
+	try {
+		await transaction.execute("SELECT 1");
+		const tables = await transaction.execute(
+			"SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('users', 'refresh_tokens')",
+		);
+		const tableNames = new Set(tables.rows.map((row) => String(row.name)));
+		if (!tableNames.has("users") || !tableNames.has("refresh_tokens")) {
+			throw new Error("Required database tables are missing");
+		}
+		const migrations = await transaction.execute(
+			`SELECT filename FROM ${MIGRATIONS_TABLE}`,
+		);
+		const applied = new Set(migrations.rows.map((row) => String(row.filename)));
+		if (expected.some((filename) => !applied.has(filename))) {
+			throw new Error("Database migrations are pending");
+		}
+	} finally {
+		await transaction.rollback();
+	}
+}
 
 function isLocalFileDatabase(databaseUrl: string): boolean {
 	return databaseUrl === ":memory:" || databaseUrl.startsWith("file:");
@@ -90,11 +128,22 @@ export async function createDbRuntime(env: AppEnv): Promise<DbRuntime> {
 
 	const writer = createSingleWriterClient(writerConnection.db);
 	let closed = false;
+	let readinessProbe: Promise<void> | undefined;
 
 	return {
 		client: {
 			read: readerConnection.db,
 			write: writer,
+		},
+		checkReady: () => {
+			if (closed)
+				return Promise.reject(new Error("Database runtime is closed"));
+			readinessProbe ??= writer
+				.execute(() => probeConnection(writerConnection.client))
+				.finally(() => {
+					readinessProbe = undefined;
+				});
+			return readinessProbe;
 		},
 		close: async () => {
 			if (closed) return;

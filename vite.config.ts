@@ -9,10 +9,12 @@ import {
 } from "./api/app/security-headers";
 import { APP_CONFIG_DEFAULTS } from "./api/config/appDefaults";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
 	// Load env file from project root (one level up from 'web' root)
 	const env = loadEnv(mode, __dirname, "");
 	Object.assign(process.env, env);
+	// A runtime .env must never turn a production bundle into a development build.
+	if (command === "build") process.env.NODE_ENV = "production";
 
 	return {
 		root: "web",

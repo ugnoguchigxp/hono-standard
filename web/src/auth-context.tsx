@@ -10,7 +10,7 @@ import {
 } from "react";
 import {
 	type AuthUser,
-	authMeQueryKey,
+	setSessionUser,
 	UNAUTHORIZED_EVENT_NAME,
 	useCurrentUserQuery,
 	useLoginMutation,
@@ -69,7 +69,7 @@ export function AuthProvider({
 
 	useEffect(() => {
 		const onUnauthorized = () => {
-			client.setQueryData(authMeQueryKey, null);
+			void setSessionUser(client, null);
 			setErrorText("Session expired.");
 		};
 		window.addEventListener(UNAUTHORIZED_EVENT_NAME, onUnauthorized);
@@ -88,8 +88,11 @@ export function AuthProvider({
 	});
 
 	const logoutMutation = useLogoutMutation({
-		onSettled: async () => {
+		onSuccess: async () => {
 			setErrorText(null);
+		},
+		onError: () => {
+			setErrorText("Logout failed. Please try again.");
 		},
 	});
 
@@ -113,7 +116,11 @@ export function AuthProvider({
 				}
 			},
 			logoutCurrentUser: async () => {
-				await logoutMutation.mutateAsync();
+				try {
+					await logoutMutation.mutateAsync();
+				} catch {
+					// The mutation keeps the session and exposes a retryable error.
+				}
 			},
 		}),
 		[
