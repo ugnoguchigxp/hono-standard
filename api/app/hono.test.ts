@@ -6,6 +6,7 @@ import { HttpError } from "./http-error";
 // Mock environment and DB connection before importing app
 vi.mock("../db", () => ({
 	createDbRuntime: vi.fn().mockReturnValue({
+		checkReady: vi.fn().mockResolvedValue(undefined),
 		client: {
 			read: {
 				query: {
@@ -86,6 +87,16 @@ describe("hono app entry", () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.status).toBe("ok");
+	});
+
+	it("reports DB readiness while liveness stays independent of DB failure", async () => {
+		const runtime = await getAppRuntime();
+		expect((await app.request("/api/ready")).status).toBe(200);
+		vi.spyOn(runtime.dbRuntime, "checkReady").mockRejectedValueOnce(
+			new Error("DB unavailable"),
+		);
+		expect((await app.request("/api/ready")).status).toBe(503);
+		expect((await app.request("/api/health")).status).toBe(200);
 	});
 
 	it("should apply security headers to API responses", async () => {

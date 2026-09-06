@@ -25,7 +25,7 @@
 | `web/src/routes/` | URL、search parameter、route guard |
 | `web/src/views/` | page-level UI |
 | `web/src/styles.css` | Tailwind v4、global token、共通class |
-| `drizzle/` | SQL migrations |
+| `drizzle/` | SQL migrationsと差分生成用`meta/`。一緒にversion管理する |
 | `scripts/` | bootstrap、seed、authless copy生成、build、quality関連script |
 | `tests/e2e/` | Playwright browser smoke tests |
 
@@ -69,6 +69,10 @@ web/src/domains/<domain>/
 
 route filesはURL/search/guardとviewの対応を表す。共通transportはcredential、401 refresh、error変換を担い、request/response contractは `AppType` と `shared/schemas/` に由来する。
 
+`/api/auth/me`も401時のrefresh対象とし、同一ページの並行requestはrotationを共有する。タブ間ではWeb Locksで認証mutationを直列化し、待機後に`/api/auth/me`を再確認する。Web Locksが使えないブラウザーでは自動refreshを行わず再ログインする。保護queryは`protected` prefixと利用者IDを持ち、認証変更時にcancel/removeする。logout失敗は認証状態を保持して表示する。パスワードはscryptの`s2`（N=16384, r=8, p=5）を保存し、旧`s1`はログイン成功時に移行する。Showcaseのmodalはnative `dialog.showModal()`で背景の操作を制限し、フォーカスとEscをブラウザに委ねる。
+
+DB差分は`db:generate`で生成し、SQLと`drizzle/meta/`を同時に管理する。適用は`db:migrate`のBun用runnerのみ。`db:migrate:drizzle`は互換aliasで、既存DBの適用履歴を保持する。migration専用connectionではテーブル再構築を許容するためforeign key enforcementをOFFにし、ファイルごとのcommit前にforeign_key_checkを必須とする。`bootstrap`はDB設定以外の既存行を保持する。Composeは`data-init`で保存先の所有者を10001へ整えてから非root appを起動する。`build:web`はruntimeのNODE_ENVにかかわらずproduction bundleを生成する。
+
 ## Current Feature Locations
 
 | Area | Current implementation |
@@ -101,3 +105,7 @@ route filesはURL/search/guardとviewの対応を表す。共通transportはcred
 DB driver、migration、deploy runtime、RAG/AI機能、SSR/SSGの差分は `variant/*` または `overlay/*` branchに分かれる。各branchでは `api/db/`、runtime entry、固有module、build entryの構成がこのbaselineと異なる。
 
 variantの管理方法と配布形式は `docs/template-variant-management.md`、起動方法とpackage scriptsは `README.md` と `package.json` に記載されている。
+
+- 運用手順は`docs/operations.md`。`/api/health`はliveness、`/api/ready`はDB readiness。HTTP終了後にDBを閉じ、アプリの期限10秒・Compose猶予15秒とする。
+- `db:backup`はVACUUM INTO、`db:restore`は新規ファイル限定。既存DBの上書きや稼働中DB本体だけのコピーを行わない。
+- E2EはChromium / Firefox / WebKitとモバイル2構成。`verify:load`は一時DB・localhostで3回計測し、authlessではhealth/readinessに切り替わる。

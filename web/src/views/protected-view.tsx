@@ -5,7 +5,7 @@ import { useAuth } from "../auth-context";
 
 export function ProtectedView() {
 	const { authUser, authLoading } = useAuth();
-	const profileQuery = useProtectedProfileQuery(Boolean(authUser));
+	const profileQuery = useProtectedProfileQuery(authUser?.id);
 
 	if (authLoading) {
 		return (

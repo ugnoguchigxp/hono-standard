@@ -1,10 +1,11 @@
+import { scryptSync } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../../app/env";
 import { HttpError } from "../../app/http-error";
 import type { AppDatabase, AppDatabaseClient } from "../../db";
 import { createSingleWriterClient } from "../../db/client";
 import { AuthService } from "./auth.service";
-import { hashPassword } from "./password";
+import { hashPassword, verifyPassword } from "./password";
 
 function createMockDb() {
 	return {
@@ -111,6 +112,27 @@ describe("AuthService", () => {
 	});
 
 	describe("login", () => {
+		it("upgrades a legacy password only after successful authentication", async () => {
+			const salt = "12".repeat(16);
+			const legacyHash = `s1$${salt}$${scryptSync("password123", salt, 64, { N: 16384, r: 8, p: 1 }).toString("hex")}`;
+			mockDb.query.users.findFirst.mockResolvedValue({
+				...testUserRow,
+				passwordHash: legacyHash,
+			});
+			await expect(
+				authService.login({ email: testUserRow.email, password: "wrong" }),
+			).rejects.toThrow("Invalid email or password.");
+			expect(mockDb.update).not.toHaveBeenCalled();
+			await authService.login({
+				email: testUserRow.email,
+				password: "password123",
+			});
+			const updated = mockDb.set.mock.calls[0]?.[0] as { passwordHash: string };
+			expect(updated.passwordHash).toMatch(/^s2\$/);
+			expect(await verifyPassword("password123", updated.passwordHash)).toBe(
+				true,
+			);
+		});
 		it("should login successfully and return tokens", async () => {
 			mockDb.query.users.findFirst.mockResolvedValue(testUserRow);
 

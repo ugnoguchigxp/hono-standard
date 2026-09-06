@@ -13,6 +13,7 @@ import { createRequestLogger } from "../middleware/request-logger";
 import { AuthService } from "../modules/auth/auth.service";
 import { createAuthRoute } from "../routes/auth.route";
 import { createHealthRoute } from "../routes/health.route";
+import { createReadyRoute } from "../routes/ready.route";
 import { createProtectedRoute } from "../routes/protected.route";
 import { type AppEnv, readAppEnv } from "./env";
 import { HttpError } from "./http-error";
@@ -58,6 +59,10 @@ const distWebIndex = path.resolve(distWebRoot, "index.html");
 export function createApiRoutes(deps: AppDeps) {
 	return new Hono()
 		.route("/health", createHealthRoute())
+		.route(
+			"/ready",
+			createReadyRoute(() => deps.dbRuntime.checkReady()),
+		)
 		.use(
 			"/protected/*",
 			requireAuth({

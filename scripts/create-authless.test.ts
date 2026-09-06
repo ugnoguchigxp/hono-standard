@@ -24,6 +24,7 @@ describe("createAuthlessTemplate", () => {
 		});
 
 		expect(fs.existsSync(path.join(target, "api/modules/auth"))).toBe(false);
+		expect(fs.existsSync(path.join(target, "drizzle/meta"))).toBe(false);
 		expect(
 			fs.existsSync(path.join(target, "web/src/views/showcase-view.tsx")),
 		).toBe(false);

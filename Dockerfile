@@ -5,7 +5,12 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
-COPY . .
+COPY api ./api
+COPY web ./web
+COPY shared ./shared
+COPY drizzle ./drizzle
+COPY scripts ./scripts
+COPY vite.config.ts tsconfig.json ./
 RUN bun run build
 
 RUN groupadd --gid 10001 appuser \
@@ -21,8 +26,8 @@ ENV DATABASE_URL=/data/sqlite.db
 EXPOSE 5173
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-	CMD bun -e "const response = await fetch('http://127.0.0.1:' + (process.env.PORT ?? '5173') + '/api/health'); if (!response.ok) process.exit(1)"
+	CMD bun -e "const response = await fetch('http://127.0.0.1:' + (process.env.PORT ?? '5173') + '/api/ready'); if (!response.ok) process.exit(1)"
 
 USER appuser
 
-CMD ["sh", "-c", "bun run db:migrate && bun run start"]
+CMD ["sh", "-c", "bun run db:migrate && exec bun api/app/server.ts"]

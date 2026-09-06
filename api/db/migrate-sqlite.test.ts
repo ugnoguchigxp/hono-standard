@@ -35,13 +35,15 @@ const { appliedByFile, databases, FakeDatabase, readdir, readFile } =
 				}
 			}
 
-			query(_sql: string) {
+			query(sql: string) {
 				return {
 					all: () =>
-						[...this.applied].map((filename) => ({
-							filename,
-							applied_at: "now",
-						})),
+						sql === "PRAGMA foreign_key_check"
+							? []
+							: [...this.applied].map((filename) => ({
+									filename,
+									applied_at: "now",
+								})),
 					run: (filename: string) => {
 						this.applied.add(filename);
 					},
@@ -133,7 +135,7 @@ describe("runSqliteMigrations", () => {
 			} as AppEnv),
 		).rejects.toThrow("migration sql failed");
 
-		expect(databases[0]?.runs).toContain("BEGIN");
+		expect(databases[0]?.runs).toContain("BEGIN IMMEDIATE");
 		expect(databases[0]?.runs).toContain("ROLLBACK");
 		expect(databases[0]?.closed).toBe(true);
 	});
