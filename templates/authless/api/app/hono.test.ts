@@ -61,6 +61,7 @@ describe("authless hono app", () => {
 		expect(response.headers.get("Content-Security-Policy")).toContain(
 			"default-src 'self'",
 		);
+		expect((await app.request("/api/ready")).status).toBe(200);
 	});
 
 	it("reuses runtime dependencies", async () => {
