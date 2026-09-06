@@ -9,8 +9,8 @@ import { secureHeaders } from "hono/secure-headers";
 import type { DbRuntime } from "../db";
 import { createDbRuntime } from "../db";
 import { createRequestLogger } from "../middleware/request-logger";
-import { createDocumentsRoute } from "../routes/documents.route";
 import { createHealthRoute } from "../routes/health.route";
+import { createReadyRoute } from "../routes/ready.route";
 import { readAppEnv, type AppEnv } from "./env";
 import { HttpError } from "./http-error";
 import { appContentSecurityPolicy } from "./security-headers";
@@ -48,10 +48,8 @@ const distWebIndex = path.resolve(distWebRoot, "index.html");
 
 export function createApiRoutes(deps: AppDeps) {
 	return new Hono().route("/health", createHealthRoute()).route(
-		"/documents",
-		createDocumentsRoute({
-			db: deps.dbRuntime.db,
-		}),
+		"/ready",
+		createReadyRoute(() => deps.dbRuntime.checkReady()),
 	);
 }
 

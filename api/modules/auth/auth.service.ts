@@ -1,9 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { AppEnv } from "../../app/env";
 import { HttpError } from "../../app/http-error";
 import type { AppDatabaseClient } from "../../db";
 import { users } from "../../db/schema";
-import { hashPassword, verifyPassword } from "./password";
+import { hashPassword, passwordNeedsRehash, verifyPassword } from "./password";
 import {
 	consumeRefreshToken,
 	generateAccessToken,
@@ -115,12 +115,17 @@ export class AuthService {
 		if (!valid) {
 			throw new HttpError(401, "Invalid email or password.");
 		}
+		const passwordHash = passwordNeedsRehash(user.passwordHash)
+			? await hashPassword(params.password)
+			: user.passwordHash;
 		const now = new Date();
 		await this.database.write.execute((db) =>
 			db
 				.update(users)
-				.set({ lastLoginAt: now, updatedAt: now })
-				.where(eq(users.id, user.id)),
+				.set({ lastLoginAt: now, updatedAt: now, passwordHash })
+				.where(
+					and(eq(users.id, user.id), eq(users.passwordHash, user.passwordHash)),
+				),
 		);
 		const refreshed = await this.findUserById(user.id);
 		if (!refreshed) {

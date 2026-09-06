@@ -114,6 +114,9 @@ bun run verify:e2e
 | `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
 | `bun run db:generate` | Drizzle migration 生成 |
 | `bun run db:migrate:drizzle` | drizzle-kit migration。`DATABASE_URL` は process env または `.env` から読む |
+| `bun run db:backup -- <new-file>` | `pg_dump` custom formatでバックアップを作成・検証 |
+| `bun run db:verify-backup -- <file>` | `pg_restore --list`でバックアップを検証 |
+| `bun run db:restore -- <file>` | 明示した別URLへバックアップを復元 |
 | `bun run typecheck` | TypeScript check |
 | `bun run lint` | Biome lint |
 | `bun run format` | Biome format write |
@@ -133,6 +136,7 @@ bun run verify:e2e
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/health` | health check |
+| `GET` | `/api/ready` | PostgreSQL、pgvector、migrationのreadiness check |
 | `POST` | `/api/auth/login` | email/password login。httpOnly cookie を設定 |
 | `POST` | `/api/auth/refresh` | refresh token rotation。使用済みtokenの再提示時はtoken familyを失効 |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
@@ -169,7 +173,7 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 server lifecycle、request summary、server errorは1行JSONで標準出力または標準エラーへ記録します。request logは`requestId`、method、path、status、durationを含み、受信した安全な`X-Request-Id`を引き継ぎます。
 
-pgvector variant では `DATABASE_URL` は PostgreSQL connection URL にしてください。container や VM で動かす場合は、PostgreSQL volume を永続化し、起動前に `bun run db:migrate` を実行します。`PORT` は platform 側が指定する値に合わせて上書きできます。
+pgvector variantでは`DATABASE_URL`にPostgreSQL connection URLを指定し、起動前に`bun run db:migrate`を実行します。停止、readiness、バックアップ、復元は[`docs/operations.md`](docs/operations.md)を参照してください。
 
 ## Docker
 
@@ -179,7 +183,7 @@ PostgreSQL + pgvector variant を container で試す場合:
 COMPOSE_JWT_SECRET='<32+ random chars>' docker compose up --build
 ```
 
-compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。Docker HEALTHCHECKはcontainer内から`/api/health`を確認します。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。production 公開時は `COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header mode を必ず環境に合わせて変更してください。
+composeはpgvector対応PostgreSQLのhealthcheck成功後にmigrationとappを起動します。appのDocker HEALTHCHECKは`/api/ready`を確認し、停止時は最大15秒待機します。production公開時はDB password、`COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header modeを環境に合わせて変更してください。
 
 ## 品質ゲート
 

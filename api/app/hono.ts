@@ -12,8 +12,8 @@ import { requireAuth, requireRole } from "../middleware/auth";
 import { createRequestLogger } from "../middleware/request-logger";
 import { AuthService } from "../modules/auth/auth.service";
 import { createAuthRoute } from "../routes/auth.route";
-import { createDocumentsRoute } from "../routes/documents.route";
 import { createHealthRoute } from "../routes/health.route";
+import { createReadyRoute } from "../routes/ready.route";
 import { createProtectedRoute } from "../routes/protected.route";
 import { type AppEnv, readAppEnv } from "./env";
 import { HttpError } from "./http-error";
@@ -60,10 +60,8 @@ export function createApiRoutes(deps: AppDeps) {
 	return new Hono()
 		.route("/health", createHealthRoute())
 		.route(
-			"/documents",
-			createDocumentsRoute({
-				db: deps.dbRuntime.db,
-			}),
+			"/ready",
+			createReadyRoute(() => deps.dbRuntime.checkReady()),
 		)
 		.use(
 			"/protected/*",

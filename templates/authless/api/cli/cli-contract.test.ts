@@ -5,7 +5,7 @@ const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
 
 describeWithDatabase("CLI contract", () => {
-	it("applies the pgvector document migration idempotently", () => {
+	it("runs an empty initial migration set idempotently", () => {
 		const result = spawnSync("bun", ["api/cli/migrate.ts"], {
 			cwd: process.cwd(),
 			encoding: "utf8",
@@ -16,8 +16,8 @@ describeWithDatabase("CLI contract", () => {
 			JSON.parse(result.stdout.slice(result.stdout.lastIndexOf("{"))),
 		).toMatchObject({
 			ok: true,
-			total: 1,
-			applied: 1,
+			total: 0,
+			applied: 0,
 			skipped: 0,
 		});
 	});

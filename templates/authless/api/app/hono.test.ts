@@ -5,7 +5,7 @@ import { HttpError } from "./http-error";
 
 vi.mock("../db", () => ({
 	createDbRuntime: vi.fn().mockReturnValue({
-		db: {},
+		checkReady: vi.fn().mockResolvedValue(undefined),
 		client: { read: {}, write: { execute: vi.fn(), close: vi.fn() } },
 		close: vi.fn(),
 	}),

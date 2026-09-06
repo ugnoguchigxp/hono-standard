@@ -1,5 +1,6 @@
+import { scryptSync } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { hashPassword, verifyPassword } from "./password";
+import { hashPassword, passwordNeedsRehash, verifyPassword } from "./password";
 
 describe("password hashing and verification", () => {
 	it("should hash a password and verify it successfully", async () => {
@@ -8,10 +9,37 @@ describe("password hashing and verification", () => {
 
 		expect(hash).toBeDefined();
 		expect(hash).toContain("$");
-		expect(hash.startsWith("s1$")).toBe(true);
+		expect(hash.startsWith("s2$")).toBe(true);
+		const [, salt, derived] = hash.split("$");
+		expect(derived).toBe(
+			scryptSync(password, salt, 64, { N: 16384, r: 8, p: 5 }).toString("hex"),
+		);
+		expect(passwordNeedsRehash(hash)).toBe(false);
 
 		const isValid = await verifyPassword(password, hash);
 		expect(isValid).toBe(true);
+	});
+
+	it("accepts legacy s1 hashes and identifies them for upgrade", async () => {
+		const salt = "12".repeat(16);
+		const derived = scryptSync("legacy-password", salt, 64, {
+			N: 16384,
+			r: 8,
+			p: 1,
+		});
+		const hash = `s1$${salt}$${derived.toString("hex")}`;
+		expect(await verifyPassword("legacy-password", hash)).toBe(true);
+		expect(await verifyPassword("wrong-password", hash)).toBe(false);
+		expect(passwordNeedsRehash(hash)).toBe(true);
+	});
+
+	it.each([
+		`s2$invalid-salt$${"00".repeat(64)}`,
+		`s2$${"00".repeat(16)}$${"gg".repeat(64)}`,
+		`s2$${"00".repeat(16)}$${"00".repeat(64)}$extra`,
+		`s3$${"00".repeat(16)}$${"00".repeat(64)}`,
+	])("rejects malformed encodings: %s", async (hash) => {
+		expect(await verifyPassword("password", hash)).toBe(false);
 	});
 
 	it("should fail verification with incorrect password", async () => {

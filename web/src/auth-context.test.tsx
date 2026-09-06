@@ -176,7 +176,9 @@ describe("AuthProvider", () => {
 		);
 
 		act(() => window.dispatchEvent(new Event(UNAUTHORIZED_EVENT_NAME)));
-		expect(queryClient.getQueryData(authMeQueryKey)).toBeNull();
+		await waitFor(() =>
+			expect(queryClient.getQueryData(authMeQueryKey)).toBeNull(),
+		);
 		expect(screen.getByTestId("error")).toHaveTextContent("Session expired.");
 	});
 
@@ -201,5 +203,42 @@ describe("AuthProvider", () => {
 				"Service unavailable",
 			),
 		);
+	});
+
+	it("keeps the session on logout failure, displays an error, and allows retry", async () => {
+		const session = {
+			id: "alice",
+			email: "alice@example.com",
+			displayName: "Alice",
+			role: "member",
+		};
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(Response.json({ user: session }))
+			.mockResolvedValueOnce(
+				Response.json({ message: "Unavailable" }, { status: 503 }),
+			)
+			.mockResolvedValueOnce(Response.json({ success: true }));
+		vi.stubGlobal("fetch", fetchMock);
+		const { queryClient, user } = renderWithProviders(
+			<AuthProvider>
+				<AuthProbe />
+			</AuthProvider>,
+		);
+		await waitFor(() =>
+			expect(screen.getByTestId("user")).toHaveTextContent(session.email),
+		);
+		await user.click(screen.getByRole("button", { name: "Logout" }));
+		await waitFor(() =>
+			expect(screen.getByTestId("error")).toHaveTextContent(
+				"Logout failed. Please try again.",
+			),
+		);
+		expect(queryClient.getQueryData(authMeQueryKey)).toEqual(session);
+		await user.click(screen.getByRole("button", { name: "Logout" }));
+		await waitFor(() =>
+			expect(screen.getByTestId("user")).toHaveTextContent("anonymous"),
+		);
+		expect(screen.getByTestId("error")).toHaveTextContent("none");
 	});
 });

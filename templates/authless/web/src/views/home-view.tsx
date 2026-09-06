@@ -6,8 +6,7 @@ export function HomeView() {
 				<h1>Welcome to Hono Standard</h1>
 				<p>
 					This authless profile keeps the same-origin Hono API, React frontend,
-					PostgreSQL + pgvector boundary, quality gates, and production
-					container contract.
+					PostgreSQL boundary, quality gates, and production container contract.
 				</p>
 			</section>
 		</main>

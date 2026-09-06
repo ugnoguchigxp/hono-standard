@@ -29,7 +29,7 @@ const { readAppEnv } = await import("../api/app/env");
 const { runMigrations } = await import("../api/db/migrate");
 const env = readAppEnv();
 await runMigrations(env);
-const { default: app, getAppRuntime } = await import("../api/app/hono");
+const { default: app } = await import("../api/app/hono");
 
 const server = Bun.serve({
 	fetch: app.fetch,
@@ -37,12 +37,7 @@ const server = Bun.serve({
 	port: env.port,
 });
 
-const shutdown = async () => {
-	server.stop(true);
-	const runtime = await getAppRuntime();
-	await runtime.dbRuntime.close();
-	process.exit(0);
-};
-
-process.on("SIGINT", () => void shutdown());
-process.on("SIGTERM", () => void shutdown());
+const { bindHttpServerSignals, toHttpServer } = await import(
+	"../api/app/server"
+);
+bindHttpServerSignals(toHttpServer(server, env.port));
