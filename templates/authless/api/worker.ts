@@ -6,6 +6,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { readAppEnv } from "./app/env";
 import { createRequestLogger } from "./middleware/request-logger";
 import { createHealthRoute } from "./routes/health.route";
+import { createReadyRoute } from "./routes/ready.route";
 
 type D1DatabaseBinding = Parameters<typeof drizzle>[0];
 
@@ -14,7 +15,7 @@ type WorkerBindings = {
 	[key: string]: string | D1DatabaseBinding | undefined;
 };
 
-function createWorkerApp(bindings: WorkerBindings) {
+export function createWorkerApp(bindings: WorkerBindings) {
 	const env = readAppEnv({
 		...(bindings as Record<string, string>),
 		DATABASE_URL: "file:cloudflare-d1",
@@ -33,7 +34,16 @@ function createWorkerApp(bindings: WorkerBindings) {
 		}),
 	);
 	app.use("/api/*", csrf());
-	app.route("/api", new Hono().route("/health", createHealthRoute()));
+	app.route(
+		"/api",
+		new Hono().route("/health", createHealthRoute()).route(
+			"/ready",
+			createReadyRoute(async () => {
+				const probe = await bindings.DB.prepare("SELECT 1").all();
+				if (!probe.success) throw new Error("D1 probe failed");
+			}),
+		),
+	);
 	return app;
 }
 

@@ -46,13 +46,6 @@ async function probeConnection(client: Client): Promise<void> {
 	const transaction = await client.transaction("write");
 	try {
 		await transaction.execute("SELECT 1");
-		const tables = await transaction.execute(
-			"SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('users', 'refresh_tokens')",
-		);
-		const tableNames = new Set(tables.rows.map((row) => String(row.name)));
-		if (!tableNames.has("users") || !tableNames.has("refresh_tokens")) {
-			throw new Error("Required database tables are missing");
-		}
 		const migrations = await transaction.execute(
 			`SELECT filename FROM ${MIGRATIONS_TABLE}`,
 		);

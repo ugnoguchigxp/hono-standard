@@ -31,6 +31,12 @@ describe("createAuthlessTemplate", () => {
 			fs.readFileSync(path.join(target, "api/app/hono.ts"), "utf8"),
 		).not.toContain("createAuthRoute");
 		expect(
+			fs.existsSync(path.join(target, "web/src/session-cache.test.ts")),
+		).toBe(false);
+		expect(
+			fs.existsSync(path.join(target, "web/src/session-lock.test.ts")),
+		).toBe(false);
+		expect(
 			fs.readFileSync(path.join(target, "api/worker.ts"), "utf8"),
 		).not.toContain("AuthService");
 		expect(

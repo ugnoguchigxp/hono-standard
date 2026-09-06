@@ -6,8 +6,8 @@ export function HomeView() {
 				<h1>Welcome to Hono Standard</h1>
 				<p>
 					This authless profile keeps the same-origin Hono API, React frontend,
-					Cloudflare Workers/D1 boundary, quality gates, and production
-					container contract.
+					Turso/libSQL boundary, quality gates, and production container
+					contract.
 				</p>
 			</section>
 		</main>

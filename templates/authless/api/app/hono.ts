@@ -10,6 +10,7 @@ import type { DbRuntime } from "../db";
 import { createDbRuntime } from "../db";
 import { createRequestLogger } from "../middleware/request-logger";
 import { createHealthRoute } from "../routes/health.route";
+import { createReadyRoute } from "../routes/ready.route";
 import { readAppEnv, type AppEnv } from "./env";
 import { HttpError } from "./http-error";
 import { appContentSecurityPolicy } from "./security-headers";
@@ -45,8 +46,11 @@ export async function getAppRuntime(): Promise<AppDeps> {
 const distWebRoot = path.resolve(process.cwd(), "dist-web");
 const distWebIndex = path.resolve(distWebRoot, "index.html");
 
-export function createApiRoutes() {
-	return new Hono().route("/health", createHealthRoute());
+export function createApiRoutes(deps: AppDeps) {
+	return new Hono().route("/health", createHealthRoute()).route(
+		"/ready",
+		createReadyRoute(() => deps.dbRuntime.checkReady()),
+	);
 }
 
 export function createApp(deps: AppDeps) {
@@ -137,7 +141,7 @@ export function createApp(deps: AppDeps) {
 		);
 	});
 
-	app.route("/api", createApiRoutes());
+	app.route("/api", createApiRoutes(deps));
 	app.use("/assets/*", serveStatic({ root: "./dist-web" }));
 	app.use("/favicon.ico", serveStatic({ root: "./dist-web" }));
 	app.get("*", async (c) => {

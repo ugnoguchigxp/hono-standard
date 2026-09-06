@@ -18,6 +18,7 @@ import { createRequestLogger } from "./middleware/request-logger";
 import { AuthService } from "./modules/auth/auth.service";
 import { createAuthRoute } from "./routes/auth.route";
 import { createHealthRoute } from "./routes/health.route";
+import { createReadyRoute } from "./routes/ready.route";
 import { createProtectedRoute } from "./routes/protected.route";
 
 type D1DatabaseBinding = Parameters<typeof drizzle>[0];
@@ -26,6 +27,38 @@ type WorkerBindings = {
 	DB: D1DatabaseBinding;
 	[key: string]: string | D1DatabaseBinding | undefined;
 };
+
+const REQUIRED_REFRESH_TOKEN_COLUMNS = [
+	"family_id",
+	"consumed_at",
+	"revoked_at",
+] as const;
+
+export async function checkD1Ready(binding: D1DatabaseBinding): Promise<void> {
+	const tables = await binding
+		.prepare(
+			"SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('users', 'refresh_tokens')",
+		)
+		.all<{ name: string }>();
+	if (!tables.success) throw new Error("D1 table probe failed");
+	const tableNames = new Set(
+		tables.results.map((row: { name: string }) => row.name),
+	);
+	if (!tableNames.has("users") || !tableNames.has("refresh_tokens")) {
+		throw new Error("Required D1 tables are missing");
+	}
+
+	const columns = await binding
+		.prepare("PRAGMA table_info(refresh_tokens)")
+		.all<{ name: string }>();
+	if (!columns.success) throw new Error("D1 schema probe failed");
+	const columnNames = new Set(
+		columns.results.map((row: { name: string }) => row.name),
+	);
+	if (REQUIRED_REFRESH_TOKEN_COLUMNS.some((name) => !columnNames.has(name))) {
+		throw new Error("Required D1 migrations are pending");
+	}
+}
 
 function readWorkerEnv(bindings: WorkerBindings): AppEnv {
 	return readAppEnv({
@@ -107,6 +140,10 @@ export function createWorkerApp(
 
 	const apiRoutes = new Hono()
 		.route("/health", createHealthRoute())
+		.route(
+			"/ready",
+			createReadyRoute(() => checkD1Ready(bindings.DB)),
+		)
 		.use(
 			"/protected/*",
 			requireAuth({

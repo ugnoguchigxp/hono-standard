@@ -1,13 +1,26 @@
 services:
+  data-init:
+    build: .
+    user: "0:0"
+    entrypoint: ["sh", "/app/scripts/init-data-dir.sh"]
+    healthcheck:
+      disable: true
+    restart: "no"
+    volumes:
+      - ./data:/data
   app:
     build: .
+    stop_grace_period: 15s
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
     ports:
       - "5173:5173"
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 5173
-      DATABASE_URL: file:/data/turso.db
+      DATABASE_URL: file:/data/cloudflare-local.db
       DATABASE_AUTH_TOKEN: ""
       JWT_SECRET: ${COMPOSE_JWT_SECRET:?Set COMPOSE_JWT_SECRET to a 32+ character production secret before running docker compose.}
       APP_URL: http://localhost:5173

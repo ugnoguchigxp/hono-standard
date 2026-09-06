@@ -8,7 +8,7 @@ import {
 
 export type HttpServer = {
 	port: number;
-	stop: (closeActiveConnections?: boolean) => void;
+	stop: (closeActiveConnections?: boolean) => void | Promise<void>;
 };
 
 export type ServeHttp = (options: {
@@ -20,7 +20,7 @@ export type ServeHttp = (options: {
 export function toHttpServer(
 	server: {
 		port?: number;
-		stop: (closeActiveConnections?: boolean) => void;
+		stop: HttpServer["stop"];
 	},
 	fallbackPort: number,
 ): HttpServer {
@@ -30,30 +30,65 @@ export function toHttpServer(
 	};
 }
 
-export async function shutdownHttpServer(
+const shutdowns = new WeakMap<HttpServer, Promise<void>>();
+
+export function shutdownHttpServer(
 	server: HttpServer,
 	signal: string,
 	deps: {
 		getRuntime?: typeof getAppRuntime;
 		exit?: (code: number) => void;
+		timeoutMs?: number;
 	} = {},
 ): Promise<void> {
+	const existing = shutdowns.get(server);
+	if (existing) return existing;
+	const shutdown = performShutdown(server, signal, deps);
+	shutdowns.set(server, shutdown);
+	return shutdown;
+}
+
+async function performShutdown(
+	server: HttpServer,
+	signal: string,
+	deps: {
+		getRuntime?: typeof getAppRuntime;
+		exit?: (code: number) => void;
+		timeoutMs?: number;
+	},
+) {
 	const getRuntime = deps.getRuntime ?? getAppRuntime;
 	const exit = deps.exit ?? ((code) => process.exit(code));
+	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	writeStructuredLog(
 		createStructuredLogRecord("info", "server_stopping", { signal }),
 	);
-	server.stop(true);
-
 	try {
-		const runtime = await getRuntime();
-		await runtime.dbRuntime.close();
+		await Promise.race([
+			(async () => {
+				await server.stop(false);
+				const runtime = await getRuntime();
+				await runtime.dbRuntime.close();
+			})(),
+			new Promise<never>((_, reject) => {
+				timer = setTimeout(
+					() => reject(new Error("Graceful shutdown deadline exceeded")),
+					deps.timeoutMs ?? 10_000,
+				);
+			}),
+		]);
 		writeStructuredLog(
 			createStructuredLogRecord("info", "server_stopped", { signal }),
 		);
 		exit(0);
 	} catch (error) {
+		// Force-close without allowing a stuck connection to delay process exit.
+		try {
+			void Promise.resolve(server.stop(true)).catch(() => undefined);
+		} catch {
+			// The original shutdown error is logged below.
+		}
 		writeStructuredLog(
 			createStructuredLogRecord("error", "server_shutdown_failed", {
 				signal,
@@ -61,6 +96,8 @@ export async function shutdownHttpServer(
 			}),
 		);
 		exit(1);
+	} finally {
+		clearTimeout(timer);
 	}
 }
 
@@ -86,11 +123,17 @@ export function bindHttpServerSignals(
 	onShutdown: (signal: string) => Promise<void> = (signal) =>
 		shutdownHttpServer(server, signal),
 ): () => void {
+	let stopping = false;
+	const stopOnce = (signal: string) => {
+		if (stopping) return;
+		stopping = true;
+		void onShutdown(signal);
+	};
 	const onSigint = () => {
-		void onShutdown("SIGINT");
+		stopOnce("SIGINT");
 	};
 	const onSigterm = () => {
-		void onShutdown("SIGTERM");
+		stopOnce("SIGTERM");
 	};
 	process.on("SIGINT", onSigint);
 	process.on("SIGTERM", onSigterm);

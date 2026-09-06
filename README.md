@@ -116,7 +116,9 @@ bun run verify:e2e
 | `bun run auth:create-admin -- --email <email> --name "<name>"` | admin user 作成 |
 | `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
 | `bun run db:generate` | Drizzle migration 生成 |
-| `bun run db:migrate:drizzle` | drizzle-kit migration。`DATABASE_URL` は process env または `.env` から読む |
+| `bun run db:backup <new-file>` | local libSQL fallback の整合性を保ったsnapshotを新規作成 |
+| `bun run db:verify-backup <file>` | snapshotの形式、integrity、外部キー、checksumを検証 |
+| `bun run db:restore <snapshot> <new-db>` | 検証済みsnapshotを新しいlocal DB fileへ復元 |
 | `bun run typecheck` | TypeScript check |
 | `bun run lint` | Biome lint |
 | `bun run format` | Biome format write |
@@ -129,6 +131,7 @@ bun run verify:e2e
 | `bun run verify:commit` | commit前のtypecheck、lint、format check |
 | `bun run verify` | typecheck、lint、format:check、test:coverage、build |
 | `bun run verify:e2e` | Playwright smoke test |
+| `bun run verify:load` | 一時local DBでread/writeの負荷・失敗率・p95を検証 |
 | `bun run verify:all` | `verify` と `verify:e2e` |
 
 ## API
@@ -136,6 +139,7 @@ bun run verify:e2e
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/health` | health check |
+| `GET` | `/api/ready` | DB接続、必須schema、migrationを含むreadiness check |
 | `POST` | `/api/auth/login` | email/password login。httpOnly cookie を設定 |
 | `POST` | `/api/auth/refresh` | refresh token rotation。使用済みtokenの再提示時はtoken familyを失効 |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
@@ -170,7 +174,7 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 server lifecycle、request summary、server errorは1行JSONで標準出力または標準エラーへ記録します。request logは`requestId`、method、path、status、durationを含み、受信した安全な`X-Request-Id`を引き継ぎます。
 
-Cloudflare variant では production database は D1 binding を前提にします。Bun CLI/dev fallback では `DATABASE_URL=file:sqlite.db` を使えます。Workers deploy 前に `wrangler.toml` の D1 binding、`APP_URL`、cookie/security 設定を実環境に合わせて変更してください。
+Cloudflare variant では production database は D1 binding を前提にします。Bun CLI/dev fallback では `DATABASE_URL=file:sqlite.db` を使えます。Workers deploy 前に `wrangler.toml` の D1 binding、`APP_URL`、cookie/security 設定を実環境に合わせて変更してください。Workerの`/api/ready`はD1の必須tableとrefresh-token migration後のcolumnを確認し、local Bun版はlibSQLのwrite transactionとmigration ledgerを確認します。
 
 ### Cloudflare/D1 concurrency contract
 
@@ -186,7 +190,7 @@ local libSQL fallback を container で試す場合:
 COMPOSE_JWT_SECRET='<32+ random chars>' docker compose up --build
 ```
 
-compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。Docker HEALTHCHECKはcontainer内から`/api/health`を確認します。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。production 公開時は `COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header mode を必ず環境に合わせて変更してください。
+compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。Docker HEALTHCHECKはcontainer内から`/api/ready`を確認します。SIGTERM時は受付停止、処理中requestの完了、DB接続のcloseを10秒以内で行い、Composeは15秒待機します。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。
 
 ## 品質ゲート
 
@@ -203,7 +207,7 @@ dependency auditはnetworkを使うためlocalの`verify`には含めず、GitHu
 
 pre-commitは`verify:commit`（typecheck / lint / format check）に限定し、test:coverage / buildを含む完全な`verify`はpre-pushとCIで実行します。
 
-Delivery の必須 Gate、リスクに応じて追加する mutation / performance / vulnWorkbench security diagnostics、結果と証拠の扱いは [`docs/delivery-quality-gates.md`](docs/delivery-quality-gates.md) を参照してください。
+停止、readiness、local snapshot、D1の復旧確認は [`docs/operations.md`](docs/operations.md) を参照してください。Delivery の必須 Gate、リスクに応じて追加する mutation / performance / vulnWorkbench security diagnostics、結果と証拠の扱いは [`docs/delivery-quality-gates.md`](docs/delivery-quality-gates.md) を参照してください。
 
 変更への参加手順は [`CONTRIBUTING.md`](CONTRIBUTING.md)、利用者に影響する変更は [`CHANGELOG.md`](CHANGELOG.md)、脆弱性の非公開報告手順は [`SECURITY.md`](SECURITY.md) を参照してください。
 

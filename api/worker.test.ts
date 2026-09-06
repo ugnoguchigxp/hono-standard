@@ -1,10 +1,37 @@
 import { describe, expect, it, vi } from "vitest";
 import { HTTPException } from "hono/http-exception";
 import { HttpError } from "./app/http-error";
-import worker, { createWorkerApp } from "./worker";
+import worker, { checkD1Ready, createWorkerApp } from "./worker";
 
-const bindings = {
-	DB: { prepare: vi.fn() },
+function createD1Binding(options?: {
+	missingTable?: boolean;
+	missingColumn?: boolean;
+}) {
+	return {
+		prepare: vi.fn((statement: string) => ({
+			all: vi.fn().mockResolvedValue(
+				statement.includes("sqlite_schema")
+					? {
+							success: true,
+							results: options?.missingTable
+								? [{ name: "users" }]
+								: [{ name: "users" }, { name: "refresh_tokens" }],
+						}
+					: {
+							success: true,
+							results: ["family_id", "consumed_at", "revoked_at"]
+								.filter(
+									(name) => !(options?.missingColumn && name === "revoked_at"),
+								)
+								.map((name) => ({ name })),
+						},
+			),
+		})),
+	};
+}
+
+const bindingValues = {
+	DB: createD1Binding(),
 	NODE_ENV: "development",
 	JWT_SECRET: "hono-standard-worker-test-secret-32-chars",
 	APP_URL: "http://localhost:5173",
@@ -12,7 +39,8 @@ const bindings = {
 	AUTH_COOKIE_SECURE: "false",
 	AUTH_COOKIE_SAME_SITE: "lax",
 	SECURITY_HEADERS_MODE: "auto",
-} as never;
+};
+const bindings = bindingValues as never;
 
 describe("Cloudflare Worker entrypoint", () => {
 	it("serves the health route through the Worker fetch handler", async () => {
@@ -27,6 +55,38 @@ describe("Cloudflare Worker entrypoint", () => {
 			status: "ok",
 			service: "hono-standard",
 		});
+	});
+
+	it("reports ready only when the D1 schema is current", async () => {
+		await expect(
+			checkD1Ready(bindingValues.DB as never),
+		).resolves.toBeUndefined();
+		const ready = await worker.fetch(
+			new Request("https://example.test/api/ready"),
+			bindings,
+			{},
+		);
+		expect(ready.status).toBe(200);
+
+		const stale = await worker.fetch(
+			new Request("https://example.test/api/ready"),
+			{
+				...bindingValues,
+				DB: createD1Binding({ missingColumn: true }),
+			} as never,
+			{},
+		);
+		expect(stale.status).toBe(503);
+
+		const incomplete = await worker.fetch(
+			new Request("https://example.test/api/ready"),
+			{
+				...bindingValues,
+				DB: createD1Binding({ missingTable: true }),
+			} as never,
+			{},
+		);
+		expect(incomplete.status).toBe(503);
 	});
 
 	it("returns an unauthorized response for protected routes", async () => {
