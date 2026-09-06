@@ -66,7 +66,7 @@ describe("authless PostgreSQL database runtime", () => {
 
 		expect(runtime.connection.ownsConnection).toBe(true);
 		expect(runtime.client.read).toBe(runtime.db);
-		expect(Object.keys(schema)).toEqual([]);
+		expect(schema.documents).toBeDefined();
 		await runtime.close();
 		await runtime.close();
 		expect(writer.close).toHaveBeenCalledOnce();
@@ -74,11 +74,14 @@ describe("authless PostgreSQL database runtime", () => {
 		await expect(runtime.checkReady()).rejects.toThrow("closed");
 	});
 
-	it("checks write access and the empty migration ledger", async () => {
+	it("checks write access, pgvector schema, and the migration ledger", async () => {
 		query
 			.mockResolvedValueOnce({ rows: [] })
 			.mockResolvedValueOnce({ rows: [{ value: 1 }] })
-			.mockResolvedValueOnce({ rows: [] })
+			.mockResolvedValueOnce({
+				rows: [{ documents: "documents", vector_extension: true }],
+			})
+			.mockResolvedValueOnce({ rows: [{ filename: "0002_documents.sql" }] })
 			.mockResolvedValueOnce({ rows: [] });
 		connect.mockResolvedValueOnce({ query, release });
 		const { createDbRuntime } = await import("./index");
@@ -90,6 +93,7 @@ describe("authless PostgreSQL database runtime", () => {
 		expect(query.mock.calls.map(([sql]) => sql)).toEqual([
 			"BEGIN READ WRITE",
 			"SELECT 1",
+			expect.stringContaining("pg_extension"),
 			expect.stringContaining("hono_standard_schema_migrations"),
 			"ROLLBACK",
 		]);
@@ -116,6 +120,9 @@ describe("authless PostgreSQL database runtime", () => {
 		query
 			.mockResolvedValueOnce({ rows: [] })
 			.mockResolvedValueOnce({ rows: [] })
+			.mockResolvedValueOnce({
+				rows: [{ documents: "documents", vector_extension: true }],
+			})
 			.mockResolvedValueOnce({ rows: [] })
 			.mockResolvedValueOnce({ rows: [] });
 		connect.mockResolvedValueOnce({ query, release });
@@ -125,6 +132,25 @@ describe("authless PostgreSQL database runtime", () => {
 		} as AppEnv);
 
 		await expect(runtime.checkReady()).rejects.toThrow("pending");
+		expect(query).toHaveBeenLastCalledWith("ROLLBACK");
+		await runtime.close();
+	});
+
+	it("rejects readiness when the pgvector schema is unavailable", async () => {
+		query
+			.mockResolvedValueOnce({ rows: [] })
+			.mockResolvedValueOnce({ rows: [] })
+			.mockResolvedValueOnce({
+				rows: [{ documents: null, vector_extension: false }],
+			})
+			.mockResolvedValueOnce({ rows: [] });
+		connect.mockResolvedValueOnce({ query, release });
+		const { createDbRuntime } = await import("./index");
+		const runtime = createDbRuntime({
+			databaseUrl: "postgres://localhost/hono_standard",
+		} as AppEnv);
+
+		await expect(runtime.checkReady()).rejects.toThrow("pgvector schema");
 		expect(query).toHaveBeenLastCalledWith("ROLLBACK");
 		await runtime.close();
 	});

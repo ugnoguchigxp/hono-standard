@@ -48,6 +48,18 @@ async function probeConnection(connection: DbConnection): Promise<void> {
 		await client.query("BEGIN READ WRITE");
 		began = true;
 		await client.query("SELECT 1");
+		const schemaResult = await client.query<{
+			documents: string | null;
+			vector_extension: boolean;
+		}>(
+			"SELECT to_regclass('public.documents')::text AS documents, EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') AS vector_extension",
+		);
+		if (
+			!schemaResult.rows[0]?.documents ||
+			!schemaResult.rows[0]?.vector_extension
+		) {
+			throw new Error("Required pgvector schema is missing");
+		}
 		const migrations = await client.query<{ filename: string }>(
 			`SELECT filename FROM ${MIGRATIONS_TABLE}`,
 		);
