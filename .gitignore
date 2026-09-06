@@ -39,5 +39,8 @@ Thumbs.db
 /playwright-report
 /test-results
 
+# Database backups may contain user and conversation data.
+**/backups/
+
 # wiki content
 /wiki-knowledge

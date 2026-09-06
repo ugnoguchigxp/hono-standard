@@ -94,7 +94,9 @@ describe("hono app entry", () => {
 				Origin: "http://localhost:5173",
 			},
 		});
-		expect(res.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:5173");
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+			"http://localhost:5173",
+		);
 		expect(res.headers.get("Access-Control-Allow-Credentials")).toBe("true");
 
 		const resInvalid = await app.request("/api/health", {
@@ -134,36 +136,45 @@ describe("hono app entry", () => {
 	// Error Handler integration tests
 	describe("Error Handler", () => {
 		it("should handle HttpError and return custom status and message", async () => {
-			const res = await app.request("http://localhost:5173/api/test-http-error", {
-				method: "POST",
-				headers: {
-					Origin: "http://localhost:5173",
+			const res = await app.request(
+				"http://localhost:5173/api/test-http-error",
+				{
+					method: "POST",
+					headers: {
+						Origin: "http://localhost:5173",
+					},
 				},
-			});
+			);
 			expect(res.status).toBe(400);
 			const body = await res.json();
 			expect(body.message).toBe("Bad Parameters");
 		});
 
 		it("should handle HTTPException and return custom status and message", async () => {
-			const res = await app.request("http://localhost:5173/api/test-hono-http-exception", {
-				method: "POST",
-				headers: {
-					Origin: "http://localhost:5173",
+			const res = await app.request(
+				"http://localhost:5173/api/test-hono-http-exception",
+				{
+					method: "POST",
+					headers: {
+						Origin: "http://localhost:5173",
+					},
 				},
-			});
+			);
 			expect(res.status).toBe(403);
 			const body = await res.json();
 			expect(body.message).toBe("Access Forbidden");
 		});
 
 		it("should handle generic errors as 500 Internal Server Error", async () => {
-			const res = await app.request("http://localhost:5173/api/test-generic-error", {
-				method: "POST",
-				headers: {
-					Origin: "http://localhost:5173",
+			const res = await app.request(
+				"http://localhost:5173/api/test-generic-error",
+				{
+					method: "POST",
+					headers: {
+						Origin: "http://localhost:5173",
+					},
 				},
-			});
+			);
 			expect(res.status).toBe(500);
 			const body = await res.json();
 			expect(body.message).toBe("Something blew up");

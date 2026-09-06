@@ -227,6 +227,54 @@ const canRetryWithRefresh = (path: string): boolean =>
 const shouldNotifyUnauthorized = (path: string): boolean =>
 	path !== "/api/auth/login";
 
+let refreshPromise: Promise<boolean> | undefined;
+let sessionVersion = 0;
+
+const browserLocks = () =>
+	typeof window === "undefined" ? undefined : globalThis.navigator?.locks;
+
+async function withSessionLock<T>(operation: () => Promise<T>): Promise<T> {
+	const locks = browserLocks();
+	return locks
+		? await locks.request("hono-standard-rag:session", operation)
+		: await operation();
+}
+
+function refreshSession(): Promise<boolean> {
+	if (typeof window !== "undefined" && !browserLocks()) {
+		return Promise.resolve(false);
+	}
+	if (!refreshPromise) {
+		refreshPromise = withSessionLock(async () => {
+			if (browserLocks()) {
+				const current = await fetch("/api/auth/me", {
+					credentials: "include",
+				});
+				if (current.ok) return true;
+				if (current.status !== 401) {
+					throw new Error(await parseErrorMessage(current));
+				}
+			}
+			const response = await fetch("/api/auth/refresh", {
+				method: "POST",
+				credentials: "include",
+			});
+			if (!response.ok && response.status !== 401) {
+				throw new Error(await parseErrorMessage(response));
+			}
+			return response.ok;
+		})
+			.then((restored) => {
+				if (restored) sessionVersion += 1;
+				return restored;
+			})
+			.finally(() => {
+				refreshPromise = undefined;
+			});
+	}
+	return refreshPromise;
+}
+
 const parseErrorMessage = async (response: Response): Promise<string> => {
 	let message = `Request failed: ${response.status}`;
 	try {
@@ -259,13 +307,10 @@ async function requestJson<T>(
 		});
 	};
 
+	const requestSessionVersion = sessionVersion;
 	let response = await execute();
 	if (response.status === 401 && canRetryWithRefresh(path)) {
-		const refreshResponse = await fetch("/api/auth/refresh", {
-			method: "POST",
-			credentials: "include",
-		});
-		if (refreshResponse.ok) {
+		if (requestSessionVersion !== sessionVersion || (await refreshSession())) {
 			response = await execute();
 		}
 	}
@@ -300,13 +345,10 @@ async function requestVoid(
 		});
 	};
 
+	const requestSessionVersion = sessionVersion;
 	let response = await execute();
 	if (response.status === 401 && canRetryWithRefresh(path)) {
-		const refreshResponse = await fetch("/api/auth/refresh", {
-			method: "POST",
-			credentials: "include",
-		});
-		if (refreshResponse.ok) {
+		if (requestSessionVersion !== sessionVersion || (await refreshSession())) {
 			response = await execute();
 		}
 	}
@@ -557,15 +599,22 @@ export async function login(params: {
 	email: string;
 	password: string;
 }): Promise<{ user: AuthUser }> {
-	return requestJson("/api/auth/login", {
-		method: "POST",
-		body: params,
+	return withSessionLock(async () => {
+		const result = await requestJson<{ user: AuthUser }>("/api/auth/login", {
+			method: "POST",
+			body: params,
+		});
+		sessionVersion += 1;
+		return result;
 	});
 }
 
 export async function logout(): Promise<void> {
-	await requestVoid("/api/auth/logout", {
-		method: "POST",
+	await withSessionLock(async () => {
+		await requestVoid("/api/auth/logout", {
+			method: "POST",
+		});
+		sessionVersion += 1;
 	});
 }
 

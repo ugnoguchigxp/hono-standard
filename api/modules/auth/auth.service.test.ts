@@ -88,7 +88,9 @@ describe("AuthService", () => {
 				role: "legacy-role",
 			});
 
-			await expect(authService.findUserById(testUserRow.id)).resolves.toMatchObject({
+			await expect(
+				authService.findUserById(testUserRow.id),
+			).resolves.toMatchObject({
 				role: "member",
 			});
 		});

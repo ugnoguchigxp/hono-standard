@@ -63,9 +63,7 @@ describe("readAppEnv", () => {
 	});
 
 	it("rejects invalid login rate limit values", () => {
-		expect(() =>
-			readAppEnv({ LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "0" }),
-		).toThrow();
+		expect(() => readAppEnv({ LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "0" })).toThrow();
 		expect(() =>
 			readAppEnv({ LOGIN_RATE_LIMIT_WINDOW_SECONDS: "not-a-number" }),
 		).toThrow();

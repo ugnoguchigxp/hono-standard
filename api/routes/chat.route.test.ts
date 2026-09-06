@@ -45,7 +45,10 @@ function createDb(options: {
 	};
 }
 
-function createApp(db: ReturnType<typeof createDb>, chatService: { run: ReturnType<typeof vi.fn> }) {
+function createApp(
+	db: ReturnType<typeof createDb>,
+	chatService: { run: ReturnType<typeof vi.fn> },
+) {
 	return new Hono()
 		.use("*", async (c, next) => {
 			c.set("authUser", authUser);
@@ -110,7 +113,10 @@ describe("chat route", () => {
 		expect(await messages.json()).toMatchObject({
 			conversationId,
 			items: [
-				{ id: "message-1", artifacts: [{ id: "artifact-1" }, { id: "artifact-2" }] },
+				{
+					id: "message-1",
+					artifacts: [{ id: "artifact-1" }, { id: "artifact-2" }],
+				},
 				{ id: "message-2", artifacts: [] },
 			],
 		});

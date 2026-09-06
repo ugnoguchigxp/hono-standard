@@ -46,10 +46,15 @@ const responseUser = {
 describe("admin users route", () => {
 	it("supports list, creation, profile, password, disable and enable operations", async () => {
 		const authService = {
-			listUsers: vi.fn().mockResolvedValue([
-				responseUser,
-				{ ...responseUser, lastLoginAt: new Date("2026-01-03T00:00:00.000Z") },
-			]),
+			listUsers: vi
+				.fn()
+				.mockResolvedValue([
+					responseUser,
+					{
+						...responseUser,
+						lastLoginAt: new Date("2026-01-03T00:00:00.000Z"),
+					},
+				]),
 			createUser: vi.fn().mockResolvedValue(responseUser),
 			updateUserProfile: vi.fn().mockResolvedValue({
 				...responseUser,
@@ -116,7 +121,8 @@ describe("admin users route", () => {
 				.status,
 		).toBe(200);
 		expect(
-			(await app.request("/users/not-a-user/enable", { method: "POST" })).status,
+			(await app.request("/users/not-a-user/enable", { method: "POST" }))
+				.status,
 		).toBe(200);
 		expect(authService.setUserActive).toHaveBeenNthCalledWith(
 			1,
@@ -165,8 +171,7 @@ describe("settings and agentic search routes", () => {
 		};
 		const app = authenticated(
 			createSettingsRoute({
-				settingsRepository:
-					settingsRepository as unknown as SettingsRepository,
+				settingsRepository: settingsRepository as unknown as SettingsRepository,
 			}),
 		);
 
@@ -207,8 +212,12 @@ describe("settings and agentic search routes", () => {
 				.mockRejectedValueOnce(new Error("runner failed")),
 		};
 		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-		const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
-		const app = authenticated(createAgenticSearchRoute({ service: service as never }));
+		const error = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		const app = authenticated(
+			createAgenticSearchRoute({ service: service as never }),
+		);
 		app.onError((caught, c) => c.json({ message: caught.message }, 500));
 
 		const ok = await app.request(
@@ -296,7 +305,9 @@ describe("artifacts route", () => {
 		};
 		const app = authenticated(createArtifactsRoute({ db: db as never }));
 
-		const list = await app.request(`/?conversationId=${conversationId}&limit=10`);
+		const list = await app.request(
+			`/?conversationId=${conversationId}&limit=10`,
+		);
 		expect(list.status).toBe(200);
 		expect(await list.json()).toMatchObject({ items: [{ id: artifactId }] });
 		expect((await app.request(`/${artifactId}`)).status).toBe(200);

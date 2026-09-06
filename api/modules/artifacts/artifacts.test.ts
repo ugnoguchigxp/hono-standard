@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { appContentSecurityPolicy, serializeContentSecurityPolicy, viteDevContentSecurityPolicy } from "../../app/security-headers";
+import {
+	appContentSecurityPolicy,
+	serializeContentSecurityPolicy,
+	viteDevContentSecurityPolicy,
+} from "../../app/security-headers";
 import { extractArtifactsFromText } from "./extract";
 import { parseLooseStructuredText } from "./parse";
 

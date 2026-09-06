@@ -57,15 +57,12 @@ describe("AgenticToolRegistry", () => {
 				body: "x".repeat(500),
 			});
 		const sourceRepository = {
-			getSourceById: vi
-				.fn()
-				.mockResolvedValueOnce(null)
-				.mockResolvedValueOnce({
-					title: null,
-					uri: "db://source",
-					body: "database body",
-					metadata: null,
-				}),
+			getSourceById: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({
+				title: null,
+				uri: "db://source",
+				body: "database body",
+				metadata: null,
+			}),
 			getSourceByUri: vi.fn().mockResolvedValue({
 				title: "URI source",
 				uri: "db://uri",
@@ -193,10 +190,7 @@ describe("AgenticToolRegistry", () => {
 		expect(result).toMatchObject({
 			resultCount: 2,
 			output: { provider: "web" },
-			citations: [
-				{ title: "https://example.com/a" },
-				{ title: "B" },
-			],
+			citations: [{ title: "https://example.com/a" }, { title: "B" }],
 		});
 	});
 });

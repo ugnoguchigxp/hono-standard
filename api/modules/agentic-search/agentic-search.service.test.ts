@@ -47,7 +47,10 @@ describe("AgenticSearchService", () => {
 			}),
 		);
 		expect(log).toHaveBeenCalledWith(
-			expect.objectContaining({ level: "debug", event: "request.system_context" }),
+			expect.objectContaining({
+				level: "debug",
+				event: "request.system_context",
+			}),
 		);
 		expect(log).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -87,22 +90,20 @@ describe("AgenticSearchService", () => {
 		).toBe(false);
 
 		const info = vi.spyOn(console, "log").mockImplementation(() => undefined);
-		const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const error = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
 		const defaultLogger = new AgenticSearchService(deps);
 		await defaultLogger.run({
 			query: "q",
 			userId: "user-1",
 			topK: 2,
 		});
-		(defaultLogger as never as { log: Function }).log(
-			"error",
-			"manual.error",
-			{ reason: "test" },
-		);
+		(defaultLogger as never as { log: Function }).log("error", "manual.error", {
+			reason: "test",
+		});
 		expect(info).toHaveBeenCalled();
-		expect(error).toHaveBeenCalledWith(
-			expect.stringContaining("manual.error"),
-		);
+		expect(error).toHaveBeenCalledWith(expect.stringContaining("manual.error"));
 		info.mockRestore();
 		error.mockRestore();
 	});

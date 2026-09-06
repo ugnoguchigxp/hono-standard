@@ -9,8 +9,9 @@ import {
 
 describe("wiki slugs", () => {
 	it("extracts and decodes a route remainder", () => {
-		expect(extractRemainderFromPathname("/pages/tech%2Fhono/", "/pages"))
-			.toBe("tech/hono");
+		expect(extractRemainderFromPathname("/pages/tech%2Fhono/", "/pages")).toBe(
+			"tech/hono",
+		);
 		expect(extractRemainderFromPathname("/other", "/pages")).toBe("");
 		expect(extractRemainderFromPathname("/pages/%E0%A4%A", "/pages")).toBe(
 			"\0",

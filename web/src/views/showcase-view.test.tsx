@@ -63,6 +63,53 @@ afterEach(() => {
 });
 
 describe("ShowcaseView", () => {
+	it("moves focus and selection together across tabs", async () => {
+		const { user } = renderWithProviders(showcase());
+		const account = screen.getByRole("tab", { name: "Account" });
+		account.focus();
+		for (const [key, label] of [
+			["{ArrowRight}", "Password"],
+			["{End}", "Settings"],
+			["{ArrowRight}", "Account"],
+			["{ArrowLeft}", "Settings"],
+			["{Home}", "Account"],
+		]) {
+			await user.keyboard(key);
+			const selected = screen.getByRole("tab", { name: label });
+			expect(selected).toHaveFocus();
+			expect(selected).toHaveAttribute("aria-selected", "true");
+		}
+		expect(
+			screen.queryByRole("heading", { name: "Password Security" }),
+		).not.toBeInTheDocument();
+	});
+
+	it("contains focus inside the settings drawer", async () => {
+		const { user } = renderWithProviders(showcase());
+		await user.click(screen.getByRole("button", { name: "Open Panel" }));
+		const drawer = screen.getByRole("dialog", { name: "Settings panel" });
+		const close = within(drawer).getByRole("button", { name: "Close panel" });
+		close.focus();
+		await user.tab({ shift: true });
+		expect(within(drawer).getByLabelText("Compact mode")).toHaveFocus();
+		await user.tab();
+		expect(close).toHaveFocus();
+	});
+
+	it.each([
+		["Open Dialog", "Confirm deployment"],
+		["Open Panel", "Settings panel"],
+	])("keeps %s open when an old close event arrives", async (triggerName, name) => {
+		const { user } = renderWithProviders(showcase());
+		const trigger = screen.getByRole("button", { name: triggerName });
+		await user.click(trigger);
+		const dialog = screen.getByRole("dialog", { name });
+		fireEvent(dialog, new Event("cancel", { cancelable: true }));
+		await user.click(trigger);
+		fireEvent(dialog, new Event("close"));
+		expect(dialog).toBeVisible();
+	});
+
 	it("renders the inventory and exercises appearance and form controls", async () => {
 		const { user } = renderWithProviders(showcase());
 
@@ -161,7 +208,7 @@ describe("ShowcaseView", () => {
 		await user.click(within(dialog).getByRole("button", { name: "Deploy" }));
 
 		await user.click(screen.getByRole("button", { name: "Open Panel" }));
-		const drawer = screen.getByRole("complementary", {
+		const drawer = screen.getByRole("dialog", {
 			name: "Settings panel",
 		});
 		await user.click(

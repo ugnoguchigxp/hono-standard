@@ -96,6 +96,10 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
 | `bun run db:generate` | Drizzle migration 生成 |
 | `bun run db:migrate:drizzle` | drizzle-kit migration。`DATABASE_URL` は process env または `.env` から読む |
+| `bun run db:backup -- <new-file>` | `pg_dump` custom formatでバックアップを作成・検証 |
+| `bun run db:verify-backup -- <file>` | `pg_restore --list`でバックアップを検証 |
+| `bun run db:restore -- <file>` | 明示した別URLへバックアップを復元 |
+| `bun run verify:load` | 認証付きread/refresh workloadの回帰確認 |
 | `bun run typecheck` | TypeScript check |
 | `bun run lint` | Biome lint |
 | `bun run format` | Biome format write |
@@ -112,6 +116,7 @@ printf '%s\n' '<password>' | bun run auth:create-admin -- --email admin@example.
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/health` | health check |
+| `GET` | `/api/ready` | PostgreSQL、RAG schema、extension、migrationのreadiness check |
 | `POST` | `/api/auth/login` | email/password login。httpOnly cookie を設定 |
 | `POST` | `/api/auth/refresh` | refresh token rotation |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
@@ -134,6 +139,8 @@ NODE_ENV=production bun run start
 ```
 
 production では `JWT_SECRET` を必ず強いランダム値に変更してください。未設定または dev default のままの場合、アプリは起動時に失敗します。HTTPS で公開する場合は `APP_URL=https://...` とし、必要に応じて `AUTH_COOKIE_SECURE=true`、`SECURITY_HEADERS_MODE=https` を明示します。
+
+`COMPOSE_JWT_SECRET='<32+ random chars>' docker compose up --build`でPostgreSQLとappを起動できます。DBのhealthcheck成功後にmigrationを適用し、appのDocker HEALTHCHECKは`/api/ready`を確認します。停止、readiness、バックアップ、復元の手順は[`docs/operations.md`](docs/operations.md)を参照してください。
 
 ## 品質ゲート
 

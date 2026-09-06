@@ -60,6 +60,7 @@ const isUnauthorizedError = (error: unknown): boolean =>
 function ShowcasePage() {
 	const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [logoutError, setLogoutError] = useState<string | null>(null);
 
 	useEffect(() => {
 		let active = true;
@@ -84,11 +85,12 @@ function ShowcasePage() {
 	const handleLogout = useCallback(async () => {
 		if (busy) return;
 		setBusy(true);
+		setLogoutError(null);
 		try {
 			await logout();
 			setAuthUser(null);
 		} catch (error) {
-			console.error(error);
+			setLogoutError(error instanceof Error ? error.message : "Logout failed.");
 		} finally {
 			setBusy(false);
 		}
@@ -102,6 +104,11 @@ function ShowcasePage() {
 				busy={busy}
 				onLogout={handleLogout}
 			/>
+			{logoutError ? (
+				<div className="status error" role="alert">
+					{logoutError}
+				</div>
+			) : null}
 			<ShowcaseSettingsProvider>
 				<ShowcaseView />
 			</ShowcaseSettingsProvider>

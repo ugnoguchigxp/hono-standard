@@ -14,8 +14,7 @@ describe("normalizeAgenticAnswerMarkdown", () => {
 			"- **`biome.jsonc` から始める**\n- CI では `biome ci .` を使う";
 
 		const normalized = normalizeAgenticAnswerMarkdown(markdown);
-		const json =
-			await MarkdownTipTapConverter.markdownToTipTapJson(normalized);
+		const json = await MarkdownTipTapConverter.markdownToTipTapJson(normalized);
 		const serialized = JSON.stringify(json);
 
 		expect(serialized).not.toContain("§CODE§");
@@ -68,9 +67,7 @@ describe("dedupeAgenticSourceCitations", () => {
 			},
 		];
 
-		expect(dedupeAgenticSourceCitations(citations)).toEqual([
-			citations[1],
-		]);
+		expect(dedupeAgenticSourceCitations(citations)).toEqual([citations[1]]);
 	});
 
 	it("builds stable keys and labels for every citation shape", () => {
@@ -101,9 +98,7 @@ describe("dedupeAgenticSourceCitations", () => {
 		expect(toAgenticSourceKey(wiki)).toBe("wiki:tech/wiki");
 		expect(toAgenticSourceKey(web)).toBe("url:https://example.com");
 		expect(toAgenticSourceKey(uri)).toBe("uri:file:///guide.md");
-		expect(toAgenticSourceKey(title)).toBe(
-			"title:wiki_fragment:Only title",
-		);
+		expect(toAgenticSourceKey(title)).toBe("title:wiki_fragment:Only title");
 		expect(toAgenticSourceLabel(web)).toBe("https://example.com");
 		expect(toAgenticSourceLabel(uri)).toBe("file:///guide.md");
 		expect(toAgenticSourceLabel(empty)).toBe("Source");

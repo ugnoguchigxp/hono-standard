@@ -16,7 +16,8 @@ afterEach(async () => {
 
 const jsonRequest = (method: string, body?: unknown): RequestInit => ({
 	method,
-	headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+	headers:
+		body === undefined ? undefined : { "Content-Type": "application/json" },
 	body: body === undefined ? undefined : JSON.stringify(body),
 });
 
@@ -166,9 +167,9 @@ describe("sources route", () => {
 		const raw = await app.request("/api/sources/pages/ops/runbook/raw");
 		expect(raw.headers.get("content-type")).toContain("text/markdown");
 		expect(await raw.text()).toContain("cobalt service");
-		expect(
-			(await app.request("/api/sources/pages/missing/raw")).status,
-		).toBe(404);
+		expect((await app.request("/api/sources/pages/missing/raw")).status).toBe(
+			404,
+		);
 
 		const emptySearch = await readJson<{ items: unknown[] }>(
 			await app.request("/api/sources/search?q=%20"),
@@ -201,9 +202,9 @@ describe("sources route", () => {
 		expect(history.items).toHaveLength(2);
 		expect(history.items[0]?.message).toBe("docs: update runbook");
 
-		expect(
-			(await app.request("/api/sources/diff/ops/runbook")).status,
-		).toBe(400);
+		expect((await app.request("/api/sources/diff/ops/runbook")).status).toBe(
+			400,
+		);
 		const diff = await readJson<{ diff: string }>(
 			await app.request(
 				`/api/sources/diff/ops/runbook?from=${created.commit}&to=${updated.commit}`,
@@ -222,9 +223,9 @@ describe("sources route", () => {
 		expect(renamePage.status).toBe(200);
 		expect(await readJson(renamePage)).toMatchObject({ slug: "ops/guide" });
 		expect(sourceRepository.deleteSourceByUri).toHaveBeenCalledTimes(1);
-		expect(
-			(await app.request("/api/sources/pages/ops/runbook")).status,
-		).toBe(404);
+		expect((await app.request("/api/sources/pages/ops/runbook")).status).toBe(
+			404,
+		);
 
 		expect(
 			(
@@ -301,18 +302,23 @@ describe("sources route", () => {
 		expect(wikiBlobSyncer.pull).toHaveBeenCalledWith({ force: true });
 
 		expect(
-			(await app.request("/api/sources/pages/platform/guide", { method: "DELETE" }))
-				.status,
+			(
+				await app.request("/api/sources/pages/platform/guide", {
+					method: "DELETE",
+				})
+			).status,
 		).toBe(200);
 		expect(
-			(await app.request("/api/sources/pages/platform/guide", { method: "DELETE" }))
-				.status,
+			(
+				await app.request("/api/sources/pages/platform/guide", {
+					method: "DELETE",
+				})
+			).status,
 		).toBe(404);
 
-		const deleteFolder = await app.request(
-			"/api/sources/folders/platform",
-			{ method: "DELETE" },
-		);
+		const deleteFolder = await app.request("/api/sources/folders/platform", {
+			method: "DELETE",
+		});
 		expect(deleteFolder.status).toBe(200);
 		expect(await readJson(deleteFolder)).toMatchObject({
 			ok: true,

@@ -157,7 +157,9 @@ describe("auth route", () => {
 			mockAuthService.login
 				.mockRejectedValueOnce(new HttpError(401, "Invalid email or password."))
 				.mockResolvedValueOnce(successfulLogin)
-				.mockRejectedValueOnce(new HttpError(401, "Invalid email or password."));
+				.mockRejectedValueOnce(
+					new HttpError(401, "Invalid email or password."),
+				);
 			const request = () =>
 				app.request("/auth/login", {
 					method: "POST",
@@ -231,7 +233,9 @@ describe("auth route", () => {
 
 			// Cookies should be cleared (max-age=0 or expires in past)
 			const cookies = res.headers.getSetCookie();
-			expect(cookies.some((c) => c.includes("Max-Age=0") || c.includes("1970"))).toBe(true);
+			expect(
+				cookies.some((c) => c.includes("Max-Age=0") || c.includes("1970")),
+			).toBe(true);
 		});
 	});
 

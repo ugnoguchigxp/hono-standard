@@ -42,9 +42,7 @@ describe("token.service", () => {
 			set: vi.fn().mockReturnThis(),
 			where: vi.fn().mockReturnThis(),
 		};
-		mockWriter = createSingleWriterClient(
-			mockDb as unknown as AppDatabase,
-		);
+		mockWriter = createSingleWriterClient(mockDb as unknown as AppDatabase);
 	});
 
 	describe("AccessToken", () => {
@@ -139,11 +137,7 @@ describe("token.service", () => {
 				expiresAt: oneHourInFuture,
 			});
 
-			const consumed = await consumeRefreshToken(
-				token,
-				mockWriter,
-				mockEnv,
-			);
+			const consumed = await consumeRefreshToken(token, mockWriter, mockEnv);
 
 			expect(consumed.payload.userId).toBe(testPayload.userId);
 			expect(consumed.payload.type).toBe("refresh");
@@ -182,11 +176,7 @@ describe("token.service", () => {
 			});
 
 			await expect(
-				consumeRefreshToken(
-					token,
-					mockWriter,
-					mockEnv,
-				),
+				consumeRefreshToken(token, mockWriter, mockEnv),
 			).rejects.toThrowError(new HttpError(401, "Refresh token expired."));
 		});
 
@@ -208,11 +198,7 @@ describe("token.service", () => {
 			});
 
 			await expect(
-				consumeRefreshToken(
-					token,
-					mockWriter,
-					mockEnv,
-				),
+				consumeRefreshToken(token, mockWriter, mockEnv),
 			).rejects.toThrowError(new HttpError(401, "Invalid refresh token."));
 		});
 

@@ -27,7 +27,9 @@ describe("SearchEvidenceCollector", () => {
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = vi
 			.fn()
-			.mockRejectedValue(new Error("skip page fetch")) as unknown as typeof fetch;
+			.mockRejectedValue(
+				new Error("skip page fetch"),
+			) as unknown as typeof fetch;
 		const retriever = {
 			evaluate: vi.fn().mockResolvedValue({
 				strategy: "merged",
@@ -79,9 +81,9 @@ describe("SearchEvidenceCollector", () => {
 
 	it("builds empty and populated local and Web context", () => {
 		expect(buildLocalContext([])).toBe("(no local markdown context found)");
-		expect(buildLocalContext([{ ...fragment, heading: null } as never])).toContain(
-			"heading=(none)\nBiome content",
-		);
+		expect(
+			buildLocalContext([{ ...fragment, heading: null } as never]),
+		).toContain("heading=(none)\nBiome content");
 		expect(toCitations([{ ...fragment, heading: null } as never])).toEqual([
 			expect.objectContaining({ title: "biome.md", heading: undefined }),
 		]);
@@ -117,7 +119,9 @@ describe("SearchEvidenceCollector", () => {
 				selectedResults: [],
 			}),
 		};
-		const collector = new SearchEvidenceCollector({ retriever: retriever as never });
+		const collector = new SearchEvidenceCollector({
+			retriever: retriever as never,
+		});
 
 		await expect(
 			collector.collect({ query: "  query  ", topK: 0, category: "  " }),

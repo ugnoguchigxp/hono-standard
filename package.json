@@ -29,7 +29,7 @@
 		"import:markdown": "bun run api/cli/import-markdown.ts",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "bun run api/cli/migrate.ts",
-		"db:migrate:drizzle": "drizzle-kit migrate",
+		"db:migrate:drizzle": "bun run db:migrate",
 		"s11tnext:lint": "s11tnext lint --release-profile development",
 		"s11tnext:build": "s11tnext build --release-profile development",
 		"s11tnext:check": "s11tnext build --check --release-profile development",
@@ -42,13 +42,17 @@
 		"lint": "biome lint api web shared scripts tests drizzle.config.ts playwright.config.ts vite.config.ts vitest.config.ts",
 		"format": "biome format --write api web shared scripts tests drizzle.config.ts playwright.config.ts vite.config.ts vitest.config.ts",
 		"format:check": "biome format api web shared scripts tests drizzle.config.ts playwright.config.ts vite.config.ts vitest.config.ts",
-		"build:web": "vite build",
+		"build:web": "NODE_ENV=production vite build",
 		"build": "bun run build:web",
 		"verify:commit": "bun run typecheck && bun run lint && bun run format:check",
 		"verify": "bun scripts/verify.ts",
 		"verify:e2e": "bun run test:e2e",
 		"verify:all": "bun run verify && bun run verify:e2e",
-		"verify:strict": "bun run verify"
+		"verify:strict": "bun run verify",
+		"db:backup": "bun scripts/db-snapshot.ts backup",
+		"db:verify-backup": "bun scripts/db-snapshot.ts verify",
+		"db:restore": "bun scripts/db-snapshot.ts restore",
+		"verify:load": "bun scripts/load-check.ts"
 	},
 	"files": [
 		"dist-web",

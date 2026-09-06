@@ -162,9 +162,12 @@ describe("SourceRetriever", () => {
 				.fn()
 				.mockResolvedValue([{ ...shared, score: 0.9 }]),
 		};
-		const retriever = new SourceRetriever(sourceRepository as never, {
-			createEmbedding: vi.fn().mockResolvedValue([0.1]),
-		} as never);
+		const retriever = new SourceRetriever(
+			sourceRepository as never,
+			{
+				createEmbedding: vi.fn().mockResolvedValue([0.1]),
+			} as never,
+		);
 
 		const result = await retriever.retrieve("  query  ", {
 			topK: 0,
@@ -227,11 +230,10 @@ describe("SourceRetriever", () => {
 			strategy: "merged",
 			selectedResults: [merged],
 		});
-		const fallback = await evaluateRetrieverCompat(
-			compatible as never,
-			"q",
-			{ topK: 1, enableTrigramFallback: true },
-		);
+		const fallback = await evaluateRetrieverCompat(compatible as never, "q", {
+			topK: 1,
+			enableTrigramFallback: true,
+		});
 		expect(fallback).toMatchObject({
 			strategy: "text_fallback",
 			selectedResults: [

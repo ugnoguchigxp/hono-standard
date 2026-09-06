@@ -209,11 +209,7 @@ describe("AgenticSearchRunner", () => {
 			if (name === "fetch") {
 				return { output: { fetched: true }, resultCount: 1 };
 			}
-			if (
-				typeof args !== "object" ||
-				args === null ||
-				!("mode" in args)
-			) {
+			if (typeof args !== "object" || args === null || !("mode" in args)) {
 				throw new Error("tool failed");
 			}
 			if (args.mode === "string-error") {
@@ -338,7 +334,9 @@ describe("AgenticSearchRunner", () => {
 		const consoleError = vi
 			.spyOn(console, "error")
 			.mockImplementation(() => undefined);
-		const consoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const consoleLog = vi
+			.spyOn(console, "log")
+			.mockImplementation(() => undefined);
 		const defaultLogger = new AgenticSearchRunner({
 			llmAdapter: adapter as unknown as OpenAiResponsesAdapter,
 			toolRegistry: registry as unknown as AgenticToolRegistry,

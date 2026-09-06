@@ -34,7 +34,14 @@ import {
 	Star,
 	X,
 } from "lucide-react";
-import { useMemo, useState, type CSSProperties } from "react";
+import {
+	type CSSProperties,
+	type KeyboardEvent,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	showcaseDensityOptions,
 	showcaseFontSizeOptions,
@@ -97,6 +104,25 @@ const visibleComponents = [
 	"NumberFormat",
 ] as const;
 
+const exampleTabs = ["account", "password", "settings"] as const;
+
+function containDialogFocus(event: KeyboardEvent<HTMLDialogElement>) {
+	if (event.key !== "Tab") return;
+	const controls = Array.from(
+		event.currentTarget.querySelectorAll<HTMLElement>(
+			"button:not(:disabled), input:not(:disabled)",
+		),
+	);
+	const current = controls.indexOf(document.activeElement as HTMLElement);
+	const next =
+		current < 0
+			? 0
+			: (current + (event.shiftKey ? -1 : 1) + controls.length) %
+				controls.length;
+	event.preventDefault();
+	controls[next]?.focus();
+}
+
 export function ShowcaseView() {
 	return <ShowcaseContent />;
 }
@@ -116,7 +142,19 @@ function ShowcaseContent() {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [popoverOpen, setPopoverOpen] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const dialogRef = useRef<HTMLDialogElement>(null);
+	useEffect(() => {
+		const dialog = dialogRef.current;
+		if (dialogOpen) dialog?.showModal();
+		else dialog?.close();
+	}, [dialogOpen]);
 	const [drawerOpen, setDrawerOpen] = useState(false);
+	const drawerRef = useRef<HTMLDialogElement>(null);
+	useEffect(() => {
+		const drawer = drawerRef.current;
+		if (drawerOpen) drawer?.showModal();
+		else drawer?.close();
+	}, [drawerOpen]);
 	const [activePage, setActivePage] = useState(2);
 	const [activeView, setActiveView] = useState<"grid" | "list">("grid");
 	const [copied, setCopied] = useState(false);
@@ -675,58 +713,97 @@ function ShowcaseContent() {
 				<div className="nav-layout-grid">
 					<div className="tabs-card">
 						<div className="tabs-list" role="tablist" aria-label="Example tabs">
-							<button
-								type="button"
-								role="tab"
-								className={activeTab === "account" ? "active" : ""}
-								aria-selected={activeTab === "account"}
-								onClick={() => setActiveTab("account")}
-							>
-								Account
-							</button>
-							<button
-								type="button"
-								role="tab"
-								className={activeTab === "password" ? "active" : ""}
-								aria-selected={activeTab === "password"}
-								onClick={() => setActiveTab("password")}
-							>
-								Password
-							</button>
-							<button
-								type="button"
-								role="tab"
-								className={activeTab === "settings" ? "active" : ""}
-								aria-selected={activeTab === "settings"}
-								onClick={() => setActiveTab("settings")}
-							>
-								Settings
-							</button>
+							{exampleTabs.map((tab, index) => (
+								<button
+									type="button"
+									role="tab"
+									key={tab}
+									id={`example-tab-${tab}`}
+									aria-controls={`example-panel-${tab}`}
+									className={activeTab === tab ? "active" : ""}
+									aria-selected={activeTab === tab}
+									tabIndex={activeTab === tab ? 0 : -1}
+									onClick={() => setActiveTab(tab)}
+									onKeyDown={(event) => {
+										const nextIndex =
+											event.key === "ArrowRight"
+												? (index + 1) % exampleTabs.length
+												: event.key === "ArrowLeft"
+													? (index + exampleTabs.length - 1) %
+														exampleTabs.length
+													: event.key === "Home"
+														? 0
+														: event.key === "End"
+															? exampleTabs.length - 1
+															: undefined;
+										if (nextIndex === undefined) return;
+										event.preventDefault();
+										const next = exampleTabs[nextIndex];
+										if (!next) return;
+										setActiveTab(next);
+										document.getElementById(`example-tab-${next}`)?.focus();
+									}}
+								>
+									{tab[0]?.toUpperCase()}
+									{tab.slice(1)}
+								</button>
+							))}
 						</div>
 						<div className="tab-content">
-							{activeTab === "account" ? (
-								<>
-									<h3>Account Information</h3>
-									<input className="demo-input" defaultValue="Template User" />
-									<input className="demo-input" defaultValue="@template-user" />
-								</>
-							) : null}
-							{activeTab === "password" ? (
-								<>
-									<h3>Password Security</h3>
-									<input className="demo-input" type="password" />
-									<input className="demo-input" type="password" />
-								</>
-							) : null}
-							{activeTab === "settings" ? (
-								<>
-									<h3>Global Settings</h3>
-									<label className="switch-row split">
-										<span>Public Profile</span>
-										<input type="checkbox" />
-									</label>
-								</>
-							) : null}
+							<div
+								role="tabpanel"
+								id="example-panel-account"
+								aria-labelledby="example-tab-account"
+								// biome-ignore lint/a11y/noNoninteractiveTabindex: APG Tabs makes the panel a Tab stop so its heading is reachable.
+								tabIndex={0}
+								hidden={activeTab !== "account"}
+							>
+								<h3>Account Information</h3>
+								<input
+									className="demo-input"
+									aria-label="Account name"
+									defaultValue="Template User"
+								/>
+								<input
+									className="demo-input"
+									aria-label="Account handle"
+									defaultValue="@template-user"
+								/>
+							</div>
+							<div
+								role="tabpanel"
+								id="example-panel-password"
+								aria-labelledby="example-tab-password"
+								// biome-ignore lint/a11y/noNoninteractiveTabindex: APG Tabs makes the panel a Tab stop so its heading is reachable.
+								tabIndex={0}
+								hidden={activeTab !== "password"}
+							>
+								<h3>Password Security</h3>
+								<input
+									className="demo-input"
+									aria-label="New password"
+									type="password"
+								/>
+								<input
+									className="demo-input"
+									aria-label="Confirm password"
+									type="password"
+								/>
+							</div>
+							<div
+								role="tabpanel"
+								id="example-panel-settings"
+								aria-labelledby="example-tab-settings"
+								// biome-ignore lint/a11y/noNoninteractiveTabindex: APG Tabs makes the panel a Tab stop so its heading is reachable.
+								tabIndex={0}
+								hidden={activeTab !== "settings"}
+							>
+								<h3>Global Settings</h3>
+								<label className="switch-row split">
+									<span>Public Profile</span>
+									<input type="checkbox" />
+								</label>
+							</div>
 						</div>
 					</div>
 
@@ -811,7 +888,10 @@ function ShowcaseContent() {
 						<button
 							type="button"
 							className="demo-button primary"
-							onClick={() => setDialogOpen(true)}
+							onClick={(event) => {
+								event.currentTarget.focus();
+								setDialogOpen(true);
+							}}
 						>
 							Open Dialog
 						</button>
@@ -841,7 +921,10 @@ function ShowcaseContent() {
 						<button
 							type="button"
 							className="demo-button secondary"
-							onClick={() => setDrawerOpen(true)}
+							onClick={(event) => {
+								event.currentTarget.focus();
+								setDrawerOpen(true);
+							}}
 						>
 							<PanelRight className="icon" />
 							Open Panel
@@ -1026,68 +1109,78 @@ function ShowcaseContent() {
 				</div>
 			</section>
 
-			{dialogOpen ? (
-				<div className="modal-backdrop" role="presentation">
-					<div className="modal-panel" role="dialog" aria-modal="true">
-						<header>
-							<h3>Confirm deployment</h3>
-							<button
-								type="button"
-								className="demo-icon-button"
-								aria-label="Close dialog"
-								onClick={() => setDialogOpen(false)}
-							>
-								<X className="icon" />
-							</button>
-						</header>
-						<p>Deploy the current template snapshot.</p>
-						<footer>
-							<button
-								type="button"
-								className="demo-button variant-outline"
-								onClick={() => setDialogOpen(false)}
-							>
-								Cancel
-							</button>
-							<button
-								type="button"
-								className="demo-button primary"
-								onClick={() => setDialogOpen(false)}
-							>
-								Deploy
-							</button>
-						</footer>
-					</div>
-				</div>
-			) : null}
+			<dialog
+				ref={dialogRef}
+				className="modal-panel"
+				aria-labelledby="deployment-dialog-title"
+				onCancel={() => setDialogOpen(false)}
+				onClose={(event) => {
+					if (!event.currentTarget.open) setDialogOpen(false);
+				}}
+				onKeyDown={containDialogFocus}
+			>
+				<header>
+					<h3 id="deployment-dialog-title">Confirm deployment</h3>
+					<button
+						type="button"
+						className="demo-icon-button"
+						aria-label="Close dialog"
+						onClick={() => setDialogOpen(false)}
+					>
+						<X className="icon" />
+					</button>
+				</header>
+				<p>Deploy the current template snapshot.</p>
+				<footer>
+					<button
+						type="button"
+						className="demo-button variant-outline"
+						onClick={() => setDialogOpen(false)}
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						className="demo-button primary"
+						onClick={() => setDialogOpen(false)}
+					>
+						Deploy
+					</button>
+				</footer>
+			</dialog>
 
-			{drawerOpen ? (
-				<div className="drawer-backdrop" role="presentation">
-					<aside className="drawer-panel" aria-label="Settings panel">
-						<header>
-							<h3>Panel</h3>
-							<button
-								type="button"
-								className="demo-icon-button"
-								aria-label="Close panel"
-								onClick={() => setDrawerOpen(false)}
-							>
-								<X className="icon" />
-							</button>
-						</header>
-						<div className="switch-column">
-							<label className="switch-row split">
-								<span>Audit log</span>
-								<input type="checkbox" defaultChecked />
-							</label>
-							<label className="switch-row split">
-								<span>Compact mode</span>
-								<input type="checkbox" />
-							</label>
-						</div>
-					</aside>
+			<dialog
+				ref={drawerRef}
+				className="drawer-panel"
+				aria-label="Settings panel"
+				onCancel={() => setDrawerOpen(false)}
+				onClose={(event) => {
+					if (!event.currentTarget.open) setDrawerOpen(false);
+				}}
+				onKeyDown={containDialogFocus}
+			>
+				<header>
+					<h3>Panel</h3>
+					<button
+						type="button"
+						className="demo-icon-button"
+						aria-label="Close panel"
+						onClick={() => setDrawerOpen(false)}
+					>
+						<X className="icon" />
+					</button>
+				</header>
+				<div className="switch-column">
+					<label className="switch-row split">
+						<span>Audit log</span>
+						<input type="checkbox" defaultChecked />
+					</label>
+					<label className="switch-row split">
+						<span>Compact mode</span>
+						<input type="checkbox" />
+					</label>
 				</div>
-			) : null}
+			</dialog>
 		</main>
 	);
 }

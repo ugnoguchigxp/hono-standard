@@ -121,7 +121,7 @@ try {
 	await seedRuntime.close();
 }
 
-const { default: app, getAppRuntime } = await import("../api/app/hono");
+const { default: app } = await import("../api/app/hono");
 
 const server = Bun.serve({
 	fetch: app.fetch,
@@ -131,20 +131,15 @@ const server = Bun.serve({
 
 console.log(`E2E server listening on http://${env.host}:${server.port}`);
 
-let shuttingDown = false;
-const shutdown = async () => {
-	if (shuttingDown) return;
-	shuttingDown = true;
-	server.stop(true);
-	try {
-		const runtime = await getAppRuntime();
-		await runtime.dbRuntime.close();
-	} finally {
-		stopDatabase();
-		rmSync(contentRoot, { force: true, recursive: true });
-	}
-	process.exit(0);
-};
-
-process.on("SIGINT", () => void shutdown());
-process.on("SIGTERM", () => void shutdown());
+const { bindHttpServerSignals, shutdownHttpServer, toHttpServer } =
+	await import("../api/app/server");
+const httpServer = toHttpServer(server, env.port);
+bindHttpServerSignals(httpServer, (signal) =>
+	shutdownHttpServer(httpServer, signal, {
+		exit: (code) => {
+			stopDatabase();
+			rmSync(contentRoot, { force: true, recursive: true });
+			process.exit(code);
+		},
+	}),
+);

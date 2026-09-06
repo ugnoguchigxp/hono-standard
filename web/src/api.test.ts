@@ -49,9 +49,8 @@ const getRequestUrl = (input: RequestInfo | URL): URL =>
 	new URL(input.toString(), "http://localhost");
 
 const jsonFetch = (payload: unknown, status = 200) =>
-	vi.fn(
-		async (_input: RequestInfo | URL, _init?: RequestInit) =>
-			Response.json(payload, { status }),
+	vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+		Response.json(payload, { status }),
 	);
 
 afterEach(() => {
@@ -62,13 +61,17 @@ afterEach(() => {
 describe("RAG web API", () => {
 	it("reads source, settings, and search resources", async () => {
 		const tree = {
-			items: [{ slug: "guide", title: "Guide", path: "guide.md", updatedAt: "" }],
+			items: [
+				{ slug: "guide", title: "Guide", path: "guide.md", updatedAt: "" },
+			],
 			folders: [{ path: "docs" }],
 		};
 		let fetchMock = jsonFetch(tree);
 		vi.stubGlobal("fetch", fetchMock);
 		await expect(fetchSourceTree()).resolves.toEqual(tree);
-		expect(getRequestPath(fetchMock.mock.calls[0]![0])).toBe("/api/sources/tree");
+		expect(getRequestPath(fetchMock.mock.calls[0]![0])).toBe(
+			"/api/sources/tree",
+		);
 
 		fetchMock = jsonFetch({ items: ["guide", "reference"] });
 		vi.stubGlobal("fetch", fetchMock);
@@ -234,7 +237,9 @@ describe("RAG web API", () => {
 		};
 		fetchMock = jsonFetch({ items: [log] });
 		vi.stubGlobal("fetch", fetchMock);
-		await expect(fetchRetrievalLogs(conversation.id, 5)).resolves.toEqual([log]);
+		await expect(fetchRetrievalLogs(conversation.id, 5)).resolves.toEqual([
+			log,
+		]);
 		expect(getRequestUrl(fetchMock.mock.calls[0]![0]).search).toBe("?limit=5");
 
 		const chat = {
@@ -339,7 +344,10 @@ describe("RAG web API", () => {
 				: Response.json({ items: [], folders: [] });
 		});
 		vi.stubGlobal("fetch", fetchMock);
-		await expect(fetchSourceTree()).resolves.toEqual({ items: [], folders: [] });
+		await expect(fetchSourceTree()).resolves.toEqual({
+			items: [],
+			folders: [],
+		});
 
 		let resetRequests = 0;
 		fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -356,6 +364,115 @@ describe("RAG web API", () => {
 		await expect(
 			resetAdminUserPassword(user.id, "new-password123456"),
 		).resolves.toBeUndefined();
+	});
+
+	it("serializes browser refresh with Web Locks and retries after rotation", async () => {
+		const request = vi.fn(
+			async (_name: string, operation: () => Promise<unknown>) => operation(),
+		);
+		vi.stubGlobal("window", { dispatchEvent: vi.fn() });
+		vi.stubGlobal("navigator", { locks: { request } });
+		let meRequests = 0;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const path = getRequestPath(input);
+			if (path === "/api/auth/refresh") {
+				return new Response(null, { status: 204 });
+			}
+			meRequests += 1;
+			return meRequests < 3
+				? Response.json({ message: "Unauthorized" }, { status: 401 })
+				: Response.json({ user });
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		await expect(fetchMe()).resolves.toEqual(user);
+		expect(request).toHaveBeenCalledWith(
+			"hono-standard-rag:session",
+			expect.any(Function),
+		);
+		expect(
+			fetchMock.mock.calls.filter(([input]) =>
+				getRequestPath(input).endsWith("/refresh"),
+			),
+		).toHaveLength(1);
+	});
+
+	it("reuses a session restored by another tab while waiting for the lock", async () => {
+		const request = vi.fn(
+			async (_name: string, operation: () => Promise<unknown>) => operation(),
+		);
+		vi.stubGlobal("window", { dispatchEvent: vi.fn() });
+		vi.stubGlobal("navigator", { locks: { request } });
+		let treeRequests = 0;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const path = getRequestPath(input);
+			if (path === "/api/auth/me") return Response.json({ user });
+			if (path === "/api/auth/refresh") {
+				throw new Error("refresh should not run");
+			}
+			treeRequests += 1;
+			return treeRequests === 1
+				? Response.json({ message: "Unauthorized" }, { status: 401 })
+				: Response.json({ items: [], folders: [] });
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		await expect(fetchSourceTree()).resolves.toEqual({ items: [], folders: [] });
+		expect(fetchMock).not.toHaveBeenCalledWith(
+			"/api/auth/refresh",
+			expect.anything(),
+		);
+	});
+
+	it("surfaces readiness and refresh failures found inside the session lock", async () => {
+		const request = vi.fn(
+			async (_name: string, operation: () => Promise<unknown>) => operation(),
+		);
+		vi.stubGlobal("window", { dispatchEvent: vi.fn() });
+		vi.stubGlobal("navigator", { locks: { request } });
+		let meStatus = 503;
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL) => {
+				const path = getRequestPath(input);
+				if (path === "/api/auth/me") {
+					return Response.json(
+						{ message: meStatus === 503 ? "session probe failed" : "Unauthorized" },
+						{ status: meStatus },
+					);
+				}
+				if (path === "/api/auth/refresh") {
+					return Response.json({ message: "refresh failed" }, { status: 503 });
+				}
+				return Response.json({ message: "Unauthorized" }, { status: 401 });
+			}),
+		);
+
+		await expect(fetchSourceTree()).rejects.toThrow("session probe failed");
+		meStatus = 401;
+		await expect(fetchSourceTree()).rejects.toThrow("refresh failed");
+	});
+
+	it("serializes successful login and logout operations", async () => {
+		const request = vi.fn(
+			async (_name: string, operation: () => Promise<unknown>) => operation(),
+		);
+		vi.stubGlobal("window", { dispatchEvent: vi.fn() });
+		vi.stubGlobal("navigator", { locks: { request } });
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL) =>
+				getRequestPath(input) === "/api/auth/login"
+					? Response.json({ user })
+					: new Response(null, { status: 204 }),
+			),
+		);
+
+		await expect(
+			login({ email: user.email, password: "password123456" }),
+		).resolves.toEqual({ user });
+		await expect(logout()).resolves.toBeUndefined();
+		expect(request).toHaveBeenCalledTimes(2);
 	});
 
 	it("reports JSON and non-JSON failures without refreshing login", async () => {
@@ -395,6 +512,7 @@ describe("RAG web API", () => {
 	it("notifies the browser once when session refresh fails", async () => {
 		const dispatchEvent = vi.fn();
 		vi.stubGlobal("window", { dispatchEvent });
+		vi.stubGlobal("navigator", {});
 		vi.spyOn(Date, "now").mockReturnValue(10_000);
 		vi.stubGlobal(
 			"fetch",
@@ -411,5 +529,39 @@ describe("RAG web API", () => {
 		expect(dispatchEvent.mock.calls[0]?.[0]).toMatchObject({
 			type: UNAUTHORIZED_EVENT_NAME,
 		});
+	});
+
+	it("notifies for an unauthorized void mutation without browser locks", async () => {
+		const dispatchEvent = vi.fn();
+		vi.stubGlobal("window", { dispatchEvent });
+		vi.stubGlobal("navigator", {});
+		vi.stubGlobal(
+			"fetch",
+			jsonFetch({ message: "Unauthorized" }, 401),
+		);
+
+		await expect(
+			resetAdminUserPassword(user.id, "new-password123456"),
+		).rejects.toThrow("Unauthorized");
+		expect(dispatchEvent).toHaveBeenCalledOnce();
+	});
+
+	it("keeps the request unauthorized when locked refresh is rejected", async () => {
+		const dispatchEvent = vi.fn();
+		vi.stubGlobal("window", { dispatchEvent });
+		vi.stubGlobal("navigator", {
+			locks: {
+				request: async (_name: string, operation: () => Promise<unknown>) =>
+					operation(),
+			},
+		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () =>
+				Response.json({ message: "Unauthorized" }, { status: 401 }),
+			),
+		);
+
+		await expect(fetchSourceTree()).rejects.toThrow("Unauthorized");
 	});
 });

@@ -13,12 +13,14 @@ describe("WebSearchService", () => {
 		});
 		vi.stubGlobal(
 			"fetch",
-			vi.fn().mockResolvedValue(
-				new Response(
-					"<html><head><title> Page </title></head><body><nav>menu</nav><main>Hello   useful world</main></body></html>",
-					{ headers: { "content-type": "text/html; charset=utf-8" } },
+			vi
+				.fn()
+				.mockResolvedValue(
+					new Response(
+						"<html><head><title> Page </title></head><body><nav>menu</nav><main>Hello   useful world</main></body></html>",
+						{ headers: { "content-type": "text/html; charset=utf-8" } },
+					),
 				),
-			),
 		);
 
 		expect(await service.search({ query: "q" })).toEqual([{ title: "Result" }]);

@@ -36,9 +36,11 @@ describe("HTTP client", () => {
 	it("throws a detailed HttpError for non-success responses", async () => {
 		vi.stubGlobal(
 			"fetch",
-			vi.fn().mockResolvedValue(
-				new Response("bad", { status: 418, statusText: "Teapot" }),
-			),
+			vi
+				.fn()
+				.mockResolvedValue(
+					new Response("bad", { status: 418, statusText: "Teapot" }),
+				),
 		);
 
 		const error = await fetchWithTimeout("https://example.com").catch(
@@ -57,14 +59,15 @@ describe("HTTP client", () => {
 		vi.useFakeTimers();
 		vi.stubGlobal(
 			"fetch",
-			vi.fn((_url: string, init: RequestInit) =>
-				new Promise((_resolve, reject) => {
-					init.signal?.addEventListener("abort", () => {
-						const error = new Error("aborted");
-						error.name = "AbortError";
-						reject(error);
-					});
-				}),
+			vi.fn(
+				(_url: string, init: RequestInit) =>
+					new Promise((_resolve, reject) => {
+						init.signal?.addEventListener("abort", () => {
+							const error = new Error("aborted");
+							error.name = "AbortError";
+							reject(error);
+						});
+					}),
 			),
 		);
 

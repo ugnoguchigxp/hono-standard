@@ -84,13 +84,18 @@ describe("resolveWikiLinkRef", () => {
 
 	it("handles empty, absolute, URI, and malformed metadata candidates", () => {
 		expect(resolveWikiLinkRef({ sourceUri: "" })).toBeNull();
-		expect(resolveWikiLinkRef({ sourceUri: "/tmp/no-pages/guide.md" })).toBeNull();
+		expect(
+			resolveWikiLinkRef({ sourceUri: "/tmp/no-pages/guide.md" }),
+		).toBeNull();
 		expect(resolveWikiLinkRef({ sourceUri: "wiki://guide.md" })).toBeNull();
 		expect(
 			resolveWikiLinkRef({ sourceUri: "guide", sourceMetadata: [] }),
 		).toBeNull();
 		expect(
-			resolveWikiLinkRef({ sourceUri: "guide", sourceMetadata: { relativePath: "" } }),
+			resolveWikiLinkRef({
+				sourceUri: "guide",
+				sourceMetadata: { relativePath: "" },
+			}),
 		).toBeNull();
 	});
 

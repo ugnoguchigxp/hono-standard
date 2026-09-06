@@ -40,6 +40,7 @@ import { createArtifactsRoute } from "../routes/artifacts.route";
 import { createAuthRoute } from "../routes/auth.route";
 import { createChatRoute } from "../routes/chat.route";
 import { createHealthRoute } from "../routes/health.route";
+import { createReadyRoute } from "../routes/ready.route";
 import { createSearchRoute } from "../routes/search.route";
 import { createSettingsRoute } from "../routes/settings.route";
 import { createSourcesRoute } from "../routes/sources.route";
@@ -73,6 +74,8 @@ type AppRuntime = {
 		}): Promise<AgenticSearchResult>;
 	};
 };
+
+export type AppDeps = AppRuntime;
 
 function createAgenticLogger(debug: boolean) {
 	return (params: {
@@ -441,6 +444,10 @@ app.onError(async (error, c) => {
 });
 
 app.route("/api/health", createHealthRoute());
+app.route(
+	"/api/ready",
+	createReadyRoute(() => runtime.dbRuntime.checkReady()),
+);
 app.use(
 	"/api/auth/me",
 	requireAuth({

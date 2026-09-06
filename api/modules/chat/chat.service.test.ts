@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-	conversations,
-	messages,
-	retrievalLogs,
-} from "../../db/schema";
+import { conversations, messages, retrievalLogs } from "../../db/schema";
 import { ChatService } from "./chat.service";
 
 const createDbMock = () => {

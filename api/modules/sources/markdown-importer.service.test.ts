@@ -32,8 +32,16 @@ describe("collectMarkdownFiles", () => {
 		await mkdir(path.join(pagesRoot, "a", "b"), { recursive: true });
 
 		await writeFile(path.join(pagesRoot, "index.md"), "# Home\n", "utf8");
-		await writeFile(path.join(pagesRoot, "a", "nested.md"), "# Nested\n", "utf8");
-		await writeFile(path.join(pagesRoot, "a", "b", "deep.md"), "# Deep\n", "utf8");
+		await writeFile(
+			path.join(pagesRoot, "a", "nested.md"),
+			"# Nested\n",
+			"utf8",
+		);
+		await writeFile(
+			path.join(pagesRoot, "a", "b", "deep.md"),
+			"# Deep\n",
+			"utf8",
+		);
 		await writeFile(path.join(pagesRoot, "a", "note.txt"), "ignore", "utf8");
 
 		const files = await collectMarkdownFiles(root);
@@ -52,7 +60,11 @@ describe("collectMarkdownFiles", () => {
 		const pagesRoot = path.join(root, "pages");
 		await mkdir(path.join(pagesRoot, "tech"), { recursive: true });
 
-		await writeFile(path.join(pagesRoot, "index.md"), "# Legacy Home\n", "utf8");
+		await writeFile(
+			path.join(pagesRoot, "index.md"),
+			"# Legacy Home\n",
+			"utf8",
+		);
 		await writeFile(path.join(pagesRoot, "foo.md"), "# Invalid Top\n", "utf8");
 
 		const sourceRepository = {

@@ -74,7 +74,8 @@ describe("createSearchRoute", () => {
 				}),
 			} as never,
 			webSearchProviderName: "exa",
-			webSearchUnavailableMessage: "Exa Search is not configured. Set EXA_API_KEY.",
+			webSearchUnavailableMessage:
+				"Exa Search is not configured. Set EXA_API_KEY.",
 		});
 
 		const response = await app.request("/", {
