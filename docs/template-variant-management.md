@@ -377,6 +377,8 @@ git push origin overlay/ssr overlay-ssr-v0.1.0
 ### `variant/sqlite`
 
 - `main` と同じ SQLite baseline に追従する。
+- 1 processにつきwritable connectionを1つだけ生成し、全書き込みを共通の `SingleWriterClient` に集約する。
+- file databaseではWALとread-only readerを使い、読み取り経路からの書き込みを許可しない。
 - `main` と差分を作る場合は、互換維持の理由を README とこの文書に明記する。
 - tag / archive 利用者向けに、SQLite variant 名を安定して残す。
 
@@ -397,6 +399,7 @@ git push origin overlay/ssr overlay-ssr-v0.1.0
 ### `variant/turso`
 
 - Turso/libSQL の remote 接続と local file DB fallback を README に明記する。
+- local file DB fallbackではSQLiteと同じ単一writer contractを適用し、remote接続でもprocess内の書き込み入口には共通writer clientを使う。
 - `DATABASE_URL` と `DATABASE_AUTH_TOKEN` の用途を `.env.example` に揃える。
 - SQLite baseline と同じ auth / showcase 構成を保ち、差分を libSQL adapter に限定する。
 

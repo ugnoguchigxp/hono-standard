@@ -3,11 +3,11 @@
 [![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh/)
 [![Hono](https://img.shields.io/badge/Hono-%23E36022.svg?style=for-the-badge&logo=hono&logoColor=white)](https://hono.dev/)
 [![React](https://img.shields.io/badge/React-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://react.dev/)
-[![SQLite](https://img.shields.io/badge/SQLite-003B57.svg?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE.md)
 
-Hono backend と React + Vite frontend を同一 origin で動かす、local SQLite 対応の Web app template です。Drizzle のユーザー認証、httpOnly Cookie による access / refresh token、React Router ベースの画面、コンポーネント showcase を含みます。
+Hono backend と React + Vite frontend を同一 origin で動かす、PostgreSQL対応のWeb app templateです。Drizzleのユーザー認証、httpOnly Cookieによるaccess / refresh token、React Routerベースの画面、コンポーネントshowcaseを含みます。
 
 ## 構成
 
@@ -18,10 +18,8 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 | `api/app/env.ts` | runtime env parser |
 | `api/config/appDefaults.ts` | 非シークレットの既定値 |
 | `api/db/index.ts` | DB runtime の public entry。variant はここから差し替える |
-| `api/db/sqlite.ts` | SQLite baseline の Drizzle runtime |
-| `api/db/schema.ts` | Drizzle SQLite schema |
+| `api/db/schema.ts` | Drizzle PostgreSQL schema |
 | `api/db/migrate.ts` | migration runner の public entry |
-| `api/db/migrate-sqlite.ts` | SQLite baseline の migration runner |
 | `api/routes/auth.route.ts` | `/api/auth/*` route |
 | `api/routes/health.route.ts` | `/api/health` route |
 | `api/routes/protected.route.ts` | `/api/protected/*` の server-side protected sample |
@@ -37,7 +35,7 @@ Hono backend と React + Vite frontend を同一 origin で動かす、local SQL
 | Tool | 用途 |
 | --- | --- |
 | Bun | package manager、runtime、scripts |
-| SQLite | auth user / refresh token storage |
+| PostgreSQL 17+ | auth user / refresh token storage |
 
 ## セットアップ
 
@@ -47,7 +45,7 @@ bun run auth:create-admin -- --email admin@example.com --name "Admin User"
 bun run dev
 ```
 
-`bootstrap` は `.env` を用意し、dependency が未導入なら `bun install --frozen-lockfile` を実行し、SQLite database に migration を適用します。
+`bootstrap`は`.env`を用意し、dependencyが未導入なら`bun install --frozen-lockfile`を実行し、PostgreSQLへの接続確認後にmigrationを適用します。
 
 `auth:create-admin` は対話で password を読みます。自動化する場合は次のように標準入力から渡せます。
 
@@ -75,7 +73,7 @@ bun run verify:e2e
 | `drizzle/*.sql` | Drizzle migration source。commit 対象 |
 | `.env.example` | local development の雛形。commit 対象 |
 | `.env*` | local secret / runtime env。`.env.example` 以外は commit しない |
-| `data/`, `*.db`, `*.sqlite`, `*.sqlite3` | local SQLite database。commit しない |
+| `backups/`, `*.dump` | PostgreSQL backup。commit しない |
 | `coverage/`, `playwright-report/`, `test-results/` | verification output。commit しない |
 | `dist/`, `dist-web/`, `build/`, `*.tgz` | build / archive output。commit しない |
 
@@ -88,7 +86,7 @@ bun run verify:e2e
 | `NODE_ENV` | no | `development` / `test` / `production` | `development` |
 | `HOST` | no | HTTP bind host。container では `0.0.0.0` を指定 | `127.0.0.1` |
 | `PORT` | no | HTTP server port | `5173` |
-| `DATABASE_URL` | no | SQLite database file path | `data/sqlite.db` |
+| `DATABASE_URL` | no | PostgreSQL connection URL | `postgres://postgres:postgres@localhost:5432/hono_standard` |
 | `JWT_SECRET` | production yes | JWT signing secret。32 文字以上。production では未設定または dev default のままだと起動しません | dev default |
 | `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | no | 1アカウント・1windowあたりのlogin試行上限 | `5` |
 | `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | no | login試行上限を保持する秒数 | `300` |
@@ -104,7 +102,7 @@ bun run verify:e2e
 
 | Command | Purpose |
 | --- | --- |
-| `bun run bootstrap` | clone 後の初期化。`.env` を用意し、SQLite database に migration を適用 |
+| `bun run bootstrap` | clone後の初期化。`.env`を用意し、PostgreSQLにmigrationを適用 |
 | `bun run seed:dev` | development 専用の demo admin 作成。production では失敗 |
 | `bun run template:authless -- <new-directory>` | auth / protected sample / showcaseを除いた新規コピーを生成 |
 | `bun run dev` | Vite + Hono dev server |
@@ -113,6 +111,9 @@ bun run verify:e2e
 | `bun run db:migrate` | `drizzle/*.sql` を順番に適用 |
 | `bun run db:generate` | Drizzle migration 生成 |
 | `bun run db:migrate:drizzle` | drizzle-kit migration。`DATABASE_URL` は process env または `.env` から読む |
+| `bun run db:backup -- <new-file>` | `pg_dump` custom formatでバックアップを作成・検証 |
+| `bun run db:verify-backup -- <file>` | `pg_restore --list`でバックアップを検証 |
+| `bun run db:restore -- <file>` | 明示した別URLへバックアップを復元 |
 | `bun run typecheck` | TypeScript check |
 | `bun run lint` | Biome lint |
 | `bun run format` | Biome format write |
@@ -132,6 +133,7 @@ bun run verify:e2e
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/health` | health check |
+| `GET` | `/api/ready` | PostgreSQLとmigrationのreadiness check |
 | `POST` | `/api/auth/login` | email/password login。httpOnly cookie を設定 |
 | `POST` | `/api/auth/refresh` | refresh token rotation。使用済みtokenの再提示時はtoken familyを失効 |
 | `POST` | `/api/auth/logout` | refresh token revoke と cookie clear |
@@ -166,17 +168,17 @@ production では `JWT_SECRET` を必ず強いランダム値に変更してく�
 
 server lifecycle、request summary、server errorは1行JSONで標準出力または標準エラーへ記録します。request logは`requestId`、method、path、status、durationを含み、受信した安全な`X-Request-Id`を引き継ぎます。
 
-SQLite baseline では `DATABASE_URL` は永続化される file path にしてください。container や VM で動かす場合は、DB file を volume に置き、起動前に `bun run db:migrate` を実行します。`PORT` は platform 側が指定する値に合わせて上書きできます。
+`DATABASE_URL`にはTLS、認証、接続数を環境に合わせたPostgreSQL URLを指定し、起動前に`bun run db:migrate`を実行します。停止、readiness、バックアップ、復元の手順は[`docs/operations.md`](docs/operations.md)を参照してください。
 
 ## Docker
 
-SQLite baseline を container で試す場合:
+PostgreSQLとappをcontainerで試す場合:
 
 ```bash
 COMPOSE_JWT_SECRET='<32+ random chars>' docker compose up --build
 ```
 
-compose は `./data` を永続 volume として mount し、container 起動時に migration 後 `bun run start` を実行します。Docker HEALTHCHECKはcontainer内から`/api/health`を確認します。`COMPOSE_JWT_SECRET` は compose 実行時の必須環境変数で、container 内では `JWT_SECRET` として渡されます。production 公開時は `COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header mode を必ず環境に合わせて変更してください。
+composeはPostgreSQLのhealthcheck成功後にmigrationとappを起動します。appのDocker HEALTHCHECKは`/api/ready`を確認し、停止時は最大15秒待機します。production公開時はDB password、`COMPOSE_JWT_SECRET`、`APP_URL`、cookie secure mode、security header modeを環境に合わせて変更してください。
 
 ## 品質ゲート
 
@@ -205,7 +207,7 @@ Delivery の必須 Gate、リスクに応じて追加する mutation / performan
 - `main` は SQLite baseline です。Turso / PostgreSQL / pgvector は `docs/template-variant-management.md` の contract に沿って branch を分けます。
 - 認証は optional UI として残しています。Home と Showcase は未ログインでも表示されます。
 - `/protected` と `/api/protected/profile` は protected route の最小サンプルです。新しい login-required 画面や API を追加するときの起点にしてください。
-- SQLite は auth user と refresh token 保存に使います。
+- PostgreSQLはauth userとrefresh token保存に使います。
 - clone 後は `package.json` の name / description、README、`.env.example`、DB 名、cookie/CORS/security 設定を利用先に合わせて見直してください。
 - さらに小さいstarterが必要な場合は、`bun run template:authless -- ../my-app`でauth/showcaseを除いた新規コピーを生成してください。元のcheckoutは変更しません。
 
@@ -216,7 +218,7 @@ clone 後に見直す項目:
 - `package.json` の `name` / `version` / `description` / repository metadata。
 - README のプロジェクト名、セットアップ手順、production 手順。
 - `.env.example` と deployment secret。
-- `DATABASE_URL`、DB 永続化 path、migration 実行タイミング。
+- `DATABASE_URL`、DB backup、migration実行タイミング。
 - cookie / CORS / CSRF / CSP / security header の本番設定。
 - sample route と showcase を残すか削るか。
 - license / author。

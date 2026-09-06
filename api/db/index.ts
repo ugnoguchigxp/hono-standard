@@ -1,6 +1,8 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { type Client, Pool } from "pg";
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+import { type Client, Pool, type PoolClient } from "pg";
 import * as schema from "./schema";
 import type { AppEnv } from "../app/env";
 import { createSingleWriterClient, type DatabaseClient } from "./client";
@@ -18,9 +20,59 @@ export type DbConnection = {
 export type DbRuntime = {
 	client: AppDatabaseClient;
 	db: AppDatabase;
+	checkReady: () => Promise<void>;
 	close: () => Promise<void>;
 	connection: DbConnection;
 };
+
+const MIGRATIONS_TABLE = "hono_standard_schema_migrations";
+
+async function expectedMigrations(): Promise<string[]> {
+	const entries = await readdir(path.resolve(process.cwd(), "drizzle"), {
+		withFileTypes: true,
+	});
+	return entries
+		.filter((entry) => entry.isFile() && entry.name.endsWith(".sql"))
+		.map((entry) => entry.name)
+		.sort((a, b) => a.localeCompare(b));
+}
+
+async function probeConnection(connection: DbConnection): Promise<void> {
+	const expected = await expectedMigrations();
+	const acquired =
+		connection.pgClient instanceof Pool
+			? await connection.pgClient.connect()
+			: connection.pgClient;
+	const client = acquired as Client | PoolClient;
+	let began = false;
+	try {
+		await client.query("BEGIN READ WRITE");
+		began = true;
+		await client.query("SELECT 1");
+		const schemaResult = await client.query<{
+			users: string | null;
+			refresh_tokens: string | null;
+		}>(
+			"SELECT to_regclass('public.users')::text AS users, to_regclass('public.refresh_tokens')::text AS refresh_tokens",
+		);
+		if (!schemaResult.rows[0]?.users || !schemaResult.rows[0]?.refresh_tokens) {
+			throw new Error("Required database tables are missing");
+		}
+		const migrations = await client.query<{ filename: string }>(
+			`SELECT filename FROM ${MIGRATIONS_TABLE}`,
+		);
+		const applied = new Set(migrations.rows.map((row) => row.filename));
+		const pending = expected.filter((filename) => !applied.has(filename));
+		if (pending.length > 0) throw new Error("Database migrations are pending");
+		await client.query("ROLLBACK");
+		began = false;
+	} finally {
+		if (began) await client.query("ROLLBACK").catch(() => undefined);
+		if (connection.pgClient instanceof Pool) {
+			(acquired as PoolClient).release();
+		}
+	}
+}
 
 export function createDbConnection(databaseUrl: string): DbConnection {
 	const pool = new Pool({ connectionString: databaseUrl });
@@ -36,6 +88,8 @@ export function wrapExternalClient(pgClient: Client | Pool): DbConnection {
 export function createDbRuntime(env: AppEnv): DbRuntime {
 	const connection = createDbConnection(env.databaseUrl);
 	const writer = createSingleWriterClient(connection.db);
+	let closed = false;
+	let readinessProbe: Promise<void> | undefined;
 	return {
 		client: {
 			read: connection.db,
@@ -43,7 +97,17 @@ export function createDbRuntime(env: AppEnv): DbRuntime {
 		},
 		db: connection.db,
 		connection,
+		checkReady: () => {
+			if (closed)
+				return Promise.reject(new Error("Database runtime is closed"));
+			readinessProbe ??= probeConnection(connection).finally(() => {
+				readinessProbe = undefined;
+			});
+			return readinessProbe;
+		},
 		close: async () => {
+			if (closed) return;
+			closed = true;
 			await writer.close();
 			if (connection.ownsConnection && connection.pgClient instanceof Pool) {
 				await connection.pgClient.end();

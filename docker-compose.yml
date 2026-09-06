@@ -8,9 +8,34 @@ services:
       POSTGRES_DB: hono_standard
     ports:
       - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hono_standard"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
     restart: unless-stopped
+    stop_grace_period: 15s
     volumes:
       - pgdata:/var/lib/postgresql/data
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    stop_grace_period: 15s
+    ports:
+      - "5173:5173"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 5173
+      DATABASE_URL: postgres://postgres:postgres@db:5432/hono_standard
+      JWT_SECRET: ${COMPOSE_JWT_SECRET:?Set COMPOSE_JWT_SECRET to a 32+ character production secret before running docker compose.}
+      APP_URL: http://localhost:5173
+      CORS_ORIGINS: http://localhost:5173
+      AUTH_COOKIE_SECURE: "false"
+      AUTH_COOKIE_SAME_SITE: lax
+      SECURITY_HEADERS_MODE: http
 
 volumes:
   pgdata:

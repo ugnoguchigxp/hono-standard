@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	setQueryData: vi.fn(),
+	cancelQueries: vi.fn().mockResolvedValue(undefined),
+	removeQueries: vi.fn(),
 	useMutation: vi.fn((options) => options),
 	useQuery: vi.fn((options) => options),
 	useQueryClient: vi.fn(),
@@ -28,13 +30,15 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mocks.useQueryClient.mockReturnValue({
 		setQueryData: mocks.setQueryData,
+		cancelQueries: mocks.cancelQueries,
+		removeQueries: mocks.removeQueries,
 	});
 });
 
 describe("web API hooks", () => {
 	it("configures current-user and protected-profile queries", () => {
 		useCurrentUserQuery(false);
-		useProtectedProfileQuery();
+		useProtectedProfileQuery("user-id");
 
 		expect(mocks.useQuery).toHaveBeenNthCalledWith(1, {
 			queryKey: authMeQueryKey,
@@ -42,7 +46,7 @@ describe("web API hooks", () => {
 			enabled: false,
 		});
 		expect(mocks.useQuery).toHaveBeenNthCalledWith(2, {
-			queryKey: protectedProfileQueryKey,
+			queryKey: [...protectedProfileQueryKey, "user-id"],
 			queryFn: fetchProtectedProfile,
 			enabled: true,
 		});
@@ -75,19 +79,13 @@ describe("web API hooks", () => {
 	});
 
 	it("clears the current-user cache before the logout callback", async () => {
-		const onSettled = vi.fn();
+		const onSuccess = vi.fn();
 
-		useLogoutMutation({ onSettled });
+		useLogoutMutation({ onSuccess });
 		const options = mocks.useMutation.mock.calls[0]?.[0];
-		await options.onSettled(undefined, null, undefined, undefined, {});
+		await options.onSuccess(undefined, undefined, undefined, {});
 
 		expect(mocks.setQueryData).toHaveBeenCalledWith(authMeQueryKey, null);
-		expect(onSettled).toHaveBeenCalledWith(
-			undefined,
-			null,
-			undefined,
-			undefined,
-			{},
-		);
+		expect(onSuccess).toHaveBeenCalledWith(undefined, undefined, undefined, {});
 	});
 });

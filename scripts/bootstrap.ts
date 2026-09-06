@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { parseEnv } from "node:util";
 
 const defaultDatabaseUrl = "data/sqlite.db";
 const urlWithAuthorityPattern = /^[a-z][a-z0-9+.-]*:\/\//i;
@@ -73,32 +74,27 @@ function parseDotenv(text: string): DotenvEntry[] {
 		const trimmed = raw.trim();
 		if (!trimmed || trimmed.startsWith("#")) return { type: "raw", raw };
 
-		const separator = raw.indexOf("=");
-		if (separator === -1) return { type: "raw", raw };
+		const assignment = /^\s*(?:export\s+)?([\w]+)\s*=/.exec(raw);
+		if (!assignment) return { type: "raw", raw };
+		const key = assignment[1];
 
 		return {
 			type: "assignment",
-			key: raw.slice(0, separator).trim(),
-			value: raw
-				.slice(separator + 1)
-				.trim()
-				.replace(/^(['"])(.*)\1$/, "$2"),
+			key,
+			value: parseEnv(raw)[key] ?? "",
 			raw,
 		};
 	});
 }
 
-function serializeDotenv(entries: DotenvEntry[]): string {
-	const lines = entries.map((entry) => {
-		if (entry.type === "raw") return entry.raw;
-		return `${entry.key}=${entry.value}`;
-	});
+function serializeDotenv(entries: DotenvEntry[], newline: string): string {
+	const lines = entries.map((entry) => entry.raw);
 
 	while (lines.length > 0 && lines[lines.length - 1] === "") {
 		lines.pop();
 	}
 
-	return `${lines.join("\n")}\n`;
+	return `${lines.join(newline)}${newline}`;
 }
 
 function readDefaultDatabaseUrl(cwd: string): string {
@@ -148,7 +144,8 @@ export function ensureEnvFile(cwd = process.cwd()): string {
 		console.log("created .env from .env.example");
 	}
 
-	const entries = parseDotenv(fs.readFileSync(envPath, "utf8"));
+	const currentText = fs.readFileSync(envPath, "utf8");
+	const entries = parseDotenv(currentText);
 	const defaultDatabaseUrlForVariant = readDefaultDatabaseUrl(cwd);
 	const databaseEntry = entries.find(
 		(entry): entry is Extract<DotenvEntry, { type: "assignment" }> =>
@@ -161,7 +158,7 @@ export function ensureEnvFile(cwd = process.cwd()): string {
 			type: "assignment",
 			key: "DATABASE_URL",
 			value: databaseUrl,
-			raw: "",
+			raw: `DATABASE_URL=${JSON.stringify(databaseUrl)}`,
 		});
 	} else if (
 		shouldUseVariantDatabaseDefault(
@@ -171,13 +168,18 @@ export function ensureEnvFile(cwd = process.cwd()): string {
 	) {
 		databaseUrl = defaultDatabaseUrlForVariant;
 		databaseEntry.value = databaseUrl;
+		databaseEntry.raw = `DATABASE_URL=${databaseUrl}`;
+	} else {
+		return databaseUrl;
 	}
 
-	const nextText = serializeDotenv(entries);
-	const currentText = fs.readFileSync(envPath, "utf8");
+	const nextText = serializeDotenv(
+		entries,
+		currentText.includes("\r\n") ? "\r\n" : "\n",
+	);
 	if (nextText !== currentText) {
 		fs.writeFileSync(envPath, nextText);
-		console.log("updated .env for local SQLite");
+		console.log("updated .env for this database variant");
 	}
 
 	return databaseUrl;
