@@ -1,0 +1,23 @@
+{
+  "seed": 1,
+  "scenario": "food",
+  "learningMode": "frozen",
+  "durationMs": 60000,
+  "status": "paused",
+  "simTimeMs": 60000,
+  "body": {
+    "energy": 0.5900000000000066,
+    "hunger": 0.7199999999999868,
+    "fatigue": 0.2599999999999934,
+    "matingDrive": 0.1299999999999967,
+    "alive": true
+  },
+  "counters": {
+    "spikes": 18339,
+    "propagated": 220068,
+    "invalidDeliveries": 0,
+    "visitedNeurons": 251357
+  },
+  "topologyVersion": 12000,
+  "actionCount": 0
+}

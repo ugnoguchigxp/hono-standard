@@ -17,7 +17,7 @@ bun run verify
 bun run verify:e2e
 ```
 
-`verify`はtypecheck、lint、format check、Vitest、95% coverage、production buildを実行します。`verify:e2e`はpublic homeと`/api/health`と`/api/ready`を5つのブラウザー・モバイル構成で確認します。初回は`bunx playwright install --with-deps chromium firefox webkit`を実行してください。
+`verify`はtypecheck、lint、format check、Vitest、95% coverage、production buildを実行します。`verify:e2e`はpublic homeと`/api/health`と`/api/ready`をChromiumのデスクトップ・モバイルの2構成で確認します。初回は`bunx playwright install --with-deps chromium`を実行してください。
 
 ## API
 

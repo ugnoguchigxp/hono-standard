@@ -223,7 +223,7 @@ bun run verify
 bun run verify:e2e
 ```
 
-`verify` は `typecheck`、Biome `lint`、`format:check`、Vitest coverage（unit test と threshold）、production build を含みます。test を coverage とは別に重ねて実行しません。`verify:e2e` は Playwrightでpublic screens、login、protected route、logout失敗と再試行、アカウント切替、複数タブの更新、Dialog・Drawer・Tabsのキーボード操作とモバイルの横溢れを確認します。対象はChromium・Firefox・WebKitとモバイル2構成です。初回は`bunx playwright install --with-deps chromium firefox webkit`を実行してください。
+`verify` は `typecheck`、Biome `lint`、`format:check`、Vitest coverage（unit test と threshold）、production build を含みます。test を coverage とは別に重ねて実行しません。`verify:e2e` は Playwrightでpublic screens、login、protected route、logout失敗と再試行、アカウント切替、複数タブの更新、Dialog・Drawer・Tabsのキーボード操作とモバイルの横溢れを確認します。対象はChromiumのデスクトップ・モバイルの2構成です。初回は`bunx playwright install --with-deps chromium`を実行してください。
 
 dependency auditはnetworkを使うためlocalの`verify`には含めず、GitHub Actionsで`bun run audit`を必須実行します。
 

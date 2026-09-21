@@ -4,7 +4,14 @@ import {
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
-import { Database, Home, LayoutGrid, LogOut, Shield } from "lucide-react";
+import {
+	Database,
+	Home,
+	LayoutGrid,
+	LogOut,
+	Shield,
+	Brain,
+} from "lucide-react";
 import { AuthProvider, useAuth } from "../auth-context";
 import { DevErrorPanel } from "../components/dev-error-panel";
 import { defaultShowcaseTableSearch } from "../showcase-table-search";
@@ -29,6 +36,14 @@ function AppLayout() {
 						>
 							<Home className="icon" />
 							Home
+						</Link>
+						<Link
+							to="/brain-sandbox"
+							className="menu-link"
+							activeProps={{ className: "menu-link active" }}
+						>
+							<Brain className="icon" />
+							Brain sandbox
 						</Link>
 						<Link
 							to="/showcase"

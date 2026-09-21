@@ -1,0 +1,23 @@
+{
+  "seed": 1,
+  "scenario": "mating",
+  "learningMode": "full",
+  "durationMs": 60000,
+  "status": "paused",
+  "simTimeMs": 60000,
+  "body": {
+    "energy": 0.5900000000000066,
+    "hunger": 0.7199999999999868,
+    "fatigue": 0.2599999999999934,
+    "matingDrive": 0.8299999999999967,
+    "alive": true
+  },
+  "counters": {
+    "spikes": 20513,
+    "propagated": 246156,
+    "invalidDeliveries": 0,
+    "visitedNeurons": 280837
+  },
+  "topologyVersion": 12064,
+  "actionCount": 0
+}

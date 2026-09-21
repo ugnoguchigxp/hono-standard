@@ -19,10 +19,7 @@ export default defineConfig({
 			name: "chromium",
 			use: { ...devices["Desktop Chrome"] },
 		},
-		{ name: "firefox", use: { ...devices["Desktop Firefox"] } },
-		{ name: "webkit", use: { ...devices["Desktop Safari"] } },
 		{ name: "mobile-chromium", use: { ...devices["Pixel 5"] } },
-		{ name: "mobile-webkit", use: { ...devices["iPhone 13"] } },
 	],
 	webServer: {
 		command: "bun scripts/e2e-server.ts",

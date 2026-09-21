@@ -68,8 +68,8 @@ describe("CLI contract", () => {
 		expectSuccess(firstRun);
 		expect(parseLastJsonObject(firstRun.stdout)).toMatchObject({
 			ok: true,
-			total: 2,
-			applied: 2,
+			total: 3,
+			applied: 3,
 			skipped: 0,
 		});
 
@@ -77,9 +77,9 @@ describe("CLI contract", () => {
 		expectSuccess(secondRun);
 		expect(parseLastJsonObject(secondRun.stdout)).toMatchObject({
 			ok: true,
-			total: 2,
+			total: 3,
 			applied: 0,
-			skipped: 2,
+			skipped: 3,
 		});
 	});
 

@@ -58,3 +58,76 @@ export const refreshTokens = sqliteTable(
 		familyIdIdx: index("refresh_tokens_family_id_idx").on(table.familyId),
 	}),
 );
+
+/** Durable experiment metadata. Snapshots deliberately omit PRNG and queue state: runs never resume after restart. */
+export const brainExperiments = sqliteTable(
+	"brain_experiments",
+	{
+		runId: text("run_id").primaryKey(),
+		ownerUserId: text("owner_user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		status: text("status").notNull(),
+		terminalReason: text("terminal_reason"),
+		seed: integer("seed").notNull(),
+		engineVersion: integer("engine_version").notNull(),
+		configVersion: integer("config_version").notNull(),
+		resolvedConfig: text("resolved_config").notNull(),
+		initialTopology: text("initial_topology").notNull(),
+		finalSnapshot: text("final_snapshot"),
+		summaryMetrics: text("summary_metrics"),
+		revision: integer("revision").notNull().default(0),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		ownerIdx: index("brain_experiments_owner_idx").on(table.ownerUserId),
+		statusIdx: index("brain_experiments_status_idx").on(table.status),
+	}),
+);
+export const brainCheckpoints = sqliteTable(
+	"brain_checkpoints",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		runId: text("run_id")
+			.notNull()
+			.references(() => brainExperiments.runId, { onDelete: "cascade" }),
+		simTimeMs: integer("sim_time_ms").notNull(),
+		snapshot: text("snapshot").notNull(),
+		metrics: text("metrics").notNull(),
+	},
+	(table) => ({
+		uniqueTime: uniqueIndex("brain_checkpoints_run_time_idx").on(
+			table.runId,
+			table.simTimeMs,
+		),
+	}),
+);
+export const brainCommands = sqliteTable(
+	"brain_commands",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		ownerUserId: text("owner_user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		commandId: text("command_id").notNull(),
+		runId: text("run_id")
+			.notNull()
+			.references(() => brainExperiments.runId, { onDelete: "cascade" }),
+		payloadHash: text("payload_hash").notNull(),
+		response: text("response").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		commandIdx: uniqueIndex("brain_commands_owner_command_idx").on(
+			table.ownerUserId,
+			table.commandId,
+		),
+	}),
+);

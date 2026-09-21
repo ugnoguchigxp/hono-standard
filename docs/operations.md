@@ -63,12 +63,12 @@ Dockerでは`DATABASE_URL`を新しい`/data/...`のパスへ変更します。�
 ## ブラウザーと負荷の検証
 
 ```bash
-bunx playwright install --with-deps chromium firefox webkit
+bunx playwright install --with-deps chromium
 bun run verify:e2e
 bun run verify:load --requests 200 --concurrency 8 --runs 3 --max-p95-ms 500 --output /tmp/load-check.json
 ```
 
-E2EはChromium・Firefox・WebKitのデスクトップ、ChromiumのPixel 5、WebKitのiPhone 13の5構成です。モバイルはエミュレーションであり、実機試験を置き換えるものではありません。認証を含む構成では、ログイン・ログアウト・複数タブ更新に加え、Drawer/Dialogのフォーカス・Escape・復帰、[Tabsの矢印/Home/End操作](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)、320/390/768pxの横溢れも確認します。
+E2EはChromiumのデスクトップとPixel 5の2構成です。モバイルはエミュレーションであり、実機試験を置き換えるものではありません。認証を含む構成では、ログイン・ログアウト・複数タブ更新に加え、Drawer/Dialogのフォーカス・Escape・復帰、[Tabsの矢印/Home/End操作](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)、320/390/768pxの横溢れも確認します。
 
 `verify:load`は一時DBとlocalhostの空きポートを使い、終了時に削除します。認証付き構成では利用者ごとに独立したセッションを持つワーカーで、認証・DB読み取りを通るprofile取得と、DB書き込みを伴うrefresh token更新を測ります。認証なし構成ではhealthとDB readinessを測ります。ウォームアップ後に複数回測り、p50/p95/p99、毎秒リクエスト数、エラー件数、各回終了時のRSSを出力します。
 

@@ -11,10 +11,14 @@ import { createDbRuntime } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { createRequestLogger } from "../middleware/request-logger";
 import { AuthService } from "../modules/auth/auth.service";
+import { BrainSandboxService } from "../modules/brain-sandbox/service";
+import { BrainSandboxScheduler } from "../modules/brain-sandbox/scheduler";
+import { BrainPersistence } from "../modules/brain-sandbox/persistence";
 import { createAuthRoute } from "../routes/auth.route";
 import { createHealthRoute } from "../routes/health.route";
 import { createReadyRoute } from "../routes/ready.route";
 import { createProtectedRoute } from "../routes/protected.route";
+import { createExperimentRoute } from "../routes/experiment.route";
 import { type AppEnv, readAppEnv } from "./env";
 import { HttpError } from "./http-error";
 import { appContentSecurityPolicy } from "./security-headers";
@@ -28,6 +32,8 @@ export type AppDeps = {
 	env: AppEnv;
 	dbRuntime: DbRuntime;
 	authService: AuthService;
+	brainSandboxService: BrainSandboxService;
+	brainSandboxScheduler: BrainSandboxScheduler;
 };
 
 declare global {
@@ -38,7 +44,19 @@ export async function createDefaultAppDeps(): Promise<AppDeps> {
 	const env = readAppEnv();
 	const dbRuntime = createDbRuntime(env);
 	const authService = new AuthService(dbRuntime.client, env);
-	return { env, dbRuntime, authService };
+	const brainPersistence = new BrainPersistence(dbRuntime.client);
+	// Startup remains available while migrations are pending; the readiness probe reports that state.
+	await brainPersistence.markInterrupted().catch(() => undefined);
+	const brainSandboxService = new BrainSandboxService(brainPersistence);
+	const brainSandboxScheduler = new BrainSandboxScheduler(brainSandboxService);
+	brainSandboxScheduler.start();
+	return {
+		env,
+		dbRuntime,
+		authService,
+		brainSandboxService,
+		brainSandboxScheduler,
+	};
 }
 
 export async function getAppRuntime(): Promise<AppDeps> {
@@ -72,6 +90,15 @@ export function createApiRoutes(deps: AppDeps) {
 		)
 		.use("/protected/admin", requireRole("admin"))
 		.route("/protected", createProtectedRoute())
+		.use(
+			"/experiments",
+			requireAuth({ env: deps.env, authService: deps.authService }),
+		)
+		.use(
+			"/experiments/*",
+			requireAuth({ env: deps.env, authService: deps.authService }),
+		)
+		.route("/experiments", createExperimentRoute(deps.brainSandboxService))
 		.use(
 			"/auth/me",
 			requireAuth({

@@ -1,4 +1,4 @@
-const sessionCheckedPathPrefixes = ["/protected"] as const;
+const sessionCheckedPathPrefixes = ["/protected", "/brain-sandbox"] as const;
 
 export function requiresSessionCheck(pathname: string): boolean {
 	return (

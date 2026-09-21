@@ -125,7 +125,7 @@ const parseErrorMessage = async (response: Response): Promise<string> => {
 	return message;
 };
 
-const customFetch = async (
+export const fetchWithSession = async (
 	input: RequestInfo | URL,
 	init?: RequestInit,
 ): Promise<Response> => {
@@ -158,7 +158,7 @@ const customFetch = async (
 };
 
 const client = hc<AppType>("/api", {
-	fetch: customFetch,
+	fetch: fetchWithSession,
 });
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {

@@ -69,6 +69,8 @@ async function performShutdown(
 			(async () => {
 				await server.stop(false);
 				const runtime = await getRuntime();
+				await runtime.brainSandboxScheduler?.stop();
+				await runtime.brainSandboxService?.shutdown();
 				await runtime.dbRuntime.close();
 			})(),
 			new Promise<never>((_, reject) => {
