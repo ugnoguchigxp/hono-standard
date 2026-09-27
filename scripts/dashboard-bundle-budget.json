@@ -2,6 +2,9 @@
 	"schemaVersion": 1,
 	"initial": { "rawBytes": 900000, "gzipBytes": 260000 },
 	"dashboardShell": { "rawBytes": 320000, "gzipBytes": 90000 },
+	"gridSurface": { "rawBytes": 385000, "gzipBytes": 115000 },
+	"spatialSurface": { "rawBytes": 200000, "gzipBytes": 60000 },
+	"spatialScene": { "rawBytes": 1150000, "gzipBytes": 310000 },
 	"kpiRenderers": {
 		"core-stat": { "rawBytes": 260000, "gzipBytes": 80000 },
 		"core-gauge": { "rawBytes": 260000, "gzipBytes": 80000 },

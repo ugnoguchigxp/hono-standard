@@ -19,6 +19,22 @@ test("dashboard gallery supports reduced motion and keyboard focus", async ({ pa
 	expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
 });
 
+test("Spatial HTML selection remains accessible alongside the canvas", async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	await openDashboard(page);
+	await page.getByRole("button", { name: "Spatial" }).click();
+	await expect(page.locator('[data-spatial-ready="true"]')).toBeVisible();
+	await expect(page.getByRole("heading", { name: "Entities" })).toBeVisible();
+	await expect(page.getByRole("heading", { name: "Boundaries" })).toBeVisible();
+	await expect(page.locator(".spatial-canvas canvas")).toBeVisible();
+	await page.getByRole("button", { name: /Agent Core —/ }).focus();
+	await page.keyboard.press("Enter");
+	await expect(page.getByRole("complementary", { name: "Selected signal details" })).toContainText("Health");
+	const results = await new AxeBuilder({ page }).analyze();
+	const blocking = results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""));
+	expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+});
+
 test("KPI status remains readable in forced colors and at 200 percent zoom", async ({ page }) => {
 	await page.emulateMedia({ forcedColors: "active" });
 	await openDashboard(page, { gallery: true });

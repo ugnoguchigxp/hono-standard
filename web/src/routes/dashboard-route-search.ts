@@ -13,6 +13,7 @@ export type DashboardRouteSearch = {
 	timezone?: string;
 	refresh?: number;
 	filters?: DashboardFiltersV2;
+	surface?: "grid" | "spatial";
 };
 
 const rangeSchema = z.enum(["15m", "1h", "6h", "24h", "7d", "custom"]);
@@ -66,6 +67,10 @@ export function parseDashboardRouteSearch(
 				: undefined,
 		refresh,
 		filters: normalizeFilters(search.filters),
+		surface:
+			search.surface === "grid" || search.surface === "spatial"
+				? search.surface
+				: undefined,
 	};
 }
 
@@ -154,6 +159,9 @@ export function resolveDashboardSearch(input: {
 		timezone,
 		refresh,
 		filters,
+		...(routeSearch.surface === "spatial"
+			? { surface: "spatial" as const }
+			: {}),
 	};
 	const value = {
 		range: candidateRange,

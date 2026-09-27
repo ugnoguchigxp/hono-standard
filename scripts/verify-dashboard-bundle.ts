@@ -11,6 +11,9 @@ const budget = JSON.parse(
 ) as {
 	initial: { rawBytes: number; gzipBytes: number };
 	dashboardShell: { rawBytes: number; gzipBytes: number };
+	gridSurface: { rawBytes: number; gzipBytes: number };
+	spatialSurface: { rawBytes: number; gzipBytes: number };
+	spatialScene: { rawBytes: number; gzipBytes: number };
 	kpiRenderers: Record<string, { rawBytes: number; gzipBytes: number }>;
 	stateRenderers: Record<string, { rawBytes: number; gzipBytes: number }>;
 	specializedRenderers: Record<string, { rawBytes: number; gzipBytes: number }>;
@@ -24,6 +27,8 @@ const forbidden = [
 	"react-grid-layout",
 	"ResponsiveContainer",
 	"LineChart",
+	"WebGLRenderer",
+	"WebGL2RenderingContext",
 ];
 const read = async (file: string) => fs.readFile(path.join(root, file), "utf8");
 const manifestPath = path.join(root, ".vite", "manifest.json");
@@ -111,11 +116,59 @@ if (!dashboardKey || !dashboardChunk)
 const dashboardFiles = graph(dashboardKey);
 // The app entry is the parent of the lazy route, not part of the dashboard shell.
 dashboardFiles.delete(entry.file);
-const dashboardSources = await Promise.all([...dashboardFiles].map(read));
-if (!dashboardSources.some((source) => source.includes("react-grid-layout")))
+const gridKey = "src/domains/dashboard/v2/grid-surface.tsx";
+const spatialKey = "src/domains/dashboard/v2/spatial/spatial-surface.tsx";
+if (
+	!dashboardChunk.dynamicImports?.includes(gridKey) ||
+	!dashboardChunk.dynamicImports.includes(spatialKey)
+)
 	throw new Error(
-		"Dashboard bundle gate: dashboard graph does not contain grid code",
+		"Dashboard bundle gate: Grid and Spatial must be lazy surfaces",
 	);
+const gridFiles = graph(gridKey);
+gridFiles.delete(entry.file);
+const spatialFiles = graph(spatialKey);
+spatialFiles.delete(entry.file);
+const gridSources = await Promise.all([...gridFiles].map(read));
+if (!gridSources.some((source) => source.includes("react-grid-layout")))
+	throw new Error(
+		"Dashboard bundle gate: Grid surface does not contain grid code",
+	);
+await assertGraphDoesNotContain("dashboard shell", dashboardFiles);
+await assertGraphDoesNotContain("spatial surface", spatialFiles);
+const sceneHostKey = "src/domains/dashboard/v2/spatial/scene-host.tsx";
+const sceneCanvasKey = "src/domains/dashboard/v2/spatial/scene-canvas.tsx";
+if (
+	!entryByKey(spatialKey)?.dynamicImports?.includes(sceneHostKey) ||
+	!entryByKey(sceneHostKey)?.dynamicImports?.includes(sceneCanvasKey)
+)
+	throw new Error(
+		"Dashboard bundle gate: Three.js scene must be lazy behind the Spatial HTML surface",
+	);
+const sceneFiles = new Set([...graph(sceneHostKey), ...graph(sceneCanvasKey)]);
+for (const [name, files] of [
+	["initial", staticFiles],
+	["dashboard shell", dashboardFiles],
+	["Grid", gridFiles],
+	["Spatial HTML", spatialFiles],
+] as const)
+	if (
+		[...sceneFiles].some(
+			(file) => file.includes("scene-canvas") && files.has(file),
+		)
+	)
+		throw new Error(`Dashboard bundle gate: scene canvas leaked into ${name}`);
+const sceneIncrement = new Set(
+	[...sceneFiles].filter(
+		(file) => !spatialFiles.has(file) && !staticFiles.has(file),
+	),
+);
+const sceneBytes = await graphBytes(sceneIncrement);
+assertBudget("spatial scene", sceneBytes, budget.spatialScene);
+// Renderer budgets measure bytes added after the Grid surface has loaded.
+// Shared chunks can move between entry and lazy graphs as the route is split.
+const incrementalRendererGraph = (rendererKey: string) =>
+	new Set([...graph(rendererKey)].filter((file) => !gridFiles.has(file)));
 
 const rendererKeys = [
 	"src/domains/dashboard/v2/visualizations/core-timeseries/renderer.lazy.tsx",
@@ -164,7 +217,7 @@ const specializedRendererKeys = [
 	(type) => `src/domains/dashboard/v2/visualizations/${type}/renderer.lazy.tsx`,
 );
 const dashboardEntries = Object.values(manifest).filter((item) =>
-	dashboardFiles.has(item.file),
+	gridFiles.has(item.file),
 );
 for (const rendererKey of rendererKeys)
 	if (
@@ -198,7 +251,7 @@ for (const rendererKey of stateRendererKeys) {
 			`Dashboard bundle gate: ${rendererKey} is not a dashboard dynamic renderer`,
 		);
 	const type = rendererKey.split("/").at(-2) ?? rendererKey;
-	const actual = await graphBytes(graph(rendererKey));
+	const actual = await graphBytes(incrementalRendererGraph(rendererKey));
 	const expected = budget.stateRenderers[type];
 	if (!expected)
 		throw new Error(
@@ -221,7 +274,7 @@ for (const rendererKey of specializedRendererKeys) {
 			`Dashboard bundle gate: ${rendererKey} is not a dashboard dynamic renderer`,
 		);
 	const type = rendererKey.split("/").at(-2) ?? rendererKey;
-	const actual = await graphBytes(graph(rendererKey));
+	const actual = await graphBytes(incrementalRendererGraph(rendererKey));
 	const expected = budget.specializedRenderers[type];
 	if (!expected)
 		throw new Error(
@@ -269,7 +322,7 @@ for (const [type, rendererKey] of kpiRendererKeys.map((key) => [
 ])) {
 	if (!entryByKey(rendererKey))
 		throw new Error(`Dashboard bundle gate: ${rendererKey} missing`);
-	const actual = await graphBytes(graph(rendererKey));
+	const actual = await graphBytes(incrementalRendererGraph(rendererKey));
 	const expected = budget.kpiRenderers[type];
 	if (!expected)
 		throw new Error(
@@ -287,7 +340,7 @@ for (const rendererKey of nonCartesianRendererKeys) {
 		rendererKey.split("/").at(-2)?.replace("core-", "core-") ?? rendererKey;
 	const entry = entryByKey(rendererKey);
 	if (!entry) throw new Error(`Dashboard bundle gate: ${rendererKey} missing`);
-	const actual = await graphBytes(graph(rendererKey));
+	const actual = await graphBytes(incrementalRendererGraph(rendererKey));
 	const expected = budget.nonCartesianRenderers[type];
 	if (!expected)
 		throw new Error(
@@ -309,12 +362,16 @@ if (catalog.includes("renderer.lazy"))
 		"Dashboard bundle gate: visualization catalog statically imports a renderer",
 	);
 await assertGraphDoesNotContain(
-	"dashboard shell",
-	dashboardFiles,
+	"grid surface",
+	gridFiles,
 	forbidden.filter((token) => token !== "react-grid-layout"),
 );
 const dashboardBytes = await graphBytes(dashboardFiles);
 assertBudget("dashboard shell", dashboardBytes, budget.dashboardShell);
+const gridBytes = await graphBytes(gridFiles);
+assertBudget("grid surface", gridBytes, budget.gridSurface);
+const spatialBytes = await graphBytes(spatialFiles);
+assertBudget("spatial surface", spatialBytes, budget.spatialSurface);
 console.log(
-	`Dashboard bundle gate passed: initial=${JSON.stringify(initialBytes)} shell=${JSON.stringify(dashboardBytes)} lazy=${dashboardChunk.file}`,
+	`Dashboard bundle gate passed: initial=${JSON.stringify(initialBytes)} shell=${JSON.stringify(dashboardBytes)} grid=${JSON.stringify(gridBytes)} spatial=${JSON.stringify(spatialBytes)} scene=${JSON.stringify(sceneBytes)} lazy=${dashboardChunk.file}`,
 );

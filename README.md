@@ -159,7 +159,7 @@ bun run verify:dashboard-release
 | `GET` | `/api/dashboards/:dashboardId/variables/:variableId/options` | static/query variable options |
 | `POST` | `/api/dashboards/:dashboardId/panels/:panelId/query` | panel単位の集計結果。共有Zod envelope |
 
-`/api/auth/me` は access token が必要です。frontend client は 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
+`/api/auth/me` は access token が必要です。access token と Cookie の有効期限は1時間、refresh token と Cookie の有効期限は7日です。frontend client は認証済み request（`/api/auth/me` を含む）で 401 を受けると `/api/auth/refresh` を一度試し、成功した場合だけ元の request を再実行します。
 
 `/api/protected/*` は server-side で `requireAuth` を適用しています。画面だけで保護しているわけではないことを確認するサンプルとして、`/protected` から `/api/protected/profile` を呼び出します。
 

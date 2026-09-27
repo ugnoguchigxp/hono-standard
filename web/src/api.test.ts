@@ -11,20 +11,39 @@ afterEach(() => {
 });
 
 describe("auth api", () => {
-	it("treats /auth/me 401 as a logged-out session without refreshing", async () => {
-		const fetchMock = vi.fn(async (_input: RequestInfo | URL) => {
-			return new Response(JSON.stringify({ message: "Unauthorized" }), {
-				status: 401,
-				headers: { "Content-Type": "application/json" },
-			});
+	it("refreshes an expired /auth/me session and retries once", async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			if (getRequestPath(input) === "/api/auth/refresh") {
+				return new Response(null, { status: 204 });
+			}
+			if (fetchMock.mock.calls.length === 1) {
+				return new Response(null, { status: 401 });
+			}
+			return Response.json({ user: { id: "user-1", email: "test@example.com" } });
 		});
 		vi.stubGlobal("fetch", fetchMock);
 
-		await expect(fetchMe()).resolves.toBeNull();
+		await expect(fetchMe()).resolves.toMatchObject({ id: "user-1" });
 
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(fetchMock).toHaveBeenCalledTimes(3);
 		expect(fetchMock.mock.calls.map(([input]) => getRequestPath(input))).toEqual([
 			"/api/auth/me",
+			"/api/auth/refresh",
+			"/api/auth/me",
+		]);
+	});
+
+	it("returns a logged-out session when /auth/me refresh fails", async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+			new Response(null, { status: 401 }),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		await expect(fetchMe()).resolves.toBeNull();
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(fetchMock.mock.calls.map(([input]) => getRequestPath(input))).toEqual([
+			"/api/auth/me",
+			"/api/auth/refresh",
 		]);
 	});
 

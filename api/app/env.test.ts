@@ -12,6 +12,8 @@ describe("readAppEnv", () => {
 		expect(env.appUrl).toBe(APP_CONFIG_DEFAULTS.appUrl);
 		expect(env.corsOrigins).toEqual(APP_CONFIG_DEFAULTS.corsOrigins);
 		expect(env.cookieSameSite).toBe(APP_CONFIG_DEFAULTS.cookieSameSite);
+		expect(env.jwtAccessExpiresIn).toBe("1h");
+		expect(env.jwtRefreshExpiresIn).toBe("7d");
 	});
 
 	it("accepts database and auth runtime overrides", () => {

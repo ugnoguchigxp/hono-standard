@@ -58,7 +58,8 @@ const getRequestPath = (input: RequestInfo | URL): string => {
 
 const isAuthPath = (path: string): boolean => path.startsWith("/api/auth/");
 
-const canRetryWithRefresh = (path: string): boolean => !isAuthPath(path);
+const canRetryWithRefresh = (path: string): boolean =>
+	path === "/api/auth/me" || !isAuthPath(path);
 
 const shouldNotifyUnauthorized = (path: string): boolean => !isAuthPath(path);
 

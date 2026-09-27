@@ -1,5 +1,125 @@
 # Dashboard Overlay 進捗台帳
 
+## SAAA 自己診断に基づく Mock 監視対象
+
+2026-09-27、`../SAAA` の `DiagnosisPage.tsx` と `src-tauri/src/diagnosis/checks/` を確認し、固定 ID を持つ主要な診断対象を Spatial Mock に追加した。SAAA Agent Core を中心に、LARM Harness と LLM / Backchannel / ASR / TTS / Embedding、SQLite、Personal State、World Model、ToolChain、ContextStill Recall / Search を個別の Entity として表示する。各 Entity は対応する診断項目 ID と短い役割説明を持ち、選択カードと HTML 詳細で確認できる。シンボルは応答ネットワーク、双方向矢印、マイク、スピーカー、ベクトル格子、データベース、脳、世界球体、歯車、想起ボックス、検索ルーペなど役割別にした。LARM 系の複数 Entity を中間軌道に分散配置する。実際の SAAA 診断結果は読み込まず、状態・活動量は引き続き Mock Simulator の値である。SAAA の fast 診断は広告された能力を operational healthy とみなさないため、この Mock の `healthy` と同一視しない。
+
+参照: `../SAAA/src/features/diagnosis/DiagnosisPage.tsx` の `LARM_SERVICES` / `STATE_ITEMS`、`../SAAA/src-tauri/src/diagnosis/checks/harness.rs`、`memory.rs`、`sqlite.rs`。動的な provider 項目と診断 mode / timeout はサービスの固定 Entity にせず、将来実データ連携時に別途扱う。
+
+確認: 固定診断 ID とシンボルの test 3 files 19件、実ブラウザの選択カード、`bun run verify`、Dashboard E2E 8件、a11y 4件、bundle / 文書リンク gate、`git diff --check` 成功。Scene 増分 raw 1,045,174 / gzip 275,217 bytes。
+
+## サービスの意味に合わせた Scene 記号
+
+2026-09-27、全 Node を天体らしい共通形から役割別の記号へ変更した。Mock Entity に `symbol` と短い `description` を追加し、Agent Core は制御ハブ、Memory は脳、Runtime はサーバー、Tool は歯車、External はゲートで表示する。LLM のネットワーク、WorldModel の球体も同じ契約で指定可能にしたが、Mock に存在しないサービスは描画しない。ContextStill の5つは探索用の拡大鏡、被覆する層、完了のチェック、レビューの目、知識の積層で表す。無関係な中心球体や粒子を削除し、傾いた軌道の薄いガイドとグリッドだけを残した。選択カードと HTML 詳細に対象が表す役割を表示する。
+
+確認: Scene model / schema / simulator test 3 files 18件、`bun run verify`、Dashboard E2E 8件、a11y 4件、bundle / 文書リンク gate、`git diff --check` 成功。実ブラウザ画像で選択カードと全シンボルを目視確認。
+
+## Scene オブジェクトの識別とシンボル
+
+2026-09-27、Scene 内のオブジェクトまたは HTML 一覧を選ぶと、Scene 右上に名前、所属サービス、種類、状態を表示する識別カードを追加した。ContextStill の各 stage / Queue は Finding、Covering、Finalize、Review、Knowledge で異なる立体シンボルに変更した。Entity は kind ごと、Task も専用の形を使う。選択状態と詳細欄は従来どおり共有する。
+
+確認: 実ブラウザで Review queue の識別カードとシンボルを目視確認。Dashboard E2E 8件、a11y 4件、bundle gate、文書リンク gate 成功。全体の型チェックは、この作業で変更していない `web/src/api.test.ts:42` の型エラーで停止中。
+
+## 傾いた周回軌道
+
+2026-09-27、ContextStill の5つの stage / Queue にそれぞれ異なる軌道傾斜角と向きを与え、中央の Agent の周囲をゆっくり周回する配置に変更した。Entity と Task も内側の軌道で移動し、Entity の種類ごとに形を変えた。Finding → Covering → Finalize の2本の接続線と Boundary は、両端の現在位置に追従する。Review / Knowledge Queue に接続線はない。軌道面のガイドは固定表示し、タブ非表示または reduced motion では周回を止める。
+
+確認: Scene の実ブラウザ画像で異なる傾きを目視確認。Scene model test 6件、`bun run verify`、Dashboard E2E 8件、a11y 4件、bundle gate 成功。Scene 増分 raw 1,029,107 / gzip 272,924 bytes。
+
+## アクティブ Queue の図形表現
+
+2026-09-27、アクティブ状態を外側リングだけで示す実装を改めた。`activeTaskId` を持つ Queue の図形本体を琥珀色に変え、ゆっくり拡縮・回転させる。台座リングは固定表示に戻した。停止時は赤、待機中は青緑で区別する。タブ非表示または reduced motion では図形を静止させ、色による状態表示は残す。
+
+確認: 実ブラウザの Scene screenshot を目視確認。`bun run verify`、Dashboard E2E 8件、a11y 4件、bundle gate 成功。Scene 増分 raw 1,026,249 / gzip 272,360 bytes。
+
+## ContextStill Queue と移管の表現
+
+2026-09-27、ContextStill の Mock トポロジーを Finding → Covering → Finalize の接続と、独立した Review / Knowledge Queue に修正した。後者の表示名は仮称。共有 schema に `kind`、`activeTaskId`、明示的な `links` を追加し、Scene は `links` にある線だけを描く。移管 Event は同じタスクが次の段階へ移る時に一度だけ発行し、受け取った Queue の `activeTaskId` を更新する。アニメーションはアクティブな Queue のリングだけに付け、線上の連続移動と Event pulse は削除した。停止、非表示、reduced motion では描画ループを止める。
+
+確認: focused 7 files / 28 tests、`bun run verify`、Dashboard E2E 8件、a11y 4件、bundle gate 成功。Scene 増分 raw 1,026,424 / gzip 272,316 bytes。
+
+## Pipeline 表現の見直し
+
+2026-09-27、等間隔の5つの箱を廃止した。Pipeline は stage の順序をつなぐ一本の経路として描き、各 stage は選択可能な小さな節点にした。queue depth は節点周囲の印、stalled は赤色で表す。stage 数は Snapshot に従うため、5件に固定していない。ブラウザ画像で配置を確認し、`bun run verify`、Dashboard E2E 8件、a11y 4件、bundle gate を通過した。Scene 増分は raw 1,023,575 / gzip 271,778 bytes。
+
+## Spatial Scene のビジュアル改修
+
+2026-09-27、静的 Scene の見た目を発光するホログラフィックなトポロジーへ変更した。暗い背景、床の格子、多層の軌道と中心ケージ、決定的に配置した光点、Node の外殻と台座、Pipeline stage のワイヤー構造を追加。Boundary は細い芯と広い光の層を重ね、操作用の hit target を別に確保した。Canvas と HTML 一覧は同じ選択 ID を使い続ける。参考画像のような常時アニメーションや postprocessing は今回追加していない。
+
+確認: 実ブラウザの Scene screenshot を目視確認。`bun run verify`、Dashboard E2E 8件、a11y 4件、bundle gate、`git diff --check` 成功。Scene 増分は raw 1,022,933 / gzip 271,613 bytes で予算内。
+
+## Spatial 第1〜3弾: コードレビュー
+
+2026-09-26、未コミットの Mock Signal Server、Dashboard Surface、Three.js Scene を横断して確認し、次を修正した。
+
+- SSE parser の frame 上限を Snapshot 契約と整合させ、複数 frame を一度に受けても合計長を誤判定しないようにした。
+- Telemetry を metric ごとの値域で検証し、queue depth に pipeline ID を含めた。同じ stage ID が別 Pipeline にあっても対象だけを更新する。
+- 認証失効時は保持中の Snapshot を破棄する。Scene の node 配置と camera fit を調整し、WebGL 可否確認用 context を解放する。
+- 初回 Snapshot の送信失敗時に SSE 購読を解除する。対応する unit test と Dashboard E2E を更新した。
+
+確認: `bun run verify`、Dashboard E2E 8件、a11y 4件、bundle / 文書リンク gate、`git diff --check` 成功。レビュー範囲で未解決の具体的な指摘はない。
+
+## Spatial 第3弾: Three.js Scene の基礎
+
+計画: [14-spatial-three-scene-foundation.md](./14-spatial-three-scene-foundation.md)。作業ブランチ: `codex/spatial-observability`。
+
+| WP | 状態 | 完了証拠 |
+| --- | --- | --- |
+| S0 基準と依存確認 | complete | 変更前 `bun run verify`、bundle gate 成功。React 19.2 に対応する `@react-three/fiber@9.7.0`、`three@0.186.0`、`@types/three@0.186.0` を固定 |
+| S1 Semantic Scene Model | complete | Entity / Boundary / Task / Pipeline stage の決定的配置、health 視覚辞書、複合 stage ID。固定 Snapshot test 4件成功 |
+| S2 HTML と選択 | complete | Spatial 親に選択 ID を維持し、Scene と HTML 一覧から同じ詳細を開く。消滅した ID は解除し、stage の HTML 選択を追加 |
+| S3 Scene 基本構造 | complete | Spatial HTML の後段で Three.js / R3F を遅延ロード。orthographic camera、静的形状、Boundary 線種、Task、Pipeline stage、凡例を表示。画面サイズに合わせて camera を調整 |
+| S4 選択と fallback | complete | Canvas click、WebGL 不可、context loss、再試行を browser test で確認。HTML 一覧・詳細は Canvas と独立 |
+| S5 統合と計測 | complete | `bun run verify`、Dashboard E2E 8件、a11y 4件、bundle / 文書リンク gate、`git diff --check` 成功。通常 / degraded の Canvas 画像差と信号更新間の描画停止を確認 |
+
+bundle 比較（raw / gzip bytes、同じ `bun run verify:dashboard-bundle`）:
+
+| Graph | 第2弾終了時 | 第3弾 | 備考 |
+| --- | ---: | ---: | --- |
+| 初期 | 838,339 / 239,493 | 837,962 / 238,368 | Three.js なし |
+| Dashboard shell | 30,547 / 9,878 | 30,597 / 9,892 | Three.js なし |
+| Grid | 379,887 / 110,466 | 339,772 / 97,834 | Three.js なし。共通 chunk の分割で値が移動 |
+| Spatial HTML | 160,236 / 44,593 | 121,478 / 33,530 | Scene は追加の lazy import |
+| Spatial Scene 増分 | なし | 1,014,092 / 270,378 | `three` と R3F を含む。上限 1,150,000 / 310,000 |
+
+Scene は描画更新時だけ動く `frameloop="demand"` と DPR 上限 1.5 を使用する。固定 viewport の目視確認で normal の構造と stage を確認した。E2E では WebGL draw call を計測し、信号更新のない短い区間で 0 件となることを確認した。初回 Canvas 表示時間の継続計測は今回の自動 gate に含めていないため、導入判定時の性能計測で追補する。
+
+次の段階: Event に対応した短い動き、Task / Pipeline / Boundary のライブ表現と探索。Scene に API 通信や health 判定を増やさず、今回の model と HTML 詳細を共有する。
+
+## Spatial 第2弾: Dashboard Surface とライブ状態表示
+
+計画: [13-spatial-dashboard-surface.md](./13-spatial-dashboard-surface.md)。作業ブランチ: `codex/spatial-observability`。
+
+| WP | 状態 | 完了証拠 |
+| --- | --- | --- |
+| U0 基準値 | complete | 変更前の Dashboard search test 3件、typecheck 成功。Mock API と第1弾の進捗を確認 |
+| U1 Route search と shell | complete | `surface` の parse / canonicalization と認証付き shell。Grid 既定、Spatial 直接 URL、履歴と検索条件保持を unit / E2E で確認 |
+| U2 Grid 分離 | complete | Grid 固有 hook と編集機能を `grid-surface.tsx` に移動。Spatial 直接表示中の panel query 0件、編集中の切替禁止、Grid E2E 成功 |
+| U3 Snapshot client | complete | `appFetch` と共有 Zod schema による取得・検証、HTML summary / 詳細、接続状態と再試行を実装 |
+| U4 SSE client | complete | chunk 分割、初回完全 Snapshot、順序・重複・欠番、instance 変更、heartbeat timeout、Abort / 再試行を実装。focused unit 12件成功 |
+| U5 統合 | complete | `bun run verify`、Dashboard E2E 5件、a11y 4件、bundle / 文書リンク gate、`git diff --check` 成功 |
+
+最終確認: `bun run verify` は typecheck、lint、format、test、coverage、build がすべて成功。`bun run verify:dashboard-e2e` は5件、`bun run verify:dashboard-a11y` は4件成功。`bun run verify:dashboard-bundle` の増分予算は shell raw 30,547 / gzip 9,878 bytes、Grid raw 379,887 / gzip 110,466 bytes、Spatial raw 160,236 / gzip 44,593 bytes で通過した。共通 chunk を含む初期 graph は raw 838,339 / gzip 239,493 bytes。Grid と Spatial の lazy import graph を分けて測定するよう bundle gate を更新した。第1弾の時点で失敗していた `core-state-timeline` の旧集計は、共有 chunk を各 renderer に重複計上していたため、今回の gate では Grid 読込済み graph に対する renderer 増分を判定する。
+
+次の段階: 同じ Snapshot / 接続状態を使う Three.js Scene の計画と実装。現段階の HTML 表示は Canvas が利用できない場合にも残す。
+
+## Spatial 第1弾: 動的 Mock Signal Server
+
+計画: [12-spatial-mock-signal-server.md](./12-spatial-mock-signal-server.md)。作業ブランチ: `codex/spatial-observability`。
+
+| WP | 状態 | 完了証拠 |
+| --- | --- | --- |
+| M0 基準値 | complete | 変更前 `api/routes/dashboard.route.test.ts` 8 tests 成功、`bun run typecheck` 成功。`bun run verify:dashboard-bundle` は `core-state-timeline` raw 251,723 bytes / 上限 250,000 bytes で失敗 |
+| M1 契約 | complete | `shared/schemas/observatory/` の Snapshot/Telemetry/Event/Scenario schema と整合性 test |
+| M2 Engine | complete | 固定 seed・初期時刻・tick による再現、6 Scenario、Task/Pipeline Event、Node/Boundary 独立 health、信号断と復旧の test |
+| M3 REST と権限 | complete | state/scenarios/scenario、入力検証、本番変更 404、未認証 401 の route/app test |
+| M4 SSE | complete | 初期 Snapshot、順序付き更新、再接続、heartbeat、購読解除、接続数上限の test |
+| M5 統合 | complete（既知の bundle gate 失敗を除く） | `bun run verify`、`bun run verify:dashboard-contract` 成功。frontend build 出力は M0 と同一で、Mock による bundle 増加なし |
+
+最終確認: `bunx vitest run shared/schemas/observatory api/modules/observatory api/routes/observatory.route.test.ts api/app/hono.test.ts` は 4 files / 26 tests 成功。`bun run verify` は typecheck、lint、format、test、coverage、build がすべて成功。`bun run verify:dashboard-contract` は 21 files / 48 tests 成功。`verify:dashboard-bundle` は変更前後とも同じ raw 251,723 bytes の閾値超過で失敗。SSE の遅い購読者も上限で解除されることを確認した。
+
+残存事項: `verify:dashboard-bundle` の容量超過は M0 時点から存在する。今回の Mock 基盤では Dashboard renderer と予算値を変更しない。リリース判定時には別途この既存 gate を解消する。後続の Spatial Client/Scene はこの contract と固定時刻の fixture を使う。
+
 ## 更新ルール
 
 - 各work package開始時にstatusを`in_progress`へ変更する。

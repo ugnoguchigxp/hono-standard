@@ -98,6 +98,19 @@ describe("hono app entry", () => {
 		);
 	});
 
+	it("should protect observatory snapshot and stream routes", async () => {
+		for (const path of ["/api/observatory/mock/state", "/api/observatory/mock/stream", "/api/observatory/mock/scenarios"]) {
+			const response = await app.request(path);
+			expect(response.status).toBe(401);
+		}
+		const scenario = await app.request("/api/observatory/mock/scenario", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ scenario: "normal" }),
+		});
+		expect(scenario.status).toBe(401);
+	});
+
 	it("should handle CORS origins", async () => {
 		const res = await app.request("/api/health", {
 			headers: {

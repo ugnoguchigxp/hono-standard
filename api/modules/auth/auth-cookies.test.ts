@@ -25,7 +25,7 @@ describe("auth-cookies", () => {
 		mockEnv = {
 			secureCookie: true,
 			cookieSameSite: "lax",
-			jwtAccessExpiresIn: "15m",
+			jwtAccessExpiresIn: "1h",
 			jwtRefreshExpiresIn: "7d",
 		} as unknown as AppEnv;
 	});
@@ -48,7 +48,7 @@ describe("auth-cookies", () => {
 				secure: true,
 				sameSite: "lax",
 				path: "/",
-				maxAge: 15 * 60, // 15m in seconds
+				maxAge: 60 * 60, // 1h in seconds
 			},
 		);
 

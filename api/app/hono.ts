@@ -23,6 +23,8 @@ import {
 import { operationsDashboardV2 } from "../modules/dashboard/v2/operations-dashboard";
 import { createAuthRoute } from "../routes/auth.route";
 import { createDashboardRoute } from "../routes/dashboard.route";
+import { createObservatoryRoute } from "../routes/observatory.route";
+import { MockSignalSimulator } from "../modules/observatory/mock/simulator";
 import { createHealthRoute } from "../routes/health.route";
 import { createProtectedRoute } from "../routes/protected.route";
 import { type AppEnv, readAppEnv } from "./env";
@@ -33,6 +35,7 @@ export type AppDeps = {
 	dbRuntime: DbRuntime;
 	authService: AuthService;
 	dashboard: DashboardModule;
+	observatory?: MockSignalSimulator;
 };
 
 declare global {
@@ -48,7 +51,9 @@ export async function createDefaultAppDeps(): Promise<AppDeps> {
 		nativeDashboards: [operationsDashboardV2, galleryDashboardV2],
 		visualizations: galleryVisualizations,
 	});
-	return { env, dbRuntime, authService, dashboard };
+	const observatory = new MockSignalSimulator();
+	observatory.start();
+	return { env, dbRuntime, authService, dashboard, observatory };
 }
 
 export async function getAppRuntime(): Promise<AppDeps> {
@@ -68,6 +73,7 @@ const distWebRoot = path.resolve(process.cwd(), distWebDirectory);
 const distWebIndex = path.resolve(distWebRoot, "index.html");
 
 export function createApiRoutes(deps: AppDeps) {
+	const observatory = deps.observatory ?? new MockSignalSimulator();
 	return new Hono()
 		.route("/health", createHealthRoute())
 		.use(
@@ -86,6 +92,17 @@ export function createApiRoutes(deps: AppDeps) {
 			}),
 		)
 		.route("/dashboards", createDashboardRoute({ dashboard: deps.dashboard }))
+		.use(
+			"/observatory/*",
+			requireAuth({ env: deps.env, authService: deps.authService }),
+		)
+		.route(
+			"/observatory",
+			createObservatoryRoute({
+				simulator: observatory,
+				nodeEnv: deps.env.nodeEnv,
+			}),
+		)
 		.use(
 			"/auth/me",
 			requireAuth({
