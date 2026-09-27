@@ -20,7 +20,51 @@ export const scenarioSchema = z.enum([
 	"runtime-degraded",
 	"total-signal-loss",
 	"recovery",
+	"host-idle",
+	"host-cpu-saturated",
+	"host-load-spike",
+	"host-memory-pressure",
+	"host-disk-pressure",
+	"host-mixed-pressure",
+	"host-offline",
 ]);
+export const hostMetricsSchema = z
+	.object({
+		logicalCores: z.number().int().min(1).max(256),
+		cpuUsage: ratio,
+		load1: z.number().finite().nonnegative().max(1024),
+		load5: z.number().finite().nonnegative().max(1024),
+		load15: z.number().finite().nonnegative().max(1024),
+		memoryUsedBytes: z.number().int().nonnegative(),
+		memoryTotalBytes: z.number().int().positive(),
+		diskUsedBytes: z.number().int().nonnegative(),
+		diskTotalBytes: z.number().int().positive(),
+	})
+	.strict()
+	.superRefine((value, context) => {
+		if (value.memoryUsedBytes > value.memoryTotalBytes)
+			context.addIssue({
+				code: "custom",
+				path: ["memoryUsedBytes"],
+				message: "Memory used exceeds total",
+			});
+		if (value.diskUsedBytes > value.diskTotalBytes)
+			context.addIssue({
+				code: "custom",
+				path: ["diskUsedBytes"],
+				message: "Disk used exceeds total",
+			});
+	});
+export const resourceMetricSchema = z
+	.object({
+		type: z.enum(["cpu", "load", "memory", "disk"]),
+		value: z.number().finite().nonnegative(),
+		capacity: z.number().finite().positive(),
+		unit: z.enum(["ratio", "load", "bytes"]),
+		load5: z.number().finite().nonnegative().optional(),
+		load15: z.number().finite().nonnegative().optional(),
+	})
+	.strict();
 export const taskStateSchema = z.enum([
 	"accepted",
 	"scheduled",
@@ -50,6 +94,7 @@ export const entitySymbolSchema = z.enum([
 	"service",
 	"task",
 	"pipeline",
+	"computer",
 ]);
 export const entitySchema = z
 	.object({
@@ -65,6 +110,8 @@ export const entitySchema = z
 			"tool",
 			"pipeline",
 			"external",
+			"host",
+			"resource",
 		]),
 		label: z.string().min(1).max(100),
 		description: z.string().min(1).max(160).optional(),
@@ -75,6 +122,8 @@ export const entitySchema = z
 		symbol: entitySymbolSchema.optional(),
 		health: healthSchema,
 		activity: ratio,
+		hostMetrics: hostMetricsSchema.optional(),
+		resourceMetric: resourceMetricSchema.optional(),
 		expectedIntervalMs: z.number().int().positive().max(60_000),
 		lastSeenAt: timestamp,
 	})

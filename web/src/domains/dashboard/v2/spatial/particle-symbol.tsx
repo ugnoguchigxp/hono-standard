@@ -44,6 +44,12 @@ function particlePosition(
 	const c = hash(index * 3 + 3);
 	const r = 0.43 + (c - 0.5) * 0.045;
 	switch (shape) {
+		case "computer": {
+			const edge = index % 4;
+			return edge < 2
+				? [edge ? 0.48 : -0.48, b * 0.34 + 0.08, (c - 0.5) * 0.08]
+				: [(c - 0.5) * 0.96, edge === 2 ? -0.26 : 0.42, b * 0.08];
+		}
 		case "brain": {
 			const side = index % 2 ? 1 : -1;
 			const lobe = index % 4 < 2 ? 0.16 : -0.16;

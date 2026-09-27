@@ -168,6 +168,31 @@
 		@apply text-2xl font-bold text-ink;
 	}
 
+	.spatial-header-actions {
+		@apply flex flex-wrap items-start gap-3;
+	}
+
+	.spatial-scenario-control {
+		@apply flex flex-col gap-1 rounded-control border border-border bg-surface px-3 py-2 text-sm;
+	}
+
+	.spatial-scenario-control label {
+		@apply font-semibold text-ink;
+	}
+
+	.spatial-scenario-control select {
+		@apply rounded-control border border-border-strong bg-surface px-2 py-1 text-ink;
+		min-width: 13rem;
+	}
+
+	.spatial-scenario-control select:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+
+	.spatial-scenario-control [role="alert"] {
+		@apply text-danger;
+	}
+
 	.spatial-connection {
 		@apply flex items-center gap-2 rounded-control border border-border bg-surface px-3 py-2 text-sm;
 	}

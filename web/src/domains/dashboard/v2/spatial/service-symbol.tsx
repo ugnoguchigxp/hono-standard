@@ -67,7 +67,24 @@ export function ServiceSymbol({
 	}, [ghost]);
 	return (
 		<group ref={group} scale={size / 0.43}>
-			{symbol === "brain" ? (
+			{symbol === "computer" ? (
+				<>
+					<mesh position={[0, 0.08, 0]}>
+						<boxGeometry args={[0.62, 0.42, 0.08]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<Rod
+						from={[0, -0.15, 0]}
+						to={[0, -0.36, 0]}
+						color={color}
+						radius={0.025}
+					/>
+					<mesh position={[0, -0.38, 0]}>
+						<boxGeometry args={[0.36, 0.035, 0.18]} />
+						<meshBasicMaterial color={color} toneMapped={false} />
+					</mesh>
+				</>
+			) : symbol === "brain" ? (
 				<>
 					{[-1, 1].flatMap((side) =>
 						[-0.15, 0.13].map((height) => (

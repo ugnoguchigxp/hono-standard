@@ -1,5 +1,19 @@
 # Dashboard Overlay 進捗台帳
 
+## 物理PCリソースの Mock 監視
+
+2026-09-28、PC周囲の4本のメーターを廃止し、CPU・Load average・Memory・Disk をそれぞれ選択可能なResource Entityにした。`PC → CPU → Load average` と `PC → Memory / Disk` を明示的なBoundaryで結び、個別のhealthと実測値をScene識別カード、HTML一覧・詳細で読める。PCは最悪のリソース状態を集約表示する。Mock操作APIとシナリオは維持する。
+
+2026-09-28、既に起動中のサーバーが `GET /mock/scenarios` の旧形式（`editable` なし）を返すと、画面のSelectが読み込み失敗で無効になる問題を修正した。旧応答では編集可能として扱い、POSTの成否を確認してからSnapshotを更新する。旧形式のfrontend testを追加し、稼働中のローカルサーバーでLoad spikeへの切替とnormalへの復帰を実画面で確認した。
+
+Spatial 画面のヘッダーに Mock scenario Select を追加。選択肢と変更可否は既存APIから取得し、変更成功後に Snapshot を再取得する。接続断・本番環境では編集不可、失敗時はエラーを表示する。frontend focused test 2 files / 9 tests、Dashboard E2E 10件で選択操作と反映を確認。
+
+2026-09-27、Spatial Mock に `physical-host` を1 Entity として追加し、CPU 使用率、logical core 数、1/5/15 分 load average、メモリとディスクの使用量を Snapshot に載せた。Scene は CPU・コア数で正規化した load・メモリ・ディスクを4本のリングで表示し、CPU 活動量に応じた外側の脈動を追加した。HTML 一覧と詳細では数値・単位・健康状態を読める。実機からは採取せず、全値がシミュレーションである。
+
+正常・idle・CPU 飽和・load 急増・メモリ逼迫・ディスク逼迫・複合逼迫・host offline をシナリオで再現できる。`GET/POST/DELETE /api/observatory/mock/host` で値の確認、全値の指定、シナリオ既定値への復帰ができる。操作 API は既存認証の内側、変更系は非本番のみ。契約と操作例は [15-spatial-host-mock.md](./15-spatial-host-mock.md) に記載。
+
+確認: `bun run verify` は typecheck、lint、format、test、coverage、build が成功。`bun run verify:dashboard-e2e` は10件成功し、シナリオ切替と直接値指定のライブ反映を確認。
+
 ## SAAA 自己診断に基づく Mock 監視対象
 
 2026-09-27、`../SAAA` の `DiagnosisPage.tsx` と `src-tauri/src/diagnosis/checks/` を確認し、固定 ID を持つ主要な診断対象を Spatial Mock に追加した。SAAA Agent Core を中心に、LARM Harness と LLM / Backchannel / ASR / TTS / Embedding、SQLite、Personal State、World Model、ToolChain、ContextStill Recall / Search を個別の Entity として表示する。各 Entity は対応する診断項目 ID と短い役割説明を持ち、選択カードと HTML 詳細で確認できる。シンボルは応答ネットワーク、双方向矢印、マイク、スピーカー、ベクトル格子、データベース、脳、世界球体、歯車、想起ボックス、検索ルーペなど役割別にした。LARM 系の複数 Entity を中間軌道に分散配置する。実際の SAAA 診断結果は読み込まず、状態・活動量は引き続き Mock Simulator の値である。SAAA の fast 診断は広告された能力を operational healthy とみなさないため、この Mock の `healthy` と同一視しない。

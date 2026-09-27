@@ -1,5 +1,6 @@
 import {
 	OBSERVATORY_SCHEMA_VERSION,
+	hostMetricsSchema,
 	type ObservatoryEvent,
 	type Scenario,
 	type Snapshot,
@@ -119,6 +120,88 @@ const SAAA_TARGETS = [
 		"id" | "kind" | "label" | "description" | "symbol" | "diagnosisId"
 	>
 >;
+type HostMetrics = NonNullable<Snapshot["entities"][number]["hostMetrics"]>;
+const GIB = 1024 ** 3;
+const BASE_HOST: HostMetrics = {
+	logicalCores: 8,
+	cpuUsage: 0.24,
+	load1: 1.3,
+	load5: 1.1,
+	load15: 0.9,
+	memoryUsedBytes: 6 * GIB,
+	memoryTotalBytes: 16 * GIB,
+	diskUsedBytes: 180 * GIB,
+	diskTotalBytes: 512 * GIB,
+};
+function hostHealth(
+	metrics: HostMetrics,
+): Snapshot["entities"][number]["health"] {
+	const memory = metrics.memoryUsedBytes / metrics.memoryTotalBytes;
+	const disk = metrics.diskUsedBytes / metrics.diskTotalBytes;
+	const load = metrics.load1 / metrics.logicalCores;
+	if (memory >= 0.98 || disk >= 0.98 || load >= 2) return "fault";
+	if (metrics.cpuUsage >= 0.85 || memory >= 0.9 || disk >= 0.9 || load >= 1)
+		return "degraded";
+	return "healthy";
+}
+function resourceHealth(
+	type: "cpu" | "load" | "memory" | "disk",
+	metrics: HostMetrics,
+): Snapshot["entities"][number]["health"] {
+	const pressure =
+		type === "cpu"
+			? metrics.cpuUsage
+			: type === "load"
+				? metrics.load1 / metrics.logicalCores
+				: type === "memory"
+					? metrics.memoryUsedBytes / metrics.memoryTotalBytes
+					: metrics.diskUsedBytes / metrics.diskTotalBytes;
+	if (type === "load" && pressure >= 2) return "fault";
+	if ((type === "memory" || type === "disk") && pressure >= 0.98)
+		return "fault";
+	if (pressure >= (type === "cpu" ? 0.85 : type === "load" ? 1 : 0.9))
+		return "degraded";
+	return "healthy";
+}
+function scenarioHost(scenario: Scenario): HostMetrics {
+	switch (scenario) {
+		case "host-idle":
+			return {
+				...BASE_HOST,
+				cpuUsage: 0.03,
+				load1: 0.1,
+				load5: 0.2,
+				load15: 0.3,
+				memoryUsedBytes: 3 * GIB,
+			};
+		case "host-cpu-saturated":
+			return {
+				...BASE_HOST,
+				cpuUsage: 0.96,
+				load1: 7.8,
+				load5: 6.4,
+				load15: 4.2,
+			};
+		case "host-load-spike":
+			return { ...BASE_HOST, cpuUsage: 0.42, load1: 18, load5: 12, load15: 3 };
+		case "host-memory-pressure":
+			return { ...BASE_HOST, memoryUsedBytes: Math.round(15.7 * GIB) };
+		case "host-disk-pressure":
+			return { ...BASE_HOST, diskUsedBytes: 505 * GIB };
+		case "host-mixed-pressure":
+			return {
+				...BASE_HOST,
+				cpuUsage: 0.91,
+				load1: 10,
+				load5: 8.5,
+				load15: 6,
+				memoryUsedBytes: 15 * GIB,
+				diskUsedBytes: 480 * GIB,
+			};
+		default:
+			return BASE_HOST;
+	}
+}
 export const MOCK_SCENARIOS: readonly { id: Scenario; label: string }[] = [
 	{ id: "normal", label: "Normal" },
 	{ id: "high-activity", label: "High activity" },
@@ -126,6 +209,13 @@ export const MOCK_SCENARIOS: readonly { id: Scenario; label: string }[] = [
 	{ id: "runtime-degraded", label: "Runtime degraded" },
 	{ id: "total-signal-loss", label: "Total signal loss" },
 	{ id: "recovery", label: "Recovery" },
+	{ id: "host-idle", label: "Host idle" },
+	{ id: "host-cpu-saturated", label: "CPU saturated" },
+	{ id: "host-load-spike", label: "Load spike" },
+	{ id: "host-memory-pressure", label: "Memory pressure" },
+	{ id: "host-disk-pressure", label: "Disk pressure" },
+	{ id: "host-mixed-pressure", label: "Mixed host pressure" },
+	{ id: "host-offline", label: "Host offline" },
 ];
 
 export type StreamPacket =
@@ -158,6 +248,7 @@ export class MockSignalSimulator {
 	private scenarioStartedTick = 0;
 	private signalLostAt: number | null = null;
 	private frozenTasks: Snapshot["tasks"] | null = null;
+	private hostOverride: HostMetrics | null = null;
 	private readonly subscribers = new Set<(packet: StreamPacket) => void>();
 	private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -194,6 +285,23 @@ export class MockSignalSimulator {
 	}
 	get currentScenario() {
 		return this.scenario;
+	}
+	get currentHostMetrics(): HostMetrics {
+		return this.hostOverride ?? scenarioHost(this.scenario);
+	}
+	setHostMetrics(metrics: HostMetrics) {
+		this.hostOverride = hostMetricsSchema.parse(metrics);
+		this.revision += 1;
+		const snapshot = this.snapshot();
+		this.emit({ id: this.nextPacketId(), event: "snapshot", data: snapshot });
+		return snapshot;
+	}
+	resetHostMetrics() {
+		this.hostOverride = null;
+		this.revision += 1;
+		const snapshot = this.snapshot();
+		this.emit({ id: this.nextPacketId(), event: "snapshot", data: snapshot });
+		return snapshot;
 	}
 
 	snapshot(): Snapshot {
@@ -249,6 +357,110 @@ export class MockSignalSimulator {
 							updatedAt: lastSeenAt,
 						};
 					});
+		const hostMetrics = this.currentHostMetrics;
+		const hostOffline = this.scenario === "host-offline";
+		const hostStatus: Snapshot["entities"][number]["health"] = lost
+			? freshness
+			: hostOffline
+				? "disconnected"
+				: hostHealth(hostMetrics);
+		const hostLastSeenAt = hostOffline
+			? this.initialTime + this.scenarioStartedTick * TICK_MS
+			: lastSeenAt;
+		const resources = [
+			{
+				id: "physical-cpu",
+				label: "CPU",
+				description: "Processor utilization",
+				symbol: "gear",
+				type: "cpu",
+				value: hostMetrics.cpuUsage,
+				capacity: 1,
+				unit: "ratio",
+			},
+			{
+				id: "physical-load",
+				label: "Load average",
+				description:
+					"Runnable work over 1, 5, and 15 minutes relative to logical cores",
+				symbol: "network",
+				type: "load",
+				value: hostMetrics.load1,
+				capacity: hostMetrics.logicalCores,
+				unit: "load",
+				load5: hostMetrics.load5,
+				load15: hostMetrics.load15,
+			},
+			{
+				id: "physical-memory",
+				label: "Memory",
+				description: "Physical memory in use",
+				symbol: "embedding",
+				type: "memory",
+				value: hostMetrics.memoryUsedBytes,
+				capacity: hostMetrics.memoryTotalBytes,
+				unit: "bytes",
+			},
+			{
+				id: "physical-disk",
+				label: "Disk",
+				description: "Storage capacity in use",
+				symbol: "database",
+				type: "disk",
+				value: hostMetrics.diskUsedBytes,
+				capacity: hostMetrics.diskTotalBytes,
+				unit: "bytes",
+			},
+		] as const;
+		const resourceEntities: Snapshot["entities"] = resources.map(
+			(resource) => ({
+				id: resource.id,
+				kind: "resource",
+				label: resource.label,
+				description: resource.description,
+				symbol: resource.symbol,
+				health: lost
+					? freshness
+					: hostOffline
+						? "disconnected"
+						: resourceHealth(resource.type, hostMetrics),
+				activity:
+					hostOffline || lost
+						? 0
+						: resource.type === "cpu"
+							? hostMetrics.cpuUsage
+							: resource.type === "load"
+								? Math.min(1, hostMetrics.load1 / hostMetrics.logicalCores)
+								: 0,
+				resourceMetric: {
+					type: resource.type,
+					value: resource.value,
+					capacity: resource.capacity,
+					unit: resource.unit,
+					...("load5" in resource
+						? { load5: resource.load5, load15: resource.load15 }
+						: {}),
+				},
+				expectedIntervalMs: EXPECTED_INTERVAL_MS,
+				lastSeenAt: hostLastSeenAt,
+			}),
+		);
+		const resourceBoundaries: Snapshot["boundaries"] = [
+			{ id: "host-cpu", source: "physical-host", target: "physical-cpu" },
+			{ id: "cpu-load", source: "physical-cpu", target: "physical-load" },
+			{ id: "host-memory", source: "physical-host", target: "physical-memory" },
+			{ id: "host-disk", source: "physical-host", target: "physical-disk" },
+		].map((link) => {
+			const target = resourceEntities.find((item) => item.id === link.target)!;
+			return {
+				...link,
+				health: lost ? freshness : hostOffline ? "disconnected" : "healthy",
+				activity: target.activity,
+				latencyMs: 0,
+				expectedIntervalMs: EXPECTED_INTERVAL_MS,
+				lastSeenAt: hostLastSeenAt,
+			};
+		});
 		const snapshot: Snapshot = {
 			schemaVersion: OBSERVATORY_SCHEMA_VERSION,
 			instanceId: this.instanceId,
@@ -257,17 +469,46 @@ export class MockSignalSimulator {
 			seed: this.seed,
 			tick: this.tick,
 			generatedAt: now,
-			entities: SAAA_TARGETS.map((target) => ({
-				...target,
-				health: target.id === "runtime" && degraded ? "degraded" : freshness,
-				activity:
-					target.id === "agent-core" || target.id === "runtime"
-						? currentActivity
-						: currentActivity / 2,
-				expectedIntervalMs: EXPECTED_INTERVAL_MS,
-				lastSeenAt,
-			})),
+			entities: [
+				...SAAA_TARGETS.map((target): Snapshot["entities"][number] => ({
+					...target,
+					health: target.id === "runtime" && degraded ? "degraded" : freshness,
+					activity:
+						target.id === "agent-core" || target.id === "runtime"
+							? currentActivity
+							: currentActivity / 2,
+					expectedIntervalMs: EXPECTED_INTERVAL_MS,
+					lastSeenAt,
+				})),
+				{
+					id: "physical-host",
+					kind: "host",
+					label: "Physical PC",
+					description:
+						"Mock physical computer resources; values are not read from this machine",
+					symbol: "computer",
+					health: hostStatus,
+					activity: hostOffline || lost ? 0 : hostMetrics.cpuUsage,
+					hostMetrics,
+					expectedIntervalMs: EXPECTED_INTERVAL_MS,
+					lastSeenAt: hostLastSeenAt,
+				},
+				...resourceEntities,
+			],
 			boundaries: [
+				...resourceBoundaries,
+				{
+					id: "host-runtime",
+					source: "physical-host",
+					target: "runtime",
+					health: lost ? freshness : hostOffline ? "disconnected" : "healthy",
+					activity: hostOffline || lost ? 0 : currentActivity,
+					latencyMs: hostOffline ? 0 : 4,
+					expectedIntervalMs: EXPECTED_INTERVAL_MS,
+					lastSeenAt: hostOffline
+						? this.initialTime + this.scenarioStartedTick * TICK_MS
+						: lastSeenAt,
+				},
 				{
 					id: "core-runtime",
 					source: "agent-core",
@@ -484,6 +725,7 @@ export class MockSignalSimulator {
 		this.frozenTasks =
 			scenario === "total-signal-loss" ? this.snapshot().tasks : null;
 		this.scenario = scenario;
+		this.hostOverride = null;
 		this.scenarioStartedTick = this.tick;
 		this.signalLostAt = scenario === "total-signal-loss" ? this.now() : null;
 		this.revision += 1;

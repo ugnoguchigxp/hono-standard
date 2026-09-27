@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { z } from "zod";
-import { scenarioSchema } from "../../shared/schemas/observatory";
+import {
+	hostMetricsSchema,
+	scenarioSchema,
+} from "../../shared/schemas/observatory";
 import {
 	MOCK_SCENARIOS,
 	type MockSignalSimulator,
@@ -28,6 +31,7 @@ export function createObservatoryRoute(deps: {
 		return c.json({
 			scenarios: MOCK_SCENARIOS,
 			current: deps.simulator.currentScenario,
+			editable: deps.nodeEnv !== "production",
 		});
 	});
 	route.post("/mock/scenario", async (c) => {
@@ -52,6 +56,41 @@ export function createObservatoryRoute(deps: {
 			return c.json({ message: "Invalid scenario request" }, 400);
 		c.header("Cache-Control", "no-store");
 		return c.json(deps.simulator.setScenario(parsed.data.scenario));
+	});
+	route.get("/mock/host", (c) => {
+		c.header("Cache-Control", "no-store");
+		return c.json({
+			scenario: deps.simulator.currentScenario,
+			metrics: deps.simulator.currentHostMetrics,
+		});
+	});
+	route.post("/mock/host", async (c) => {
+		if (deps.nodeEnv === "production") return c.notFound();
+		if (
+			!/^application\/json(?:\s*;|$)/i.test(c.req.header("Content-Type") ?? "")
+		)
+			return c.json({ message: "Invalid host request" }, 400);
+		if (Number(c.req.header("Content-Length")) > 2_048)
+			return c.json({ message: "Invalid host request" }, 400);
+		const raw = await c.req.text().catch(() => "");
+		if (raw.length > 2_048)
+			return c.json({ message: "Invalid host request" }, 400);
+		let body: unknown;
+		try {
+			body = JSON.parse(raw);
+		} catch {
+			body = undefined;
+		}
+		const parsed = hostMetricsSchema.safeParse(body);
+		if (!parsed.success)
+			return c.json({ message: "Invalid host request" }, 400);
+		c.header("Cache-Control", "no-store");
+		return c.json(deps.simulator.setHostMetrics(parsed.data));
+	});
+	route.delete("/mock/host", (c) => {
+		if (deps.nodeEnv === "production") return c.notFound();
+		c.header("Cache-Control", "no-store");
+		return c.json(deps.simulator.resetHostMetrics());
 	});
 	route.get("/mock/stream", (c) => {
 		if (deps.simulator.subscriberCount >= MAX_SUBSCRIBERS)

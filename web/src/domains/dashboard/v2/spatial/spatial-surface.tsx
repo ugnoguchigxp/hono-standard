@@ -4,6 +4,8 @@ import {
 	type Selection,
 	selectionExists,
 } from "./scene-model";
+import { formatResourceMetric } from "./resource-format";
+import { ScenarioSelect } from "./scenario-select";
 import { summarize } from "./spatial-state";
 import { useSpatialData } from "./use-spatial-data";
 
@@ -51,13 +53,22 @@ export function SpatialSurface() {
 					<h1>System overview</h1>
 					<p>Simulated signals modeled on SAAA self-diagnosis.</p>
 				</div>
-				<div className="spatial-connection" role="status" aria-live="polite">
-					<span>Connection: {status}</span>
-					{status !== "live" ? (
-						<button type="button" onClick={retry}>
-							Retry
-						</button>
+				<div className="spatial-header-actions">
+					{snapshot ? (
+						<ScenarioSelect
+							current={snapshot.scenario}
+							live={status === "live"}
+							onChanged={retry}
+						/>
 					) : null}
+					<div className="spatial-connection" role="status" aria-live="polite">
+						<span>Connection: {status}</span>
+						{status !== "live" ? (
+							<button type="button" onClick={retry}>
+								Retry
+							</button>
+						) : null}
+					</div>
 				</div>
 			</header>
 			{status === "unauthorized" ? (
@@ -128,8 +139,16 @@ export function SpatialSurface() {
 												setSelected({ kind: "entity", id: item.id })
 											}
 										>
-											{item.label} — {item.health}; activity{" "}
-											{Math.round(item.activity * 100)}%
+											{item.label} — {item.health}
+											{!item.resourceMetric
+												? `; activity ${Math.round(item.activity * 100)}%`
+												: ""}
+											{item.hostMetrics
+												? `; CPU ${Math.round(item.hostMetrics.cpuUsage * 100)}%, load ${item.hostMetrics.load1.toFixed(1)}/${item.hostMetrics.logicalCores} cores, memory ${Math.round((item.hostMetrics.memoryUsedBytes / item.hostMetrics.memoryTotalBytes) * 100)}%, disk ${Math.round((item.hostMetrics.diskUsedBytes / item.hostMetrics.diskTotalBytes) * 100)}%`
+												: ""}
+											{item.resourceMetric
+												? `; ${formatResourceMetric(item.resourceMetric)}`
+												: ""}
 										</button>
 									</li>
 								))}
@@ -252,10 +271,64 @@ export function SpatialSurface() {
 										<dd>{selectedItem.health}</dd>
 									</>
 								) : null}
-								{"activity" in selectedItem ? (
+								{"activity" in selectedItem &&
+								!(
+									"resourceMetric" in selectedItem &&
+									selectedItem.resourceMetric
+								) ? (
 									<>
 										<dt>Activity</dt>
 										<dd>{Math.round(selectedItem.activity * 100)}%</dd>
+									</>
+								) : null}
+								{"hostMetrics" in selectedItem && selectedItem.hostMetrics ? (
+									<>
+										<dt>CPU</dt>
+										<dd>
+											{Math.round(selectedItem.hostMetrics.cpuUsage * 100)}%
+											across {selectedItem.hostMetrics.logicalCores} logical
+											cores
+										</dd>
+										<dt>Load average</dt>
+										<dd>
+											{selectedItem.hostMetrics.load1.toFixed(2)} /{" "}
+											{selectedItem.hostMetrics.load5.toFixed(2)} /{" "}
+											{selectedItem.hostMetrics.load15.toFixed(2)} (1 / 5 / 15
+											min)
+										</dd>
+										<dt>Memory</dt>
+										<dd>
+											{(
+												selectedItem.hostMetrics.memoryUsedBytes /
+												1024 ** 3
+											).toFixed(1)}{" "}
+											/{" "}
+											{(
+												selectedItem.hostMetrics.memoryTotalBytes /
+												1024 ** 3
+											).toFixed(1)}{" "}
+											GiB
+										</dd>
+										<dt>Disk</dt>
+										<dd>
+											{(
+												selectedItem.hostMetrics.diskUsedBytes /
+												1024 ** 3
+											).toFixed(1)}{" "}
+											/{" "}
+											{(
+												selectedItem.hostMetrics.diskTotalBytes /
+												1024 ** 3
+											).toFixed(1)}{" "}
+											GiB
+										</dd>
+									</>
+								) : null}
+								{"resourceMetric" in selectedItem &&
+								selectedItem.resourceMetric ? (
+									<>
+										<dt>Measurement</dt>
+										<dd>{formatResourceMetric(selectedItem.resourceMetric)}</dd>
 									</>
 								) : null}
 								{"latencyMs" in selectedItem ? (

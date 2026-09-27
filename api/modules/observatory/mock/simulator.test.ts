@@ -13,7 +13,43 @@ describe("MockSignalSimulator", () => {
 			["sqlite", "sqlite"], ["memory", "memory.personal_state"],
 			["world-model", "world.status"], ["tool", "tool_selection.catalog"],
 			["context-recall", "context_still.recall"], ["context-search", "context_still.search"],
+			["physical-host", undefined],
+			["physical-cpu", undefined],
+			["physical-load", undefined],
+			["physical-memory", undefined],
+			["physical-disk", undefined],
 		]);
+	});
+	it("gives each PC resource its own health and explicit relationship", () => {
+		const engine = new MockSignalSimulator(options);
+		engine.setScenario("host-load-spike");
+		const snapshot = engine.snapshot();
+		const entity = (id: string) => snapshot.entities.find((item) => item.id === id);
+		expect(entity("physical-host")?.health).toBe("fault");
+		expect(entity("physical-load")?.health).toBe("fault");
+		expect(entity("physical-cpu")?.health).toBe("healthy");
+		expect(entity("physical-memory")?.health).toBe("healthy");
+		expect(entity("physical-load")?.resourceMetric).toMatchObject({ type: "load", value: 18, capacity: 8 });
+		expect(snapshot.boundaries.filter((item) => item.id.startsWith("host-") || item.id === "cpu-load").map((item) => [item.source, item.target, item.health])).toContainEqual(["physical-cpu", "physical-load", "healthy"]);
+	});
+	it("models distinct host pressure patterns and restores normal state", () => {
+		const engine = new MockSignalSimulator(options);
+		const host = () => engine.snapshot().entities.find((entity) => entity.id === "physical-host");
+		expect(host()?.health).toBe("healthy");
+		engine.setScenario("host-cpu-saturated");
+		expect(host()?.hostMetrics?.cpuUsage).toBeGreaterThan(0.9);
+		expect(host()?.health).toBe("degraded");
+		engine.setScenario("host-load-spike");
+		expect(host()?.hostMetrics?.load1).toBeGreaterThan(2 * 8);
+		expect(host()?.health).toBe("fault");
+		engine.setScenario("host-memory-pressure");
+		expect(host()?.health).toBe("fault");
+		engine.setScenario("host-disk-pressure");
+		expect(host()?.health).toBe("fault");
+		engine.setScenario("host-offline");
+		expect(host()?.health).toBe("disconnected");
+		engine.setScenario("normal");
+		expect(host()?.health).toBe("healthy");
 	});
 	it("replays the same scenario transitions and event sequence", () => {
 		const run = () => {

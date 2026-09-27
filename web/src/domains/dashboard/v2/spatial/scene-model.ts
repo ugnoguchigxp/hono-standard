@@ -51,6 +51,8 @@ const zones: Record<Snapshot["entities"][number]["kind"], Point> = {
 	external: [2.45, 0, 0],
 	runtime: [0, 0, 2.45],
 	service: [0, 0, 3.6],
+	host: [-2.8, 0, 3.1],
+	resource: [-3.8, 0, 4.2],
 	model: [2.45, 0, 0],
 	task: [-2.25, 0, -2.25],
 	pipeline: [2.25, 0, -2.25],
@@ -68,6 +70,8 @@ const defaultSymbol: Record<
 	external: "gateway",
 	runtime: "server",
 	service: "service",
+	host: "computer",
+	resource: "service",
 	model: "world",
 	task: "task",
 	pipeline: "pipeline",
@@ -97,6 +101,15 @@ function orbitForKind(
 	total = 1,
 ): Orbit {
 	const [x, y, z] = zones[kind];
+	if (kind === "resource") {
+		const hostOrbit = orbitForKind("host", 0);
+		return {
+			...hostOrbit,
+			radius: hostOrbit.radius + 1.55,
+			phase: hostOrbit.phase + [-0.44, -0.15, 0.15, 0.44][slot % 4]!,
+			yOffset: hostOrbit.yOffset + (slot % 2 ? 0.25 : -0.2),
+		};
+	}
 	const order = kinds.indexOf(kind);
 	return {
 		radius:
@@ -123,10 +136,22 @@ function orbitForKind(
 function slots(items: Snapshot["entities"]) {
 	const counts = new Map<string, number>();
 	const totals = new Map<string, number>();
+	const resourceOrder = [
+		"physical-cpu",
+		"physical-load",
+		"physical-memory",
+		"physical-disk",
+	];
 	for (const item of items)
 		totals.set(item.kind, (totals.get(item.kind) ?? 0) + 1);
 	return [...items]
-		.sort((a, b) => a.id.localeCompare(b.id))
+		.sort(
+			(a, b) =>
+				a.kind.localeCompare(b.kind) ||
+				(a.kind === "resource"
+					? resourceOrder.indexOf(a.id) - resourceOrder.indexOf(b.id)
+					: a.id.localeCompare(b.id)),
+		)
 		.map((item) => {
 			const slot = counts.get(item.kind) ?? 0;
 			counts.set(item.kind, slot + 1);

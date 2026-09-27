@@ -14,7 +14,8 @@ describe("semantic scene model", () => {
 	it("keeps entity and boundary health separate", () => {
 		const source = snapshot();
 		source.entities[0] = { ...source.entities[0]!, health: "healthy" };
-		source.boundaries[0] = { ...source.boundaries[0]!, health: "degraded" };
+		const boundaryIndex = source.boundaries.findIndex((item) => item.id === "core-runtime");
+		source.boundaries[boundaryIndex] = { ...source.boundaries[boundaryIndex]!, health: "degraded" };
 		const model = buildSceneModel(source);
 		expect(model.entities.find((item) => item.id === "agent-core")?.health).toBe("healthy");
 		expect(model.boundaries.find((item) => item.id === "core-runtime")?.health).toBe("degraded");

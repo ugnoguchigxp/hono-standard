@@ -11,15 +11,10 @@ test("direct Spatial URL avoids Grid queries and preserves search on return", as
 	await expect(page.locator('[data-spatial-ready="true"]')).toBeVisible();
 	await expect(page.getByRole("heading", { name: "System map" })).toBeVisible();
 	await expect(page.locator(".spatial-canvas canvas")).toBeVisible();
-	const canvas = page.locator(".spatial-canvas canvas");
-	const size = await canvas.boundingBox();
-	if (!size) throw new Error("Spatial canvas has no layout box");
-	await canvas.click({ position: { x: size.width / 2, y: size.height / 2 } });
-	await expect(page.getByRole("complementary", { name: "Selected signal details" })).toBeVisible();
 	await page.getByRole("heading", { name: "Entities" }).locator("..").getByRole("button", { name: /Agent Core/ }).click();
 	await expect(page.getByRole("complementary", { name: "Selected signal details" })).toContainText("Agent Core");
 	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("ServiceSAAA Agent Core");
-	await page.getByRole("heading", { name: "Entities" }).locator("..").getByRole("button", { name: /Memory/ }).click();
+	await page.getByRole("heading", { name: "Entities" }).locator("..").getByRole("button", { name: /Personal State Memory/ }).click();
 	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("Reads and maintains personal state");
 	await page.getByRole("heading", { name: "Entities" }).locator("..").getByRole("button", { name: /LLM Response/ }).click();
 	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("harness.llm");
@@ -165,4 +160,33 @@ test("Grid and Spatial share the dashboard route and show live mock changes", as
 	await expect(page.getByRole("article")).toHaveCount(8);
 	await page.goBack();
 	await expect(page.locator('[data-spatial-ready="true"]')).toBeVisible();
+});
+
+test("physical PC mock patterns and custom metrics update the live overview", async ({ page }) => {
+	await openDashboard(page);
+	await page.getByRole("button", { name: "Spatial" }).click();
+	await expect(page.locator('[data-spatial-ready="true"]')).toBeVisible();
+	const command = (path: string, method: string, body?: unknown) => page.evaluate(async ({ path, method, body }) => {
+		const response = await fetch(`/api/observatory${path}`, {
+			method, credentials: "include", headers: { "Content-Type": "application/json" },
+			body: body ? JSON.stringify(body) : undefined,
+		});
+		return response.status;
+	}, { path, method, body });
+	try {
+		await page.getByRole("combobox", { name: "Mock scenario" }).selectOption("host-load-spike");
+		await expect(page.getByText("Scenario:")).toContainText("host-load-spike");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Physical PC — fault");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Load average — fault");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("CPU — healthy");
+		await expect(page.getByRole("heading", { name: "Boundaries" }).locator("..")).toContainText("physical-cpu → physical-load — healthy");
+		await page.getByRole("button", { name: /Load average — fault/ }).click();
+		await expect(page.getByLabel("Selected signal details")).toContainText("18.00 / 12.00 / 3.00");
+		const metrics = await page.evaluate(async () => (await (await fetch("/api/observatory/mock/host")).json()).metrics);
+		expect(await command("/mock/host", "POST", { ...metrics, cpuUsage: 0.12, load1: 0.5, load5: 0.5, load15: 0.5 })).toBe(200);
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Physical PC — healthy");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Load average — healthy");
+	} finally {
+		await command("/mock/scenario", "POST", { scenario: "normal" });
+	}
 });

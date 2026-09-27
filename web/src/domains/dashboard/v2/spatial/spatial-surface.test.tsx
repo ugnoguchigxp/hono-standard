@@ -18,6 +18,9 @@ vi.mock("./scene-host", () => ({
 		<p>scene host {active ? "active" : "paused"}</p>
 	),
 }));
+vi.mock("./scenario-select", () => ({
+	ScenarioSelect: ({ current }: { current: string }) => <p>scenario {current}</p>,
+}));
 
 const snapshot = () =>
 	new MockSignalSimulator({

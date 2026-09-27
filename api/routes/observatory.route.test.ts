@@ -21,7 +21,26 @@ describe("observatory mock route", () => {
 		simulator.advance();
 		expect((await (await app.request("/mock/state")).json()).tick).toBe(1);
 		const scenarios = await (await app.request("/mock/scenarios")).json();
-		expect(scenarios.scenarios).toHaveLength(6);
+		expect(scenarios.scenarios.map((scenario: { id: string }) => scenario.id)).toContain("host-memory-pressure");
+		expect(scenarios.editable).toBe(true);
+		expect((await (await createRoute("production").app.request("/mock/scenarios")).json()).editable).toBe(false);
+	});
+	it("accepts validated host metrics, streams the update, and resets it", async () => {
+		const { app, simulator } = createRoute();
+		const metrics = simulator.currentHostMetrics;
+		const updates: string[] = [];
+		const unsubscribe = simulator.subscribe((packet) => updates.push(packet.event));
+		const body = JSON.stringify({ ...metrics, cpuUsage: 0.95 });
+		const updated = await app.request("/mock/host", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+		expect(updated.status).toBe(200);
+		expect((await updated.json()).entities.find((entity: { id: string }) => entity.id === "physical-host").health).toBe("degraded");
+		expect((await (await app.request("/mock/host")).json()).metrics.cpuUsage).toBe(0.95);
+		expect((await app.request("/mock/host", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...metrics, memoryUsedBytes: metrics.memoryTotalBytes + 1 }) })).status).toBe(400);
+		expect((await app.request("/mock/host", { method: "DELETE" })).status).toBe(200);
+		expect(simulator.currentHostMetrics.cpuUsage).toBe(metrics.cpuUsage);
+		expect(updates).toEqual(["snapshot", "snapshot", "snapshot"]);
+		unsubscribe();
+		expect((await createRoute("production").app.request("/mock/host", { method: "POST", headers: { "Content-Type": "application/json" }, body })).status).toBe(404);
 	});
 
 	it("validates scenario commands and disables them in production", async () => {

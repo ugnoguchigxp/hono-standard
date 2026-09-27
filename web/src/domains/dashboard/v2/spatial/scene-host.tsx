@@ -7,6 +7,7 @@ import {
 	useState,
 } from "react";
 import type { SceneModel, Selection } from "./scene-model";
+import { formatResourceMetric } from "./resource-format";
 
 const loadScene = () =>
 	import("./scene-canvas").then((module) => ({ default: module.SceneCanvas }));
@@ -30,6 +31,9 @@ function identifySelection(model: SceneModel, selected: Selection) {
 				type: entity.kind,
 				state: entity.health,
 				meaning: entity.description ?? entity.kind,
+				measurement: entity.resourceMetric
+					? formatResourceMetric(entity.resourceMetric)
+					: undefined,
 				diagnosisId: entity.diagnosisId,
 			}
 		);
@@ -56,6 +60,7 @@ function identifySelection(model: SceneModel, selected: Selection) {
 						? "Independent queued work"
 						: "Pipeline processing step"),
 				diagnosisId: undefined,
+				measurement: undefined,
 			}
 		);
 	}
@@ -69,6 +74,7 @@ function identifySelection(model: SceneModel, selected: Selection) {
 				state: `${pipeline.stages.length} objects`,
 				meaning: "Coordinates ordered steps and independent queues",
 				diagnosisId: undefined,
+				measurement: undefined,
 			}
 		);
 	}
@@ -82,6 +88,7 @@ function identifySelection(model: SceneModel, selected: Selection) {
 				state: task.state,
 				meaning: task.currentAction || "Agent task",
 				diagnosisId: undefined,
+				measurement: undefined,
 			}
 		);
 	}
@@ -100,6 +107,7 @@ function identifySelection(model: SceneModel, selected: Selection) {
 		state: boundary.health,
 		meaning: "Observed connection between services",
 		diagnosisId: undefined,
+		measurement: undefined,
 	};
 }
 
@@ -231,6 +239,12 @@ export function SceneHost({
 						<dd>{identification.service}</dd>
 						<dt>Status</dt>
 						<dd>{identification.state}</dd>
+						{identification.measurement ? (
+							<>
+								<dt>Measurement</dt>
+								<dd>{identification.measurement}</dd>
+							</>
+						) : null}
 						{identification.diagnosisId ? (
 							<>
 								<dt>Diagnosis check</dt>
@@ -241,11 +255,15 @@ export function SceneHost({
 				</aside>
 			) : null}
 			<p className="spatial-legend">
-				Symbols represent SAAA diagnosis targets. Select any object to see its
-				meaning and diagnosis check. Node health: healthy solid teal · degraded
-				amber diamond · stale dim · disconnected dark ring · fault red triangle
-				· unknown outline. Boundary: solid / dashed / broken. Queue: amber
-				animated shape means an active task; red means stalled.
+				Symbols represent simulated SAAA diagnosis targets and one physical PC.
+				Select any object to see its meaning and diagnosis check. Node health:
+				healthy solid teal · degraded amber diamond · stale dim · disconnected
+				dark ring · fault red triangle · unknown outline. Boundary: solid /
+				dashed / broken. Queue: amber animated shape means an active task; red
+				means stalled. Physical PC resources are separate selectable objects: PC
+				→ CPU → Load average, and PC → Memory / Disk. Each connection and
+				resource has its own health; exact measurements are in the details
+				below.
 			</p>
 		</section>
 	);
