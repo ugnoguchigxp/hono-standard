@@ -1,10 +1,34 @@
 import { MockSignalSimulator } from "@api/modules/observatory/mock/simulator";
 import { describe, expect, it } from "vitest";
-import { buildSceneModel, healthVisual, orbitalPosition, selectionExists } from "./scene-model";
+import { buildSceneModel, entityVisualColor, entityVisualState, healthVisual, orbitalPosition, selectionExists, stateVisual } from "./scene-model";
 
 const snapshot = () => new MockSignalSimulator({ seed: 42, initialTime: 1_700_000_000_000, instanceId: "00000000-0000-4000-8000-000000000001" }).snapshot();
 
 describe("semantic scene model", () => {
+	it("maps operating pressure and failures to distinct visual states", () => {
+		const source = snapshot();
+		const entity = source.entities.find((item) => item.id === "physical-cpu")!;
+		const withPressure = (activity: number, health: typeof entity.health = entity.health) =>
+			entityVisualState({ ...entity, resourceMetric: undefined, activity, health }, source);
+		expect(withPressure(0)).toBe("idle");
+		expect(withPressure(0.2)).toBe("processing-light");
+		expect(withPressure(0.6)).toBe("processing");
+		expect(withPressure(0.8)).toBe("heavy-load");
+		expect(withPressure(0.9, "degraded")).toBe("warn");
+		expect(withPressure(0.9, "fault")).toBe("danger");
+		expect(withPressure(0, "disconnected")).toBe("dead");
+		expect(withPressure(0, "stale")).toBe("unknown");
+		expect(entityVisualState(entity, { scenario: "recovery", tasks: [{ ...source.tasks[0]!, state: "accepted" }] })).toBe("start-active");
+		expect(new Set(Object.values(stateVisual).map((visual) => visual.color)).size).toBe(9);
+	});
+	it("darkens Processing green continuously as pressure rises", () => {
+		const entity = buildSceneModel(snapshot()).entities.find((item) => item.id === "physical-cpu")!;
+		const at = (activity: number) => entityVisualColor({ ...entity, resourceMetric: undefined, activity, visualState: "processing" });
+		expect(at(0.05)).toBe("#b8f6c5");
+		expect(at(0.75)).toBe("#148b49");
+		expect(at(0.4)).not.toBe(at(0.05));
+		expect(at(0.4)).not.toBe(at(0.75));
+	});
 	it("keeps positions stable when the server changes array order", () => {
 		const first = snapshot();
 		const second = { ...first, entities: [...first.entities].reverse(), boundaries: [...first.boundaries].reverse(), tasks: [...first.tasks].reverse() };

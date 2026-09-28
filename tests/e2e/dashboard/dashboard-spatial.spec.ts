@@ -176,16 +176,16 @@ test("physical PC mock patterns and custom metrics update the live overview", as
 	try {
 		await page.getByRole("combobox", { name: "Mock scenario" }).selectOption("host-load-spike");
 		await expect(page.getByText("Scenario:")).toContainText("host-load-spike");
-		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Physical PC — fault");
-		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Load average — fault");
-		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("CPU — healthy");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Physical PC — Danger (fault)");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Load average — Danger (fault)");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("CPU — Processing (healthy)");
 		await expect(page.getByRole("heading", { name: "Boundaries" }).locator("..")).toContainText("physical-cpu → physical-load — healthy");
-		await page.getByRole("button", { name: /Load average — fault/ }).click();
+		await page.getByRole("button", { name: /Load average — Danger \(fault\)/ }).click();
 		await expect(page.getByLabel("Selected signal details")).toContainText("18.00 / 12.00 / 3.00");
 		const metrics = await page.evaluate(async () => (await (await fetch("/api/observatory/mock/host")).json()).metrics);
 		expect(await command("/mock/host", "POST", { ...metrics, cpuUsage: 0.12, load1: 0.5, load5: 0.5, load15: 0.5 })).toBe(200);
-		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Physical PC — healthy");
-		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Load average — healthy");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Physical PC — Processing (healthy)");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Load average — Processing (healthy)");
 	} finally {
 		await command("/mock/scenario", "POST", { scenario: "normal" });
 	}

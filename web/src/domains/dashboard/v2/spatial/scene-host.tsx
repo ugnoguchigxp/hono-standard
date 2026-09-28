@@ -6,7 +6,7 @@ import {
 	Suspense,
 	useState,
 } from "react";
-import type { SceneModel, Selection } from "./scene-model";
+import { stateVisual, type SceneModel, type Selection } from "./scene-model";
 import { formatResourceMetric } from "./resource-format";
 
 const loadScene = () =>
@@ -29,7 +29,7 @@ function identifySelection(model: SceneModel, selected: Selection) {
 				name: entity.label,
 				service: entity.label,
 				type: entity.kind,
-				state: entity.health,
+				state: `${stateVisual[entity.visualState].label} (${entity.health})`,
 				meaning: entity.description ?? entity.kind,
 				measurement: entity.resourceMetric
 					? formatResourceMetric(entity.resourceMetric)
@@ -256,14 +256,15 @@ export function SceneHost({
 			) : null}
 			<p className="spatial-legend">
 				Symbols represent simulated SAAA diagnosis targets and one physical PC.
-				Select any object to see its meaning and diagnosis check. Node health:
-				healthy solid teal · degraded amber diamond · stale dim · disconnected
-				dark ring · fault red triangle · unknown outline. Boundary: solid /
-				dashed / broken. Queue: amber animated shape means an active task; red
-				means stalled. Physical PC resources are separate selectable objects: PC
-				→ CPU → Load average, and PC → Memory / Disk. Each connection and
-				resource has its own health; exact measurements are in the details
-				below.
+				Select any object to see its meaning and diagnosis check. Node colors:
+				StartActive dark blue · Idle blue · Processing light to dark green ·
+				Heavy load yellow · Warn orange · Danger light red with a fast pulse ·
+				Dead red with an interrupted violet signal · Unknown violet. Motion
+				stops when reduced motion is preferred. Boundary: solid / dashed /
+				broken. Queue: amber animated shape means an active task; red means
+				stalled. Physical PC resources are separate selectable objects: PC → CPU
+				→ Load average, and PC → Memory / Disk. Each connection and resource has
+				its own health; exact measurements are in the details below.
 			</p>
 		</section>
 	);

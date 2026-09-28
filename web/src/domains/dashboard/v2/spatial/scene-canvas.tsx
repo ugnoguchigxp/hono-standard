@@ -13,12 +13,14 @@ import {
 import {
 	AdditiveBlending,
 	type Group,
+	type MeshBasicMaterial,
 	OrthographicCamera,
 	Vector3,
 } from "three";
 import { ParticleSymbol } from "./particle-symbol";
 import {
 	healthVisual,
+	entityVisualColor,
 	type Orbit,
 	orbitalPosition,
 	type SceneModel,
@@ -733,10 +735,25 @@ function EntityGlyph({
 	selected: boolean;
 	onClick: () => void;
 }) {
-	const visual = healthVisual[entity.health];
 	const radius =
 		entity.kind === "agent" || entity.kind === "system" ? 0.57 : 0.43;
-	const color = selected ? "#ffffff" : visual.color;
+	const color = entityVisualColor(entity);
+	const alarm = useRef<Group>(null);
+	const alarmMaterial = useRef<MeshBasicMaterial>(null);
+	const clock = useOrbitClock();
+	useFrame(() => {
+		if (!alarm.current || !alarmMaterial.current) return;
+		const elapsed = clock.current;
+		if (entity.visualState === "danger") {
+			const pulse = (Math.sin(elapsed * 0.008) + 1) / 2;
+			alarm.current.scale.setScalar(1 + pulse * 0.35);
+			alarmMaterial.current.opacity = 0.35 + pulse * 0.65;
+		} else if (entity.visualState === "dead") {
+			alarm.current.scale.setScalar(1);
+			alarmMaterial.current.opacity =
+				Math.floor(elapsed / 400) % 3 === 0 ? 1 : 0.25;
+		}
+	});
 	return (
 		<group
 			scale={selected ? 1.18 : 1}
@@ -752,6 +769,32 @@ function EntityGlyph({
 				size={radius / 0.43}
 				selected={selected}
 			/>
+			{entity.visualState === "danger" || entity.visualState === "dead" ? (
+				<group
+					ref={alarm}
+					rotation={[-Math.PI / 2, 0, 0]}
+					position={[0, -0.35, 0]}
+				>
+					<mesh>
+						<torusGeometry
+							args={[
+								radius * 1.8,
+								0.04,
+								6,
+								32,
+								entity.visualState === "dead" ? Math.PI * 1.5 : Math.PI * 2,
+							]}
+						/>
+						<meshBasicMaterial
+							ref={alarmMaterial}
+							color={entity.visualState === "dead" ? "#ad86ed" : "#f43e5c"}
+							transparent
+							opacity={0.6}
+							toneMapped={false}
+						/>
+					</mesh>
+				</group>
+			) : null}
 			{selected ? (
 				<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
 					<torusGeometry args={[radius * 1.5, 0.025, 5, 40]} />

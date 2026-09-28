@@ -17,9 +17,81 @@ export type Orbit = {
 export type EntitySymbol = NonNullable<Snapshot["entities"][number]["symbol"]>;
 export type SceneNode = Snapshot["entities"][number] & {
 	symbol: EntitySymbol;
+	visualState: VisualState;
 	position: Point;
 	orbit: Orbit;
 };
+export type VisualState =
+	| "start-active"
+	| "idle"
+	| "processing-light"
+	| "processing"
+	| "heavy-load"
+	| "warn"
+	| "danger"
+	| "dead"
+	| "unknown";
+
+export const stateVisual: Record<
+	VisualState,
+	{ color: string; label: string }
+> = {
+	"start-active": { color: "#2857ad", label: "StartActive" },
+	idle: { color: "#4b9cff", label: "Idle" },
+	"processing-light": { color: "#b8f6c5", label: "Processing" },
+	processing: { color: "#148b49", label: "Processing" },
+	"heavy-load": { color: "#f3df57", label: "Heavy load" },
+	warn: { color: "#ff9e45", label: "Warn" },
+	danger: { color: "#ff858e", label: "Danger" },
+	dead: { color: "#f43e5c", label: "Dead" },
+	unknown: { color: "#ad86ed", label: "Unknown" },
+};
+
+export function entityVisualState(
+	entity: Snapshot["entities"][number],
+	snapshot: Pick<Snapshot, "scenario" | "tasks">,
+): VisualState {
+	if (entity.health === "disconnected") return "dead";
+	if (entity.health === "fault") return "danger";
+	if (entity.health === "degraded") return "warn";
+	if (entity.health === "stale" || entity.health === "unknown")
+		return "unknown";
+	if (
+		snapshot.scenario === "recovery" &&
+		snapshot.tasks.some((task) =>
+			["accepted", "scheduled", "planning"].includes(task.state),
+		)
+	)
+		return "start-active";
+	const pressure = entity.resourceMetric
+		? entity.resourceMetric.value / entity.resourceMetric.capacity
+		: entity.activity;
+	if (pressure < 0.05) return "idle";
+	if (pressure < 0.45) return "processing-light";
+	if (pressure < 0.75) return "processing";
+	return "heavy-load";
+}
+
+export function entityVisualColor(entity: SceneNode): string {
+	if (
+		entity.visualState !== "processing-light" &&
+		entity.visualState !== "processing"
+	)
+		return stateVisual[entity.visualState].color;
+	const pressure = entity.resourceMetric
+		? entity.resourceMetric.value / entity.resourceMetric.capacity
+		: entity.activity;
+	const fraction = Math.max(0, Math.min(1, (pressure - 0.05) / 0.7));
+	const start = [0xb8, 0xf6, 0xc5];
+	const end = [0x14, 0x8b, 0x49];
+	return `#${start
+		.map((channel, index) =>
+			Math.round(channel + (end[index]! - channel) * fraction)
+				.toString(16)
+				.padStart(2, "0"),
+		)
+		.join("")}`;
+}
 export type SceneBoundary = Snapshot["boundaries"][number] & {
 	from: Point;
 	to: Point;
@@ -133,7 +205,8 @@ function orbitForKind(
 	};
 }
 
-function slots(items: Snapshot["entities"]) {
+function slots(snapshot: Snapshot) {
+	const items = snapshot.entities;
 	const counts = new Map<string, number>();
 	const totals = new Map<string, number>();
 	const resourceOrder = [
@@ -158,6 +231,7 @@ function slots(items: Snapshot["entities"]) {
 			const orbit = orbitForKind(item.kind, slot, totals.get(item.kind));
 			return {
 				...item,
+				visualState: entityVisualState(item, snapshot),
 				symbol: item.symbol ?? defaultSymbol[item.kind],
 				orbit,
 				position: orbitalPosition(orbit, 0),
@@ -166,7 +240,7 @@ function slots(items: Snapshot["entities"]) {
 }
 
 export function buildSceneModel(snapshot: Snapshot): SceneModel {
-	const entities = slots(snapshot.entities);
+	const entities = slots(snapshot);
 	const positions = new Map(
 		entities.map((entity) => [entity.id, entity.position]),
 	);

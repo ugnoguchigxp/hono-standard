@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
 	buildSceneModel,
+	stateVisual,
 	type Selection,
 	selectionExists,
 } from "./scene-model";
@@ -139,7 +140,8 @@ export function SpatialSurface() {
 												setSelected({ kind: "entity", id: item.id })
 											}
 										>
-											{item.label} — {item.health}
+											{item.label} — {stateVisual[item.visualState].label} (
+											{item.health})
 											{!item.resourceMetric
 												? `; activity ${Math.round(item.activity * 100)}%`
 												: ""}
@@ -267,6 +269,12 @@ export function SpatialSurface() {
 								) : null}
 								{"health" in selectedItem ? (
 									<>
+										{"visualState" in selectedItem ? (
+											<>
+												<dt>Visual state</dt>
+												<dd>{stateVisual[selectedItem.visualState].label}</dd>
+											</>
+										) : null}
 										<dt>Health</dt>
 										<dd>{selectedItem.health}</dd>
 									</>
