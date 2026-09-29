@@ -6,6 +6,7 @@ import {
 	Quaternion,
 	Vector3,
 } from "three";
+import { HEAD_ROTATION, headProfile } from "./head-profile";
 import type { EntitySymbol, Point } from "./scene-model";
 
 function Rod({
@@ -44,7 +45,15 @@ export function ServiceSymbol({
 	ghost = false,
 	ghostOpacity = 0.17,
 }: {
-	symbol: EntitySymbol | "harness" | "laptop" | "thermometer" | "processor";
+	symbol:
+		| EntitySymbol
+		| "harness"
+		| "laptop"
+		| "thermometer"
+		| "processor"
+		| "dimm"
+		| "ssd"
+		| "head";
 	color: string;
 	size: number;
 	ghost?: boolean;
@@ -69,7 +78,69 @@ export function ServiceSymbol({
 	}, [ghost, ghostOpacity]);
 	return (
 		<group ref={group} scale={size / 0.43}>
-			{symbol === "processor" ? (
+			{symbol === "head" ? (
+				<group rotation={[0, HEAD_ROTATION, 0]}>
+					<mesh position={[0, 0, -0.075]}>
+						<extrudeGeometry
+							args={[
+								headProfile,
+								{
+									depth: 0.15,
+									bevelEnabled: true,
+									bevelSegments: 1,
+									steps: 1,
+									bevelSize: 0.012,
+									bevelThickness: 0.012,
+									curveSegments: 2,
+								},
+							]}
+						/>
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[-0.19, 0.02, 0.105]}>
+						<torusGeometry args={[0.055, 0.009, 3, 10]} />
+						<meshBasicMaterial color={color} toneMapped={false} />
+					</mesh>
+					<mesh position={[0.18, 0.13, 0.105]}>
+						<sphereGeometry args={[0.017, 5, 4]} />
+						<meshBasicMaterial color={color} toneMapped={false} />
+					</mesh>
+				</group>
+			) : symbol === "ssd" ? (
+				<group rotation={[0, -Math.PI / 6, 0]}>
+					<mesh>
+						<boxGeometry args={[0.7, 0.09, 0.45]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[0, 0.051, 0]}>
+						<boxGeometry args={[0.47, 0.005, 0.28]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[0.35, 0, -0.085]}>
+						<boxGeometry args={[0.07, 0.035, 0.17]} />
+						<meshBasicMaterial color={color} toneMapped={false} />
+					</mesh>
+				</group>
+			) : symbol === "dimm" ? (
+				<group rotation={[0, -Math.PI / 7, 0]}>
+					<mesh position={[0, 0.05, 0]}>
+						<boxGeometry args={[0.94, 0.3, 0.045]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					{[-0.33, -0.11, 0.11, 0.33].map((x) => (
+						<mesh key={x} position={[x, 0.075, 0.035]}>
+							<boxGeometry args={[0.17, 0.17, 0.025]} />
+							<meshBasicMaterial color={color} wireframe toneMapped={false} />
+						</mesh>
+					))}
+					{[-0.38, -0.28, -0.18, -0.08, 0.13, 0.23, 0.33, 0.43].map((x) => (
+						<mesh key={x} position={[x, -0.13, 0.01]}>
+							<boxGeometry args={[0.055, 0.085, 0.052]} />
+							<meshBasicMaterial color={color} toneMapped={false} />
+						</mesh>
+					))}
+				</group>
+			) : symbol === "processor" ? (
 				<group rotation={[0, Math.PI / 4, 0]}>
 					<mesh>
 						<boxGeometry args={[0.62, 0.05, 0.62]} />
@@ -200,42 +271,50 @@ export function ServiceSymbol({
 					</mesh>
 				</>
 			) : symbol === "brain" ? (
-				<>
-					{[-1, 1].flatMap((side) =>
-						[-0.15, 0.13].map((height) => (
+				[-1, 1].map((side) => (
+					<group key={side}>
+						<mesh position={[side * 0.18, 0.015, 0]} scale={[0.75, 1, 0.75]}>
+							<icosahedronGeometry args={[0.35, 1]} />
+							<meshBasicMaterial color={color} wireframe toneMapped={false} />
+						</mesh>
+						{[
+							[0.22, 0.13],
+							[-0.02, 0.27],
+							[-0.2, 0.12],
+						].map(([height, x]) => (
 							<mesh
-								key={`${side}:${height}`}
-								position={[side * 0.17, height, 0]}
-								scale={[0.8, 0.72, 0.9]}
+								key={`${height}:${x}`}
+								position={[side * x, height, 0.13]}
+								scale={[0.9, 0.75, 0.65]}
 							>
-								<icosahedronGeometry args={[0.29, 1]} />
+								<icosahedronGeometry args={[0.16, 0]} />
 								<meshBasicMaterial color={color} wireframe toneMapped={false} />
 							</mesh>
-						)),
-					)}
-					<Rod
-						from={[0, -0.34, 0.04]}
-						to={[0, 0.35, 0.04]}
-						color={color}
-						radius={0.018}
-					/>
-					{[-1, 1].map((side) => (
-						<group key={side}>
+						))}
+						{[
+							[
+								[0.08, 0.25, 0.25],
+								[0.29, 0.17, 0.22],
+							],
+							[
+								[0.1, 0.01, 0.28],
+								[0.31, -0.08, 0.22],
+							],
+							[
+								[0.08, -0.2, 0.23],
+								[0.26, -0.26, 0.18],
+							],
+						].map(([from, to]) => (
 							<Rod
-								from={[side * 0.08, 0.19, 0.29]}
-								to={[side * 0.3, 0.09, 0.24]}
+								key={from.join(":")}
+								from={[side * from[0], from[1], from[2]]}
+								to={[side * to[0], to[1], to[2]]}
 								color={color}
-								radius={0.018}
+								radius={0.012}
 							/>
-							<Rod
-								from={[side * 0.09, -0.08, 0.3]}
-								to={[side * 0.29, -0.18, 0.23]}
-								color={color}
-								radius={0.018}
-							/>
-						</group>
-					))}
-				</>
+						))}
+					</group>
+				))
 			) : symbol === "network" ? (
 				<>
 					<mesh>
@@ -404,16 +483,6 @@ export function ServiceSymbol({
 						<boxGeometry args={[0.1, 0.18, 0.18]} />
 						<meshBasicMaterial color={color} toneMapped={false} />
 					</mesh>
-					{[0.28, 0.39].map((radius) => (
-						<mesh
-							key={radius}
-							position={[0.13, 0, 0]}
-							rotation={[0, 0, -Math.PI / 2]}
-						>
-							<torusGeometry args={[radius, 0.012, 4, 24, Math.PI]} />
-							<meshBasicMaterial color={color} toneMapped={false} />
-						</mesh>
-					))}
 				</>
 			) : symbol === "embedding" ? (
 				<>

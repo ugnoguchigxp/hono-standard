@@ -7,6 +7,7 @@ import {
 	Float32BufferAttribute,
 	type Group,
 } from "three";
+import { HEAD_CONTOUR, HEAD_ROTATION } from "./head-profile";
 import type { EntitySymbol } from "./scene-model";
 
 type Shape =
@@ -15,6 +16,9 @@ type Shape =
 	| "laptop"
 	| "thermometer"
 	| "processor"
+	| "dimm"
+	| "ssd"
+	| "head"
 	| "stage"
 	| "task-particle"
 	| "finding"
@@ -69,6 +73,62 @@ function particlePosition(
 	const c = hash(index * 3 + 3);
 	const r = 0.43 + (c - 0.5) * 0.045;
 	switch (shape) {
+		case "head": {
+			const edge = Math.floor(hash(index * 17 + 9) * HEAD_CONTOUR.length);
+			const from = HEAD_CONTOUR[edge] ?? [0, 0];
+			const to = HEAD_CONTOUR[(edge + 1) % HEAD_CONTOUR.length] ?? from;
+			let x = from[0] + (to[0] - from[0]) * c;
+			let y = from[1] + (to[1] - from[1]) * c;
+			let z = b * 0.08;
+			if (index % 11 === 0) {
+				x = -0.19 + Math.cos(a) * 0.055;
+				y = 0.02 + Math.sin(a) * 0.055;
+				z = 0.105;
+			} else if (index % 13 === 0) {
+				x = 0.18 + Math.cos(a) * 0.017;
+				y = 0.13 + Math.sin(a) * 0.017;
+				z = 0.105;
+			} else if (index % 4 === 0) {
+				const fill = hash(index * 19 + 11) * 0.8;
+				x = x * (1 - fill) - 0.02 * fill;
+				y = y * (1 - fill) + 0.04 * fill;
+			}
+			return [
+				x * Math.cos(HEAD_ROTATION) + z * Math.sin(HEAD_ROTATION),
+				y,
+				-x * Math.sin(HEAD_ROTATION) + z * Math.cos(HEAD_ROTATION),
+			];
+		}
+		case "ssd": {
+			const edge = index % 4;
+			const x = edge < 2 ? (edge ? 0.35 : -0.35) : b * 0.35;
+			const z = edge < 2 ? b * 0.225 : edge === 2 ? -0.225 : 0.225;
+			const rotation = -Math.PI / 6;
+			return [
+				x * Math.cos(rotation) + z * Math.sin(rotation),
+				(c - 0.5) * 0.09,
+				-x * Math.sin(rotation) + z * Math.cos(rotation),
+			];
+		}
+		case "dimm": {
+			const part = index % 6;
+			const x = part < 2 ? (part ? 0.47 : -0.47) : b * 0.47;
+			const y =
+				part < 2
+					? b * 0.19
+					: part === 2
+						? -0.1
+						: part === 3
+							? 0.2
+							: (index % 4) * 0.22 - 0.32;
+			const z = part >= 4 ? 0.04 : (c - 0.5) * 0.05;
+			const rotation = -Math.PI / 7;
+			return [
+				x * Math.cos(rotation) + z * Math.sin(rotation),
+				y,
+				-x * Math.sin(rotation) + z * Math.cos(rotation),
+			];
+		}
 		case "processor": {
 			const edge = index % 4;
 			const x = edge < 2 ? (edge ? 0.31 : -0.31) : b * 0.31;
@@ -136,12 +196,22 @@ function particlePosition(
 		}
 		case "brain": {
 			const side = index % 2 ? 1 : -1;
-			const lobe = index % 4 < 2 ? 0.16 : -0.16;
-			const z = Math.sqrt(Math.max(0, 1 - b * b));
+			const part = Math.floor(index / 2) % 5;
+			if (part === 4) {
+				const crease = Math.floor(index / 10) % 3;
+				return [
+					side * (0.09 + c * 0.21),
+					([0.25, 0.01, -0.2][crease] ?? 0) - c * 0.08,
+					0.27 - c * 0.05,
+				];
+			}
+			const height = [0.19, 0.02, -0.16, 0.04][part] ?? 0;
+			const offset = [0.15, 0.26, 0.16, 0.09][part] ?? 0;
+			const width = Math.sqrt(Math.max(0, 1 - b * b));
 			return [
-				side * 0.23 + Math.cos(a) * z * 0.3,
-				lobe + b * 0.26,
-				Math.sin(a) * z * 0.3,
+				side * offset + Math.cos(a) * width * 0.16,
+				height + b * 0.17,
+				0.03 + Math.sin(a) * width * 0.2,
 			];
 		}
 		case "network": {
@@ -183,8 +253,8 @@ function particlePosition(
 				: [(c - 0.5) * 0.86, level + b * 0.09, edge === 2 ? -0.24 : 0.24];
 		}
 		case "database": {
-			const level = ((index % 3) - 1) * 0.26;
-			return [Math.cos(a) * 0.43, level + b * 0.055, Math.sin(a) * 0.24];
+			const level = ((index % 3) - 1) * 0.2;
+			return [Math.cos(a) * 0.29, level + b * 0.065, Math.sin(a) * 0.29];
 		}
 		case "service": {
 			const face = index % 6;
@@ -265,8 +335,6 @@ function particlePosition(
 			return [Math.cos(a) * 0.19, b * 0.45, Math.sin(a) * 0.18];
 		}
 		case "speaker": {
-			if (index % 4 === 0)
-				return [0.36 + c * 0.34, Math.sin(a) * (0.24 + c * 0.18), b * 0.08];
 			return [
 				c * 0.53 - 0.35,
 				Math.sin(a) * (0.12 + c * 0.29),

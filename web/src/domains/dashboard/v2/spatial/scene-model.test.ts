@@ -120,6 +120,17 @@ describe("semantic scene model", () => {
 		}
 	});
 
+	it("assigns stable varied orbit radii to satellites", () => {
+		const source = snapshot();
+		const first = buildSceneModel(source);
+		const services = first.entities.filter((item) => item.kind === "service");
+		expect(new Set(services.map((item) => item.orbit.radius)).size).toBe(services.length);
+		const runtimeRadius = first.entities.find((item) => item.id === "runtime")?.orbit.radius;
+		source.entities.push({ ...source.entities.find((item) => item.id === "runtime")!, id: "aa-runtime" });
+		const second = buildSceneModel(source);
+		expect(second.entities.find((item) => item.id === "runtime")?.orbit.radius).toBe(runtimeRadius);
+	});
+
 	it("projects every satellite orbit clockwise from the overview camera", () => {
 		const model = buildSceneModel(snapshot());
 		for (const item of [...model.entities, ...model.tasks, ...model.stages]) {
@@ -179,14 +190,14 @@ describe("semantic scene model", () => {
 		expect(steps.map((stage) => stage.id)).toEqual(["finding", "covering", "finalize"]);
 		expect(new Set(model.stages.map((stage) => stage.orbit.inclination)).size).toBe(5);
 		expect(new Set(model.stages.map((stage) => stage.orbit.nodeAngle)).size).toBe(3);
-		expect(model.stages.every((stage) => stage.orbit.radius >= 3.35 && stage.orbit.radius <= 3.75)).toBe(true);
+		expect(model.stages.every((stage) => stage.orbit.radius >= 2.6 && stage.orbit.radius <= 3.7)).toBe(true);
 		expect(model.stages.some((stage) =>
 			[0, 0.25, 0.5, 0.75].some((fraction) =>
 				Math.abs(orbitalPosition(stage.orbit, stage.orbit.periodMs * fraction)[1] - stage.orbit.yOffset) > 0.1,
 			),
 		)).toBe(true);
 		expect([...model.entities, ...model.tasks, ...model.stages].every(
-			(item) => Math.abs(item.orbit.inclination) <= Math.PI / 3,
+			(item) => Math.abs(item.orbit.inclination) <= Math.PI / 18 + 1e-9,
 		)).toBe(true);
 		expect(pipeline.links.every((link) => !queues.some((queue) => queue.id === link.source || queue.id === link.target))).toBe(true);
 	});

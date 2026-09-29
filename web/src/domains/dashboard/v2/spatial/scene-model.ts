@@ -132,30 +132,52 @@ const zones: Record<Snapshot["entities"][number]["kind"], Point> = {
 
 const kinds = Object.keys(zones) as Array<Snapshot["entities"][number]["kind"]>;
 const ORBIT_PERIOD_MS = 180_000;
+const DEGREE = Math.PI / 180;
+function stableFraction(id: string): number {
+	let hash = 2166136261;
+	for (let index = 0; index < id.length; index++) {
+		hash ^= id.charCodeAt(index);
+		hash = Math.imul(hash, 16777619);
+	}
+	return (hash >>> 0) / 4294967296;
+}
+
+function entityOrbitRadius(
+	kind: Snapshot["entities"][number]["kind"],
+	id: string,
+	slot: number,
+): number {
+	if (kind === "agent") return slot * 1.5;
+	const random = stableFraction(`${kind}:${id}`);
+	if (kind === "resource") return 2.6 + random * 1.1;
+	if (kind === "service") return 2.1 + random * 1.5;
+	if (kind === "memory" || kind === "model") return 2.2 + random * 1.35;
+	return 2.3 + random * 1.3;
+}
 const initialEntityPhaseDegrees: Record<string, number> = {
-	"physical-host": 120,
-	memory: 145,
-	"world-model": 320,
-	"physical-cpu": 65,
-	"physical-load": 10,
-	"physical-memory": 180,
-	"physical-disk": 210,
-	runtime: 335,
-	asr: 335,
-	backchannel: 270,
-	"context-recall": 210,
-	"context-search": 285,
-	embedding: 90,
-	llm: 70,
-	sqlite: 145,
+	"physical-host": 12,
+	memory: 122,
+	"world-model": 272,
+	"physical-cpu": 12,
+	"physical-load": 74,
+	"physical-memory": 66,
+	"physical-disk": 206,
+	runtime: 108,
+	asr: 346,
+	backchannel: 332,
+	"context-recall": 190,
+	"context-search": 288,
+	embedding: 150,
+	llm: 306,
+	sqlite: 132,
 	tts: 230,
 };
 const initialStagePhaseDegrees: Record<string, number> = {
-	finding: 240,
-	covering: 345,
-	finalize: 45,
-	"review-queue": 140,
-	"knowledge-queue": 200,
+	finding: 238,
+	covering: 334,
+	finalize: 104,
+	"review-queue": 112,
+	"knowledge-queue": 258,
 };
 const defaultSymbol: Record<
 	Snapshot["entities"][number]["kind"],
@@ -197,14 +219,15 @@ function orbitForKind(
 	kind: Snapshot["entities"][number]["kind"],
 	slot: number,
 	total = 1,
+	id = `${kind}:${slot}`,
 ): Orbit {
 	const [x, , z] = zones[kind];
 	if (kind === "resource") {
 		const hostOrbit = orbitForKind("host", 0);
 		return {
 			...hostOrbit,
-			radius: 3.75,
-			inclination: [-Math.PI / 6, 0, Math.PI / 6, Math.PI / 3][slot % 4] ?? 0,
+			radius: entityOrbitRadius(kind, id, slot),
+			inclination: ([-10, -3, 3, 10][slot % 4] ?? 0) * DEGREE,
 			nodeAngle: [-0.25, 0, 0.25, 0][slot % 4] ?? 0,
 			phase: hostOrbit.phase + ([-1.42, -0.39, 0.66, 1.9][slot % 4] ?? 0),
 			yOffset: 0,
@@ -212,21 +235,12 @@ function orbitForKind(
 	}
 	const order = kinds.indexOf(kind);
 	return {
-		radius:
-			kind === "agent"
-				? slot * 1.5
-				: kind === "service"
-					? 2.65 + slot * 0.12
-					: Math.min(
-							3.1,
-							Math.hypot(x, z) + Math.floor(slot / 5) * 0.25 + (slot % 5) * 0.1,
-						),
+		radius: entityOrbitRadius(kind, id, slot),
 		inclination:
 			kind === "agent"
 				? 0
-				: ([-Math.PI / 6, -Math.PI / 12, 0, Math.PI / 6, Math.PI / 3][
-						(kind === "service" ? slot : order) % 5
-					] ?? 0),
+				: ([-10, -5, 0, 5, 10][(kind === "service" ? slot : order) % 5] ?? 0) *
+					DEGREE,
 		nodeAngle:
 			kind === "agent"
 				? 0
@@ -243,12 +257,12 @@ function orbitForKind(
 function slots(snapshot: Snapshot) {
 	const items = snapshot.entities.filter((entity) => entity.id !== "tool");
 	const previewPlanes: Record<string, [number, number]> = {
-		"physical-host": [Math.PI / 6, -0.25],
-		"context-recall": [-Math.PI / 6, 0.15],
-		backchannel: [Math.PI / 3, 0.25],
+		"physical-host": [8 * DEGREE, -0.25],
+		"context-recall": [-8 * DEGREE, 0.15],
+		backchannel: [10 * DEGREE, 0.25],
 		"world-model": [0, 0],
-		"context-search": [Math.PI / 6, -0.25],
-		sqlite: [-Math.PI / 6, 0.15],
+		"context-search": [8 * DEGREE, -0.25],
+		sqlite: [-8 * DEGREE, 0.15],
 	};
 	const counts = new Map<string, number>();
 	const totals = new Map<string, number>();
@@ -271,14 +285,18 @@ function slots(snapshot: Snapshot) {
 		.map((item) => {
 			const slot = counts.get(item.kind) ?? 0;
 			counts.set(item.kind, slot + 1);
-			const baseOrbit = orbitForKind(item.kind, slot, totals.get(item.kind));
+			const baseOrbit = orbitForKind(
+				item.kind,
+				slot,
+				totals.get(item.kind),
+				item.id,
+			);
 			const plane = previewPlanes[item.id];
 			const orbitWithPreview =
 				plane === undefined
 					? baseOrbit
 					: {
 							...baseOrbit,
-							radius: item.kind === "service" ? baseOrbit.radius : 3.25,
 							inclination: plane[0],
 							nodeAngle: plane[1],
 							yOffset: 0,
@@ -323,10 +341,13 @@ export function buildSceneModel(snapshot: Snapshot): SceneModel {
 		.sort((a, b) => a.id.localeCompare(b.id))
 		.map((task, index) => {
 			const orbit: Orbit = {
-				radius: 1.65 + Math.floor(index / 4) * 0.4,
-				inclination: [0, Math.PI / 6, -Math.PI / 6][index % 3] ?? 0,
+				radius:
+					1.55 +
+					stableFraction(`task:${task.id}`) * 0.35 +
+					Math.floor(index / 4) * 0.4,
+				inclination: ([0, 10, -10][index % 3] ?? 0) * DEGREE,
 				nodeAngle: [-0.25, 0, 0.25][index % 3] ?? 0,
-				phase: Math.PI + index * 0.8,
+				phase: Math.PI + 8 * DEGREE + index * 0.8,
 				periodMs: ORBIT_PERIOD_MS,
 				yOffset: 0,
 			};
@@ -338,11 +359,8 @@ export function buildSceneModel(snapshot: Snapshot): SceneModel {
 	const stages = pipelines.flatMap((pipeline, pipelineIndex) =>
 		pipeline.stages.map((stage, index) => {
 			const orbit: Orbit = {
-				radius: 3.55 + index * 0.05 + pipelineIndex * 0.2,
-				inclination:
-					[-Math.PI / 6, -Math.PI / 12, 0, Math.PI / 6, Math.PI / 3][
-						index % 5
-					] ?? 0,
+				radius: 2.6 + stableFraction(`stage:${pipeline.id}:${stage.id}`) * 1.1,
+				inclination: ([-10, -5, 0, 5, 10][index % 5] ?? 0) * DEGREE,
 				nodeAngle: [-0.25, 0, 0.25, -0.25, 0.25][index % 5] ?? 0,
 				phase:
 					pipelineIndex === 0 &&

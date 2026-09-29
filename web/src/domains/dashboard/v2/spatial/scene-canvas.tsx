@@ -468,11 +468,14 @@ function SceneCamera({
 function HoverSelectionSphere({
 	radius,
 	onClick,
+	hovered,
+	onHoverChange,
 }: {
 	radius: number;
 	onClick: () => void;
+	hovered: boolean;
+	onHoverChange: (hovered: boolean) => void;
 }) {
-	const [hovered, setHovered] = useState(false);
 	const particles = useMemo(() => {
 		const positions: number[] = [];
 		const count = 640;
@@ -498,11 +501,11 @@ function HoverSelectionSphere({
 			<mesh
 				onPointerOver={(event) => {
 					event.stopPropagation();
-					setHovered(true);
+					onHoverChange(true);
 				}}
 				onPointerOut={(event) => {
 					event.stopPropagation();
-					setHovered(false);
+					onHoverChange(false);
 				}}
 				onClick={(event) => {
 					event.stopPropagation();
@@ -538,10 +541,14 @@ function TaskGlyph({
 	task,
 	selected,
 	onClick,
+	hovered,
+	onHoverChange,
 }: {
 	task: SceneModel["tasks"][number];
 	selected: boolean;
 	onClick: () => void;
+	hovered: boolean;
+	onHoverChange: (hovered: boolean) => void;
 }) {
 	const color = selected
 		? "#ffffff"
@@ -561,7 +568,12 @@ function TaskGlyph({
 			}}
 		>
 			<group>
-				<HoverSelectionSphere radius={0.76} onClick={onClick} />
+				<HoverSelectionSphere
+					radius={0.76}
+					onClick={onClick}
+					hovered={hovered}
+					onHoverChange={onHoverChange}
+				/>
 				<ParticleSymbol
 					shape="task-particle"
 					color={color}
@@ -595,11 +607,15 @@ function StageGlyph({
 	selected,
 	active,
 	onClick,
+	hovered,
+	onHoverChange,
 }: {
 	stage: SceneModel["stages"][number];
 	selected: boolean;
 	active: boolean;
 	onClick: () => void;
+	hovered: boolean;
+	onHoverChange: (hovered: boolean) => void;
 }) {
 	const processing =
 		active && stage.status === "running" && stage.activeTaskId !== null;
@@ -622,7 +638,12 @@ function StageGlyph({
 			}}
 		>
 			<group>
-				<HoverSelectionSphere radius={0.82} onClick={onClick} />
+				<HoverSelectionSphere
+					radius={0.82}
+					onClick={onClick}
+					hovered={hovered}
+					onHoverChange={onHoverChange}
+				/>
 				<StageCore
 					symbol={stage.id}
 					kind={stage.kind}
@@ -1025,10 +1046,14 @@ function EntityGlyph({
 	entity,
 	selected,
 	onClick,
+	hovered,
+	onHoverChange,
 }: {
 	entity: SceneModel["entities"][number];
 	selected: boolean;
 	onClick: () => void;
+	hovered: boolean;
+	onHoverChange: (hovered: boolean) => void;
 }) {
 	const radius =
 		entity.kind === "agent" || entity.kind === "system" ? 0.57 : 0.43;
@@ -1042,11 +1067,17 @@ function EntityGlyph({
 					? "laptop"
 					: entity.id === "llm"
 						? "brain"
-						: entity.id === "physical-load"
-							? "thermometer"
-							: entity.id === "physical-cpu"
-								? "processor"
-								: entity.symbol;
+						: entity.id === "memory"
+							? "head"
+							: entity.id === "physical-load"
+								? "thermometer"
+								: entity.id === "physical-memory"
+									? "dimm"
+									: entity.id === "physical-cpu"
+										? "processor"
+										: entity.id === "physical-disk"
+											? "ssd"
+											: entity.symbol;
 	const tint = useRef<Group>(null);
 	useSmoothTint(tint, color);
 	return (
@@ -1061,6 +1092,8 @@ function EntityGlyph({
 				<HoverSelectionSphere
 					radius={radius === 0.57 ? 0.94 : 0.76}
 					onClick={onClick}
+					hovered={hovered}
+					onHoverChange={onHoverChange}
 				/>
 				<ServiceSymbol
 					symbol={symbol}
@@ -1137,12 +1170,30 @@ function SceneContent({
 	onSelect,
 	active,
 }: Omit<Props, "onContextLost">) {
+	const [hoveredTarget, setHoveredTarget] = useState<Selection>(null);
+	const hoveredTargetRef = useRef<Selection>(null);
+	const sameTarget = (a: Selection, b: Selection) =>
+		a?.kind === b?.kind &&
+		a?.id === b?.id &&
+		(a?.kind !== "stage" ||
+			(b?.kind === "stage" && a.pipelineId === b.pipelineId));
+	const hover = (target: NonNullable<Selection>, active: boolean) => {
+		if (active) {
+			hoveredTargetRef.current = target;
+			setHoveredTarget(target);
+		} else if (sameTarget(hoveredTargetRef.current, target)) {
+			hoveredTargetRef.current = null;
+			setHoveredTarget(null);
+		}
+	};
 	const inspection = useMemo(
 		() => inspectionDetails(model, selected),
 		[model, selected],
 	);
 	const choose = (target: NonNullable<Selection>) => {
-		const next = selectionFromClick(selected, target);
+		const next = selected
+			? null
+			: selectionFromClick(selected, hoveredTargetRef.current ?? target);
 		if (next !== selected) onSelect(next);
 	};
 	return (
@@ -1169,6 +1220,13 @@ function SceneContent({
 					<OrbitAnchor key={entity.id} orbit={entity.orbit}>
 						<EntityGlyph
 							entity={entity}
+							hovered={sameTarget(hoveredTarget, {
+								kind: "entity",
+								id: entity.id,
+							})}
+							onHoverChange={(active) =>
+								hover({ kind: "entity", id: entity.id }, active)
+							}
 							selected={
 								selected?.kind === "entity" && selected.id === entity.id
 							}
@@ -1180,6 +1238,10 @@ function SceneContent({
 					<OrbitAnchor key={task.id} orbit={task.orbit}>
 						<TaskGlyph
 							task={task}
+							hovered={sameTarget(hoveredTarget, { kind: "task", id: task.id })}
+							onHoverChange={(active) =>
+								hover({ kind: "task", id: task.id }, active)
+							}
 							selected={selected?.kind === "task" && selected.id === task.id}
 							onClick={() => choose({ kind: "task", id: task.id })}
 						/>
@@ -1205,6 +1267,17 @@ function SceneContent({
 					>
 						<StageGlyph
 							stage={stage}
+							hovered={sameTarget(hoveredTarget, {
+								kind: "stage",
+								id: stage.id,
+								pipelineId: stage.pipelineId,
+							})}
+							onHoverChange={(active) =>
+								hover(
+									{ kind: "stage", id: stage.id, pipelineId: stage.pipelineId },
+									active,
+								)
+							}
 							active={active}
 							selected={
 								selected?.kind === "stage" &&
