@@ -131,6 +131,32 @@ const zones: Record<Snapshot["entities"][number]["kind"], Point> = {
 };
 
 const kinds = Object.keys(zones) as Array<Snapshot["entities"][number]["kind"]>;
+const ORBIT_PERIOD_MS = 180_000;
+const initialEntityPhaseDegrees: Record<string, number> = {
+	"physical-host": 120,
+	memory: 145,
+	"world-model": 320,
+	"physical-cpu": 65,
+	"physical-load": 10,
+	"physical-memory": 180,
+	"physical-disk": 210,
+	runtime: 335,
+	asr: 335,
+	backchannel: 270,
+	"context-recall": 210,
+	"context-search": 285,
+	embedding: 90,
+	llm: 70,
+	sqlite: 145,
+	tts: 230,
+};
+const initialStagePhaseDegrees: Record<string, number> = {
+	finding: 240,
+	covering: 345,
+	finalize: 45,
+	"review-queue": 140,
+	"knowledge-queue": 200,
+};
 const defaultSymbol: Record<
 	Snapshot["entities"][number]["kind"],
 	EntitySymbol
@@ -172,14 +198,16 @@ function orbitForKind(
 	slot: number,
 	total = 1,
 ): Orbit {
-	const [x, y, z] = zones[kind];
+	const [x, , z] = zones[kind];
 	if (kind === "resource") {
 		const hostOrbit = orbitForKind("host", 0);
 		return {
 			...hostOrbit,
-			radius: hostOrbit.radius + 1.55,
-			phase: hostOrbit.phase + [-0.44, -0.15, 0.15, 0.44][slot % 4]!,
-			yOffset: hostOrbit.yOffset + (slot % 2 ? 0.25 : -0.2),
+			radius: 3.75,
+			inclination: [-Math.PI / 6, 0, Math.PI / 6, Math.PI / 3][slot % 4] ?? 0,
+			nodeAngle: [-0.25, 0, 0.25, 0][slot % 4] ?? 0,
+			phase: hostOrbit.phase + ([-1.42, -0.39, 0.66, 1.9][slot % 4] ?? 0),
+			yOffset: 0,
 		};
 	}
 	const order = kinds.indexOf(kind);
@@ -188,25 +216,40 @@ function orbitForKind(
 			kind === "agent"
 				? slot * 1.5
 				: kind === "service"
-					? 3.6
-					: Math.hypot(x, z) + Math.floor(slot / 5) * 0.65 + (slot % 5) * 0.13,
+					? 2.65 + slot * 0.12
+					: Math.min(
+							3.1,
+							Math.hypot(x, z) + Math.floor(slot / 5) * 0.25 + (slot % 5) * 0.1,
+						),
 		inclination:
 			kind === "agent"
 				? 0
-				: (order % 2 === 0 ? 1 : -1) * (0.12 + (order % 4) * 0.065),
-		nodeAngle: kind === "agent" ? 0 : ((order * 0.37) % 1.2) - 0.6,
+				: ([-Math.PI / 6, -Math.PI / 12, 0, Math.PI / 6, Math.PI / 3][
+						(kind === "service" ? slot : order) % 5
+					] ?? 0),
+		nodeAngle:
+			kind === "agent"
+				? 0
+				: ([-0.25, 0, 0.25][(kind === "service" ? slot : order) % 3] ?? 0),
 		phase:
 			kind === "service"
 				? -Math.PI / 2 + (slot * Math.PI * 2) / total
 				: Math.atan2(z, x) + (slot % 5) * 0.34,
-		periodMs:
-			kind === "service" ? 180_000 : 105_000 + order * 9_000 + slot * 3_000,
-		yOffset: y,
+		periodMs: ORBIT_PERIOD_MS,
+		yOffset: 0,
 	};
 }
 
 function slots(snapshot: Snapshot) {
-	const items = snapshot.entities;
+	const items = snapshot.entities.filter((entity) => entity.id !== "tool");
+	const previewPlanes: Record<string, [number, number]> = {
+		"physical-host": [Math.PI / 6, -0.25],
+		"context-recall": [-Math.PI / 6, 0.15],
+		backchannel: [Math.PI / 3, 0.25],
+		"world-model": [0, 0],
+		"context-search": [Math.PI / 6, -0.25],
+		sqlite: [-Math.PI / 6, 0.15],
+	};
 	const counts = new Map<string, number>();
 	const totals = new Map<string, number>();
 	const resourceOrder = [
@@ -228,7 +271,26 @@ function slots(snapshot: Snapshot) {
 		.map((item) => {
 			const slot = counts.get(item.kind) ?? 0;
 			counts.set(item.kind, slot + 1);
-			const orbit = orbitForKind(item.kind, slot, totals.get(item.kind));
+			const baseOrbit = orbitForKind(item.kind, slot, totals.get(item.kind));
+			const plane = previewPlanes[item.id];
+			const orbitWithPreview =
+				plane === undefined
+					? baseOrbit
+					: {
+							...baseOrbit,
+							radius: item.kind === "service" ? baseOrbit.radius : 3.25,
+							inclination: plane[0],
+							nodeAngle: plane[1],
+							yOffset: 0,
+						};
+			const initialPhaseDegrees = initialEntityPhaseDegrees[item.id];
+			const orbit =
+				initialPhaseDegrees === undefined
+					? orbitWithPreview
+					: {
+							...orbitWithPreview,
+							phase: (initialPhaseDegrees * Math.PI) / 180,
+						};
 			return {
 				...item,
 				visualState: entityVisualState(item, snapshot),
@@ -246,6 +308,9 @@ export function buildSceneModel(snapshot: Snapshot): SceneModel {
 	);
 	const orbits = new Map(entities.map((entity) => [entity.id, entity.orbit]));
 	const boundaries = [...snapshot.boundaries]
+		.filter(
+			(boundary) => boundary.source !== "tool" && boundary.target !== "tool",
+		)
 		.sort((a, b) => a.id.localeCompare(b.id))
 		.map((boundary) => ({
 			...boundary,
@@ -259,11 +324,11 @@ export function buildSceneModel(snapshot: Snapshot): SceneModel {
 		.map((task, index) => {
 			const orbit: Orbit = {
 				radius: 1.65 + Math.floor(index / 4) * 0.4,
-				inclination: 0.18 + (index % 3) * 0.1,
-				nodeAngle: index * 0.32,
+				inclination: [0, Math.PI / 6, -Math.PI / 6][index % 3] ?? 0,
+				nodeAngle: [-0.25, 0, 0.25][index % 3] ?? 0,
 				phase: Math.PI + index * 0.8,
-				periodMs: 70_000 + index * 5_000,
-				yOffset: 0.25,
+				periodMs: ORBIT_PERIOD_MS,
+				yOffset: 0,
 			};
 			return { ...task, orbit, position: orbitalPosition(orbit, 0) };
 		});
@@ -273,12 +338,19 @@ export function buildSceneModel(snapshot: Snapshot): SceneModel {
 	const stages = pipelines.flatMap((pipeline, pipelineIndex) =>
 		pipeline.stages.map((stage, index) => {
 			const orbit: Orbit = {
-				radius: 5.1 + index * 0.15 + pipelineIndex * 1.4,
-				inclination: [-0.32, 0.2, -0.16, 0.34, -0.25][index % 5] ?? 0,
-				nodeAngle: [-0.28, 0.34, 0.72, -0.55, 0.48][index % 5] ?? 0,
-				phase: -Math.PI / 2 + (index * Math.PI * 2) / pipeline.stages.length,
-				periodMs: stage.kind === "step" ? 140_000 : 125_000 + index * 8_000,
-				yOffset: 0.2,
+				radius: 3.55 + index * 0.05 + pipelineIndex * 0.2,
+				inclination:
+					[-Math.PI / 6, -Math.PI / 12, 0, Math.PI / 6, Math.PI / 3][
+						index % 5
+					] ?? 0,
+				nodeAngle: [-0.25, 0, 0.25, -0.25, 0.25][index % 5] ?? 0,
+				phase:
+					pipelineIndex === 0 &&
+					initialStagePhaseDegrees[stage.id] !== undefined
+						? ((initialStagePhaseDegrees[stage.id] ?? 0) * Math.PI) / 180
+						: -Math.PI / 2 + (index * Math.PI * 2) / pipeline.stages.length,
+				periodMs: ORBIT_PERIOD_MS,
+				yOffset: 0,
 			};
 			return {
 				...stage,
@@ -289,6 +361,14 @@ export function buildSceneModel(snapshot: Snapshot): SceneModel {
 		}),
 	);
 	return { entities, boundaries, tasks, pipelines, stages };
+}
+
+export function selectionFromClick(
+	current: Selection,
+	target: NonNullable<Selection>,
+): Selection {
+	if (!current) return target;
+	return null;
 }
 
 export function selectionExists(

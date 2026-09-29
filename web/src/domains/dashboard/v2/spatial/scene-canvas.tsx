@@ -2,31 +2,43 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
 	createContext,
-	type MouseEvent as ReactMouseEvent,
 	type ReactNode,
 	useCallback,
 	useContext,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
+	useState,
 } from "react";
 import {
 	AdditiveBlending,
+	BufferGeometry,
+	Color,
+	Float32BufferAttribute,
 	type Group,
-	type MeshBasicMaterial,
+	Line,
+	LineBasicMaterial,
+	type Mesh,
+	MeshBasicMaterial,
 	OrthographicCamera,
+	Quaternion,
 	Vector3,
 } from "three";
+import { inspectionDetails } from "./inspection-details";
+import { InspectionPanel } from "./inspection-panel";
 import { ParticleSymbol } from "./particle-symbol";
 import {
-	healthVisual,
 	entityVisualColor,
+	healthVisual,
 	type Orbit,
 	orbitalPosition,
 	type SceneModel,
 	type Selection,
+	selectionFromClick,
 } from "./scene-model";
 import { ServiceSymbol } from "./service-symbol";
+import { UniverseField } from "./universe-field";
 
 const OrbitClock = createContext<{ current: number } | null>(null);
 
@@ -70,6 +82,132 @@ function useOrbitClock() {
 	return clock;
 }
 
+function useSmoothTint(group: React.RefObject<Group | null>, color: string) {
+	const target = useMemo(() => new Color(color), [color]);
+	const current = useRef(new Color(color));
+	const materials = useRef<Color[]>([]);
+	const invalidate = useThree((state) => state.invalidate);
+	const reduced = useRef(false);
+	useEffect(() => {
+		const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+		const update = () => {
+			reduced.current = preference.matches;
+		};
+		update();
+		preference.addEventListener("change", update);
+		return () => preference.removeEventListener("change", update);
+	}, []);
+	useLayoutEffect(() => {
+		const previous = new Set(materials.current);
+		const next: Color[] = [];
+		group.current?.traverse((object) => {
+			const material = (object as Mesh).material;
+			for (const entry of Array.isArray(material) ? material : [material]) {
+				if (
+					entry &&
+					"color" in entry &&
+					entry.color instanceof Color &&
+					(entry.color.equals(target) || previous.has(entry.color))
+				) {
+					entry.color.copy(current.current);
+					next.push(entry.color);
+				}
+			}
+		});
+		materials.current = next;
+		invalidate();
+	});
+	useFrame((_, delta) => {
+		if (
+			Math.abs(current.current.r - target.r) +
+				Math.abs(current.current.g - target.g) +
+				Math.abs(current.current.b - target.b) <
+			0.005
+		)
+			return;
+		current.current.lerp(
+			target,
+			reduced.current ? 1 : 1 - Math.exp(-Math.min(delta, 0.05) * 4),
+		);
+		for (const materialColor of materials.current)
+			materialColor.copy(current.current);
+		invalidate();
+	});
+}
+
+const OVERVIEW_RADIUS = 4.15 / 1.1;
+const FOCUS_ZOOM_SCALE = 1.85;
+const FOCUS_SHIFT = 0.16;
+
+export function overviewZoomFor(viewWidth: number, viewHeight: number) {
+	return Math.min(viewWidth, viewHeight) / (2 * OVERVIEW_RADIUS);
+}
+
+export function focusZoomFor(viewWidth: number, viewHeight: number) {
+	return overviewZoomFor(viewWidth, viewHeight) * FOCUS_ZOOM_SCALE;
+}
+
+export function focusShiftX(viewWidth: number, zoom: number) {
+	return (-FOCUS_SHIFT * viewWidth) / zoom;
+}
+
+function writeFocusPoint(
+	model: SceneModel,
+	selected: Selection,
+	elapsed: number,
+	out: Vector3,
+	a: [number, number, number],
+	b: [number, number, number],
+) {
+	if (!selected) return false;
+	if (selected.kind === "entity") {
+		const item = model.entities.find((entry) => entry.id === selected.id);
+		if (!item) return false;
+		out.fromArray(orbitalPosition(item.orbit, elapsed, a));
+		return true;
+	}
+	if (selected.kind === "task") {
+		const item = model.tasks.find((entry) => entry.id === selected.id);
+		if (!item) return false;
+		out.fromArray(orbitalPosition(item.orbit, elapsed, a));
+		return true;
+	}
+	if (selected.kind === "stage") {
+		const item = model.stages.find(
+			(entry) =>
+				entry.pipelineId === selected.pipelineId && entry.id === selected.id,
+		);
+		if (!item) return false;
+		out.fromArray(orbitalPosition(item.orbit, elapsed, a));
+		return true;
+	}
+	if (selected.kind === "boundary") {
+		const item = model.boundaries.find((entry) => entry.id === selected.id);
+		if (!item) return false;
+		const from = orbitalPosition(item.fromOrbit, elapsed, a);
+		const to = orbitalPosition(item.toOrbit, elapsed, b);
+		out.set(
+			(from[0] + to[0]) / 2,
+			(from[1] + to[1]) / 2,
+			(from[2] + to[2]) / 2,
+		);
+		return true;
+	}
+	const stages = model.stages.filter(
+		(entry) => entry.pipelineId === selected.id,
+	);
+	if (!stages.length) return false;
+	out.set(0, 0, 0);
+	for (const stage of stages) {
+		const point = orbitalPosition(stage.orbit, elapsed, a);
+		out.x += point[0];
+		out.y += point[1];
+		out.z += point[2];
+	}
+	out.multiplyScalar(1 / stages.length);
+	return true;
+}
+
 function OrbitAnchor({
 	orbit,
 	children,
@@ -110,55 +248,120 @@ function ContextMonitor({ onContextLost }: { onContextLost: () => void }) {
 	return null;
 }
 
-function SceneCamera({ model }: { model: SceneModel }) {
+function SceneCamera({
+	model,
+	selected,
+}: {
+	model: SceneModel;
+	selected: Selection;
+}) {
 	const camera = useThree((state) => state.camera);
 	const size = useThree((state) => state.size);
 	const invalidate = useThree((state) => state.invalidate);
 	const canvas = useThree((state) => state.gl.domElement);
 	const surface = canvas.closest<HTMLElement>(".spatial-canvas") ?? canvas;
+	const clock = useOrbitClock();
 	const basePosition = useRef(camera.position.clone());
-	const pan = useRef(new Vector3());
-	const zoomFactor = useRef(1);
-	const fitZoom = useRef(camera.zoom);
+	const overviewZoom = useRef(camera.zoom);
+	const userPan = useRef(new Vector3());
+	const userZoom = useRef(1);
+	const currentPan = useRef(new Vector3());
+	const currentZoom = useRef(camera.zoom);
+	const reduced = useRef(false);
+	const selectedRef = useRef(selected);
+	const modelRef = useRef(model);
+	selectedRef.current = selected;
+	modelRef.current = model;
 	const drag = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+	const scratch = useMemo(
+		() => ({
+			point: new Vector3(),
+			cam: new Vector3(),
+			targetPan: new Vector3(),
+			right: new Vector3(),
+			up: new Vector3(),
+			inverse: new Quaternion(),
+			a: [0, 0, 0] as [number, number, number],
+			b: [0, 0, 0] as [number, number, number],
+		}),
+		[],
+	);
 	const publishCameraState = useCallback(() => {
 		canvas.dataset.cameraZoom = camera.zoom.toFixed(3);
-		canvas.dataset.cameraPan = [pan.current.x, pan.current.y, pan.current.z]
+		canvas.dataset.cameraPan = [
+			currentPan.current.x,
+			currentPan.current.y,
+			currentPan.current.z,
+		]
 			.map((value) => value.toFixed(3))
 			.join(",");
 	}, [camera, canvas]);
 	useEffect(() => {
+		const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+		const update = () => {
+			reduced.current = preference.matches;
+		};
+		update();
+		preference.addEventListener("change", update);
+		return () => preference.removeEventListener("change", update);
+	}, []);
+	useEffect(() => {
 		if (!(camera instanceof OrthographicCamera)) return;
-		camera.position.copy(basePosition.current);
-		camera.updateMatrixWorld();
-		let maxX = 0;
-		let maxY = 0;
-		const orbits = [...model.entities, ...model.tasks, ...model.stages].map(
-			(item) => item.orbit,
-		);
-		for (const position of orbits.flatMap((orbit) =>
-			Array.from({ length: 12 }, (_, index) =>
-				orbitalPosition(orbit, (orbit.periodMs * index) / 12),
-			),
-		)) {
-			const projected = new Vector3(...position).applyMatrix4(
-				camera.matrixWorldInverse,
-			);
-			maxX = Math.max(maxX, Math.abs(projected.x));
-			maxY = Math.max(maxY, Math.abs(projected.y));
+		overviewZoom.current = overviewZoomFor(size.width, size.height);
+		if (!selectedRef.current) {
+			currentZoom.current = overviewZoom.current * userZoom.current;
+			currentPan.current.copy(userPan.current);
+			camera.position.copy(basePosition.current).add(currentPan.current);
+			camera.zoom = currentZoom.current;
+			camera.updateMatrixWorld();
+			camera.updateProjectionMatrix();
+			publishCameraState();
 		}
-		fitZoom.current = Math.min(
-			size.width / (2 * maxX + 4.4),
-			size.height / (2 * maxY + 4.4),
-			78,
+		invalidate();
+	}, [camera, size.width, size.height, invalidate, publishCameraState]);
+	useFrame((_, delta) => {
+		if (!(camera instanceof OrthographicCamera)) return;
+		const focused = writeFocusPoint(
+			modelRef.current,
+			selectedRef.current,
+			clock.current,
+			scratch.point,
+			scratch.a,
+			scratch.b,
 		);
-		camera.position.add(pan.current);
-		camera.zoom = fitZoom.current * zoomFactor.current;
+		let targetZoom = overviewZoom.current * userZoom.current;
+		scratch.targetPan.copy(userPan.current);
+		if (focused) {
+			targetZoom = focusZoomFor(size.width, size.height);
+			scratch.inverse.copy(camera.quaternion).invert();
+			scratch.cam
+				.copy(scratch.point)
+				.sub(basePosition.current)
+				.applyQuaternion(scratch.inverse);
+			scratch.right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+			scratch.up.set(0, 1, 0).applyQuaternion(camera.quaternion);
+			scratch.targetPan
+				.copy(scratch.right)
+				.multiplyScalar(scratch.cam.x - focusShiftX(size.width, targetZoom))
+				.addScaledVector(scratch.up, scratch.cam.y);
+		}
+		const step = reduced.current
+			? 1
+			: 1 - Math.exp(-Math.min(delta, 0.05) * 6.5);
+		currentPan.current.lerp(scratch.targetPan, step);
+		currentZoom.current += (targetZoom - currentZoom.current) * step;
+		camera.position.copy(basePosition.current).add(currentPan.current);
+		camera.zoom = currentZoom.current;
 		camera.updateMatrixWorld();
 		camera.updateProjectionMatrix();
 		publishCameraState();
-		invalidate();
-	}, [camera, size.width, size.height, invalidate, model, publishCameraState]);
+		if (
+			focused ||
+			Math.abs(currentZoom.current - targetZoom) > 0.05 ||
+			currentPan.current.distanceTo(scratch.targetPan) > 0.002
+		)
+			invalidate();
+	});
 	useEffect(() => {
 		if (!(camera instanceof OrthographicCamera)) return;
 		const right = new Vector3();
@@ -166,8 +369,9 @@ function SceneCamera({ model }: { model: SceneModel }) {
 		const moveView = (x: number, y: number) => {
 			right.set(1, 0, 0).applyQuaternion(camera.quaternion);
 			up.set(0, 1, 0).applyQuaternion(camera.quaternion);
-			pan.current.addScaledVector(right, x).addScaledVector(up, y);
-			camera.position.copy(basePosition.current).add(pan.current);
+			userPan.current.addScaledVector(right, x).addScaledVector(up, y);
+			currentPan.current.copy(userPan.current);
+			camera.position.copy(basePosition.current).add(currentPan.current);
 			camera.updateMatrixWorld();
 			publishCameraState();
 			invalidate();
@@ -175,15 +379,16 @@ function SceneCamera({ model }: { model: SceneModel }) {
 		const zoomBy = (delta: number, clientX: number, clientY: number) => {
 			const nextFactor = Math.min(
 				4,
-				Math.max(0.45, zoomFactor.current * Math.exp(-delta * 0.0012)),
+				Math.max(0.45, userZoom.current * Math.exp(-delta * 0.0012)),
 			);
 			const previousZoom = camera.zoom;
-			const nextZoom = fitZoom.current * nextFactor;
+			const nextZoom = overviewZoom.current * nextFactor;
 			if (nextZoom === previousZoom) return;
 			const rect = canvas.getBoundingClientRect();
 			const x = clientX - rect.left - rect.width / 2;
 			const y = clientY - rect.top - rect.height / 2;
-			zoomFactor.current = nextFactor;
+			userZoom.current = nextFactor;
+			currentZoom.current = nextZoom;
 			moveView(
 				x * (1 / previousZoom - 1 / nextZoom),
 				-y * (1 / previousZoom - 1 / nextZoom),
@@ -195,6 +400,7 @@ function SceneCamera({ model }: { model: SceneModel }) {
 		};
 		const onWheel = (event: WheelEvent) => {
 			event.preventDefault();
+			if (selectedRef.current) return;
 			const delta =
 				event.deltaY *
 				(event.deltaMode === 1
@@ -204,38 +410,8 @@ function SceneCamera({ model }: { model: SceneModel }) {
 						: 1);
 			zoomBy(delta, event.clientX, event.clientY);
 		};
-		const onCommand = (event: Event) => {
-			const command = (event as CustomEvent<string>).detail;
-			const rect = canvas.getBoundingClientRect();
-			if (command === "zoom-in" || command === "zoom-out") {
-				zoomBy(
-					command === "zoom-in" ? -300 : 300,
-					rect.left + rect.width / 2,
-					rect.top + rect.height / 2,
-				);
-			} else if (command === "reset") {
-				pan.current.set(0, 0, 0);
-				zoomFactor.current = 1;
-				camera.position.copy(basePosition.current);
-				camera.zoom = fitZoom.current;
-				camera.updateMatrixWorld();
-				camera.updateProjectionMatrix();
-				publishCameraState();
-				invalidate();
-			} else if (
-				command === "left" ||
-				command === "right" ||
-				command === "up" ||
-				command === "down"
-			) {
-				moveView(
-					command === "left" ? -0.65 : command === "right" ? 0.65 : 0,
-					command === "up" ? 0.65 : command === "down" ? -0.65 : 0,
-				);
-			}
-		};
 		const onPointerDown = (event: PointerEvent) => {
-			if (event.button !== 2) return;
+			if (event.button !== 2 || selectedRef.current) return;
 			event.preventDefault();
 			drag.current = {
 				x: event.clientX,
@@ -275,7 +451,6 @@ function SceneCamera({ model }: { model: SceneModel }) {
 		surface.addEventListener("pointercancel", onPointerEnd);
 		surface.addEventListener("lostpointercapture", onPointerEnd);
 		surface.addEventListener("contextmenu", onContextMenu);
-		surface.addEventListener("spatial-camera-command", onCommand);
 		return () => {
 			surface.removeEventListener("wheel", onWheel);
 			surface.removeEventListener("pointerdown", onPointerDown);
@@ -284,112 +459,78 @@ function SceneCamera({ model }: { model: SceneModel }) {
 			surface.removeEventListener("pointercancel", onPointerEnd);
 			surface.removeEventListener("lostpointercapture", onPointerEnd);
 			surface.removeEventListener("contextmenu", onContextMenu);
-			surface.removeEventListener("spatial-camera-command", onCommand);
 			canvas.style.cursor = "";
 		};
 	}, [camera, canvas, surface, invalidate, publishCameraState]);
 	return null;
 }
 
-function OrbitSegment({
-	fromOrbit,
-	toOrbit,
-	start = 0,
-	end = 1,
-	color,
-	radius = 0.04,
+function HoverSelectionSphere({
+	radius,
 	onClick,
 }: {
-	fromOrbit: Orbit;
-	toOrbit: Orbit;
-	start?: number;
-	end?: number;
-	color: string;
-	radius?: number;
-	onClick?: () => void;
+	radius: number;
+	onClick: () => void;
 }) {
-	const group = useRef<Group>(null);
-	const clock = useOrbitClock();
-	const scratch = useMemo(
-		() => ({
-			fromPoint: [0, 0, 0] as [number, number, number],
-			toPoint: [0, 0, 0] as [number, number, number],
-			from: new Vector3(),
-			to: new Vector3(),
-			begin: new Vector3(),
-			finish: new Vector3(),
-			direction: new Vector3(),
-			up: new Vector3(0, 1, 0),
-		}),
-		[],
-	);
-	useFrame(() => {
-		if (!group.current) return;
-		scratch.from.fromArray(
-			orbitalPosition(fromOrbit, clock.current, scratch.fromPoint),
-		);
-		scratch.to.fromArray(
-			orbitalPosition(toOrbit, clock.current, scratch.toPoint),
-		);
-		scratch.begin.copy(scratch.from).lerp(scratch.to, start);
-		scratch.finish.copy(scratch.from).lerp(scratch.to, end);
-		scratch.direction.copy(scratch.finish).sub(scratch.begin);
-		const length = scratch.direction.length();
-		group.current.position
-			.copy(scratch.begin)
-			.add(scratch.finish)
-			.multiplyScalar(0.5);
-		if (length > 0) {
-			group.current.quaternion.setFromUnitVectors(
-				scratch.up,
-				scratch.direction.multiplyScalar(1 / length),
+	const [hovered, setHovered] = useState(false);
+	const particles = useMemo(() => {
+		const positions: number[] = [];
+		const count = 640;
+		const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+		for (let index = 0; index < count; index++) {
+			const y = 1 - (index / (count - 1)) * 2;
+			const width = Math.sqrt(1 - y * y);
+			const angle = index * goldenAngle;
+			const shell = radius * (0.85 + (((index * 37) % 101) / 101) * 0.15);
+			positions.push(
+				Math.cos(angle) * width * shell,
+				y * shell,
+				Math.sin(angle) * width * shell,
 			);
 		}
-		group.current.scale.set(1, Math.max(length, 0.001), 1);
-	});
+		const geometry = new BufferGeometry();
+		geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+		return geometry;
+	}, [radius]);
+	useEffect(() => () => particles.dispose(), [particles]);
 	return (
-		<group ref={group}>
-			<mesh>
-				<cylinderGeometry args={[radius * 3.5, radius * 3.5, 1, 8]} />
+		<>
+			<mesh
+				onPointerOver={(event) => {
+					event.stopPropagation();
+					setHovered(true);
+				}}
+				onPointerOut={(event) => {
+					event.stopPropagation();
+					setHovered(false);
+				}}
+				onClick={(event) => {
+					event.stopPropagation();
+					onClick();
+				}}
+			>
+				<sphereGeometry args={[radius, 16, 12]} />
 				<meshBasicMaterial
-					color={color}
+					color="#ffffff"
 					transparent
-					opacity={0.16}
-					blending={AdditiveBlending}
+					opacity={0}
 					depthWrite={false}
 					toneMapped={false}
 				/>
 			</mesh>
-			<mesh>
-				<cylinderGeometry args={[radius * 0.42, radius * 0.42, 1, 8]} />
-				<meshBasicMaterial color={color} toneMapped={false} />
-			</mesh>
-			<mesh
-				onClick={
-					onClick
-						? (event) => {
-								event.stopPropagation();
-								onClick();
-							}
-						: undefined
-				}
-			>
-				<cylinderGeometry
-					args={[
-						Math.max(radius * 1.8, 0.09),
-						Math.max(radius * 1.8, 0.09),
-						1,
-						8,
-					]}
-				/>
-				<meshBasicMaterial
-					color={color}
+			<points geometry={particles} visible={hovered} raycast={() => {}}>
+				<pointsMaterial
+					color="#e9f7ff"
+					size={0.047}
+					sizeAttenuation
 					transparent
-					opacity={0.001}
+					opacity={0.86}
 					depthWrite={false}
+					blending={AdditiveBlending}
+					toneMapped={false}
 				/>
-			</mesh>
-		</group>
+			</points>
+		</>
 	);
 }
 
@@ -402,39 +543,49 @@ function TaskGlyph({
 	selected: boolean;
 	onClick: () => void;
 }) {
-	const color =
-		task.state === "failed" || task.state === "blocked"
+	const color = selected
+		? "#ffffff"
+		: task.state === "failed" || task.state === "blocked"
 			? "#ff6b7b"
 			: task.state === "completed"
 				? "#61d6bd"
 				: "#f5b375";
+	const tint = useRef<Group>(null);
+	useSmoothTint(tint, color);
 	return (
 		<group
-			scale={selected ? 1.3 : 1}
+			ref={tint}
 			onClick={(event) => {
 				event.stopPropagation();
 				onClick();
 			}}
 		>
-			<ParticleSymbol shape="task-particle" color={color} selected={selected} />
-			<mesh>
-				<tetrahedronGeometry args={[0.25, 0]} />
-				<meshBasicMaterial
+			<group>
+				<HoverSelectionSphere radius={0.76} onClick={onClick} />
+				<ParticleSymbol
+					shape="task-particle"
 					color={color}
-					transparent
-					opacity={0.16}
-					toneMapped={false}
+					selected={selected}
 				/>
-			</mesh>
-			<mesh rotation={[Math.PI / 2.4, 0.2, 0]}>
-				<torusGeometry args={[0.31, 0.013, 4, 3]} />
-				<meshBasicMaterial
-					color={color}
-					transparent
-					opacity={0.75}
-					toneMapped={false}
-				/>
-			</mesh>
+				<mesh>
+					<tetrahedronGeometry args={[0.25, 0]} />
+					<meshBasicMaterial
+						color={color}
+						transparent
+						opacity={0.16}
+						toneMapped={false}
+					/>
+				</mesh>
+				<mesh rotation={[Math.PI / 2.4, 0.2, 0]}>
+					<torusGeometry args={[0.31, 0.013, 4, 3]} />
+					<meshBasicMaterial
+						color={color}
+						transparent
+						opacity={0.75}
+						toneMapped={false}
+					/>
+				</mesh>
+			</group>
 		</group>
 	);
 }
@@ -460,37 +611,38 @@ function StageGlyph({
 				? "#ffb477"
 				: "#61d6bd";
 	const queueMarks = Math.min(stage.queueDepth, 6);
+	const tint = useRef<Group>(null);
+	useSmoothTint(tint, color);
 	return (
 		<group
+			ref={tint}
 			onClick={(event) => {
 				event.stopPropagation();
 				onClick();
 			}}
 		>
-			<StageCore
-				symbol={stage.id}
-				kind={stage.kind}
-				active={processing}
-				color={color}
-			/>
-			{selected ? (
-				<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.43, 0]}>
-					<torusGeometry args={[0.47, 0.018, 5, 40]} />
-					<meshBasicMaterial color="#ffffff" toneMapped={false} />
-				</mesh>
-			) : null}
-			{Array.from({ length: queueMarks }, (_, index) => {
-				const angle = (index / 6) * Math.PI * 2;
-				return (
-					<mesh
-						key={`queue-${angle.toFixed(5)}`}
-						position={[Math.cos(angle) * 0.53, -0.4, Math.sin(angle) * 0.53]}
-					>
-						<sphereGeometry args={[0.045, 6, 4]} />
-						<meshBasicMaterial color={color} toneMapped={false} />
-					</mesh>
-				);
-			})}
+			<group>
+				<HoverSelectionSphere radius={0.82} onClick={onClick} />
+				<StageCore
+					symbol={stage.id}
+					kind={stage.kind}
+					active={processing}
+					selected={selected}
+					color={color}
+				/>
+				{Array.from({ length: queueMarks }, (_, index) => {
+					const angle = (index / 6) * Math.PI * 2;
+					return (
+						<mesh
+							key={`queue-${angle.toFixed(5)}`}
+							position={[Math.cos(angle) * 0.53, -0.4, Math.sin(angle) * 0.53]}
+						>
+							<sphereGeometry args={[0.045, 6, 4]} />
+							<meshBasicMaterial color={color} toneMapped={false} />
+						</mesh>
+					);
+				})}
+			</group>
 		</group>
 	);
 }
@@ -499,15 +651,18 @@ function StageCore({
 	symbol,
 	kind,
 	active,
+	selected,
 	color,
 }: {
 	symbol: string;
 	kind: SceneModel["stages"][number]["kind"];
 	active: boolean;
+	selected: boolean;
 	color: string;
 }) {
 	const group = useRef<Group>(null);
 	const moving = useRef(false);
+	const motion = useRef(0);
 	const invalidate = useThree((state) => state.invalidate);
 	useEffect(() => {
 		const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -515,10 +670,6 @@ function StageCore({
 		const update = () => {
 			if (timer) clearInterval(timer);
 			moving.current = active && !document.hidden && !preference.matches;
-			if (!moving.current && group.current) {
-				group.current.rotation.y = 0;
-				group.current.scale.setScalar(1);
-			}
 			if (moving.current) timer = setInterval(invalidate, 50);
 			invalidate();
 		};
@@ -531,11 +682,30 @@ function StageCore({
 			preference.removeEventListener("change", update);
 		};
 	}, [active, invalidate]);
-	useFrame(() => {
-		if (!group.current || !moving.current) return;
-		group.current.rotation.y = performance.now() / 1400;
-		group.current.scale.setScalar(1 + 0.1 * Math.sin(performance.now() / 330));
+	useFrame(({ clock }, delta) => {
+		if (!group.current) return;
+		motion.current +=
+			((moving.current ? 1 : 0) - motion.current) *
+			(1 - Math.exp(-Math.min(delta, 0.05) * 3));
+		group.current.scale.setScalar(
+			1 + 0.025 * motion.current * Math.sin(clock.elapsedTime * 1.3),
+		);
 	});
+	useEffect(() => {
+		group.current?.traverse((object) => {
+			const material = (object as Mesh).material;
+			for (const entry of Array.isArray(material) ? material : [material]) {
+				if (!(entry instanceof MeshBasicMaterial)) continue;
+				entry.transparent = true;
+				if (entry.userData.baseOpacity === undefined)
+					entry.userData.baseOpacity = entry.opacity;
+				const baseOpacity = entry.userData.baseOpacity as number;
+				entry.opacity = Math.min(baseOpacity, active ? 0.38 : 0.12);
+				entry.depthWrite = false;
+				entry.needsUpdate = true;
+			}
+		});
+	}, [active]);
 	return (
 		<group ref={group}>
 			<ParticleSymbol
@@ -549,7 +719,8 @@ function StageCore({
 						: "stage"
 				}
 				color={color}
-				selected={active}
+				selected={selected}
+				active={active}
 			/>
 			{symbol === "finding" ? (
 				<>
@@ -646,19 +817,6 @@ function StageCore({
 					</mesh>
 				</>
 			)}
-			{active ? (
-				<mesh>
-					<sphereGeometry args={[0.46, 12, 8]} />
-					<meshBasicMaterial
-						color="#ffab70"
-						transparent
-						opacity={0.12}
-						blending={AdditiveBlending}
-						depthWrite={false}
-						toneMapped={false}
-					/>
-				</mesh>
-			) : null}
 		</group>
 	);
 }
@@ -683,11 +841,11 @@ function PipelinePath({
 				if (!from || !to) return null;
 				return (
 					<group key={`${link.source}:${link.target}`}>
-						<OrbitSegment
+						<SynapseLink
 							fromOrbit={from}
 							toOrbit={to}
+							highlighted={selected}
 							color={selected ? "#ffffff" : "#dc9d69"}
-							radius={0.045}
 							onClick={onClick}
 						/>
 					</group>
@@ -697,31 +855,168 @@ function PipelinePath({
 	);
 }
 
-function TopologyField({ stages }: { stages: SceneModel["stages"] }) {
+function SynapseLink({
+	fromOrbit,
+	toOrbit,
+	start = 0,
+	end = 1,
+	highlighted = false,
+	color,
+	onClick,
+}: {
+	fromOrbit: Orbit;
+	toOrbit: Orbit;
+	start?: number;
+	end?: number;
+	highlighted?: boolean;
+	color: string;
+	onClick: () => void;
+}) {
+	const clock = useOrbitClock();
+	const targetColor = useMemo(() => new Color(color), [color]);
+	const initialColor = useRef(color);
+	const invalidate = useThree((state) => state.invalidate);
+	const hit = useRef<Group>(null);
+	const paths = useMemo(
+		() =>
+			Array.from({ length: 3 }, () => {
+				const geometry = new BufferGeometry();
+				geometry.setAttribute(
+					"position",
+					new Float32BufferAttribute(new Float32Array(17 * 3), 3),
+				);
+				return geometry;
+			}),
+		[],
+	);
+	const lines = useMemo(
+		() =>
+			paths.map(
+				(geometry, index) =>
+					new Line(
+						geometry,
+						new LineBasicMaterial({
+							color: initialColor.current,
+							transparent: true,
+							opacity:
+								index === 1
+									? highlighted
+										? 0.9
+										: 0.55
+									: highlighted
+										? 0.45
+										: 0.25,
+							toneMapped: false,
+						}),
+					),
+			),
+		[paths, highlighted],
+	);
+	useEffect(
+		() => () =>
+			lines.forEach((line) => {
+				line.material.dispose();
+			}),
+		[lines],
+	);
+	const scratch = useMemo(
+		() => ({
+			from: new Vector3(),
+			to: new Vector3(),
+			axis: new Vector3(),
+			bend: new Vector3(),
+			side: new Vector3(),
+			point: new Vector3(),
+			up: new Vector3(0, 1, 0),
+			a: [0, 0, 0] as [number, number, number],
+			b: [0, 0, 0] as [number, number, number],
+		}),
+		[],
+	);
+	useEffect(
+		() => () =>
+			paths.forEach((path) => {
+				path.dispose();
+			}),
+		[paths],
+	);
+	useFrame((_, delta) => {
+		for (const line of lines) {
+			if (!line.material.color.equals(targetColor)) {
+				line.material.color.lerp(
+					targetColor,
+					1 - Math.exp(-Math.min(delta, 0.05) * 4),
+				);
+				invalidate();
+			}
+		}
+		scratch.from.fromArray(
+			orbitalPosition(fromOrbit, clock.current, scratch.a),
+		);
+		scratch.to.fromArray(orbitalPosition(toOrbit, clock.current, scratch.b));
+		scratch.axis.copy(scratch.to).sub(scratch.from);
+		const length = scratch.axis.length();
+		if (length < 0.01) return;
+		scratch.axis.multiplyScalar(1 / length);
+		scratch.bend.set(-scratch.axis.z, 0.35, scratch.axis.x).normalize();
+		scratch.side.crossVectors(scratch.axis, scratch.bend).normalize();
+		const bendSize = Math.min(length * 0.16, 0.85);
+		for (const [branch, path] of paths.entries()) {
+			const attribute = path.getAttribute("position");
+			for (let index = 0; index <= 16; index++) {
+				const u = index / 16;
+				const fraction = start + u * (end - start);
+				const t = 0.09 + fraction * 0.78;
+				const spread = (branch - 1) * 0.12 * Math.sin(u * Math.PI);
+				scratch.point
+					.copy(scratch.from)
+					.lerp(scratch.to, t)
+					.addScaledVector(
+						scratch.bend,
+						Math.sin(t * Math.PI) * bendSize + spread,
+					);
+				if (branch !== 1)
+					scratch.point.addScaledVector(
+						scratch.side,
+						Math.sin(u * Math.PI) *
+							(Math.sin(u * Math.PI * 2 + branch * 1.7) * 0.045 +
+								(branch - 1) * 0.04),
+					);
+				attribute.setXYZ(
+					index,
+					scratch.point.x,
+					scratch.point.y,
+					scratch.point.z,
+				);
+			}
+			attribute.needsUpdate = true;
+			path.computeBoundingSphere();
+		}
+		if (hit.current) {
+			hit.current.position
+				.copy(scratch.from)
+				.add(scratch.to)
+				.multiplyScalar(0.5);
+			hit.current.quaternion.setFromUnitVectors(scratch.up, scratch.axis);
+			hit.current.scale.set(1, length, 1);
+		}
+	});
 	return (
 		<group>
-			<gridHelper
-				args={[20, 10, "#26384d", "#142235"]}
-				position={[0, -1.05, 0]}
-			/>
-			{stages.map((stage) => (
-				<group
-					key={`${stage.pipelineId}:${stage.id}`}
-					rotation={[0, stage.orbit.nodeAngle, 0]}
-					position={[0, stage.orbit.yOffset, 0]}
-				>
-					<mesh rotation={[-Math.PI / 2 + stage.orbit.inclination, 0, 0]}>
-						<torusGeometry args={[stage.orbit.radius, 0.008, 4, 128]} />
-						<meshBasicMaterial
-							color={stage.kind === "queue" ? "#5795ac" : "#d7a275"}
-							transparent
-							opacity={0.16}
-							depthWrite={false}
-							toneMapped={false}
-						/>
-					</mesh>
-				</group>
+			{lines.map((line) => (
+				<primitive key={line.uuid} object={line} />
 			))}
+			<group ref={hit}>
+				<mesh
+					onClick={(event) => {
+						event.stopPropagation();
+						onClick();
+					}}
+				>
+					<cylinderGeometry args={[0.12, 0.12, 1, 6]} />
+					<meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+				</mesh>
+			</group>
 		</group>
 	);
 }
@@ -737,84 +1032,55 @@ function EntityGlyph({
 }) {
 	const radius =
 		entity.kind === "agent" || entity.kind === "system" ? 0.57 : 0.43;
-	const color = entityVisualColor(entity);
-	const alarm = useRef<Group>(null);
-	const alarmMaterial = useRef<MeshBasicMaterial>(null);
-	const clock = useOrbitClock();
-	useFrame(() => {
-		if (!alarm.current || !alarmMaterial.current) return;
-		const elapsed = clock.current;
-		if (entity.visualState === "danger") {
-			const pulse = (Math.sin(elapsed * 0.008) + 1) / 2;
-			alarm.current.scale.setScalar(1 + pulse * 0.35);
-			alarmMaterial.current.opacity = 0.35 + pulse * 0.65;
-		} else if (entity.visualState === "dead") {
-			alarm.current.scale.setScalar(1);
-			alarmMaterial.current.opacity =
-				Math.floor(elapsed / 400) % 3 === 0 ? 1 : 0.25;
-		}
-	});
+	const color = selected ? "#ffffff" : entityVisualColor(entity);
+	const symbol =
+		entity.id === "context-search"
+			? "embedding"
+			: entity.id === "runtime"
+				? "harness"
+				: entity.id === "physical-host"
+					? "laptop"
+					: entity.id === "llm"
+						? "brain"
+						: entity.id === "physical-load"
+							? "thermometer"
+							: entity.id === "physical-cpu"
+								? "processor"
+								: entity.symbol;
+	const tint = useRef<Group>(null);
+	useSmoothTint(tint, color);
 	return (
 		<group
-			scale={selected ? 1.18 : 1}
+			ref={tint}
 			onClick={(event) => {
 				event.stopPropagation();
 				onClick();
 			}}
 		>
-			<ServiceSymbol symbol={entity.symbol} color={color} size={radius} ghost />
-			<ParticleSymbol
-				shape={entity.symbol}
-				color={color}
-				size={radius / 0.43}
-				selected={selected}
-			/>
-			{entity.visualState === "danger" || entity.visualState === "dead" ? (
-				<group
-					ref={alarm}
-					rotation={[-Math.PI / 2, 0, 0]}
-					position={[0, -0.35, 0]}
-				>
-					<mesh>
-						<torusGeometry
-							args={[
-								radius * 1.8,
-								0.04,
-								6,
-								32,
-								entity.visualState === "dead" ? Math.PI * 1.5 : Math.PI * 2,
-							]}
-						/>
-						<meshBasicMaterial
-							ref={alarmMaterial}
-							color={entity.visualState === "dead" ? "#ad86ed" : "#f43e5c"}
-							transparent
-							opacity={0.6}
-							toneMapped={false}
-						/>
-					</mesh>
-				</group>
-			) : null}
-			{selected ? (
-				<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-					<torusGeometry args={[radius * 1.5, 0.025, 5, 40]} />
-					<meshBasicMaterial color="#ffffff" toneMapped={false} />
-				</mesh>
-			) : null}
-			{entity.health !== "healthy" ? (
-				<mesh position={[0, radius + 0.44, 0]}>
-					{entity.health === "fault" ? (
-						<coneGeometry args={[0.17, 0.28, 3]} />
-					) : entity.health === "degraded" ? (
-						<octahedronGeometry args={[0.17]} />
-					) : entity.health === "disconnected" ? (
-						<torusGeometry args={[0.18, 0.045, 6, 12]} />
-					) : (
-						<sphereGeometry args={[0.12, 8, 6]} />
-					)}
-					<meshBasicMaterial color={color} toneMapped={false} />
-				</mesh>
-			) : null}
+			<group>
+				<HoverSelectionSphere
+					radius={radius === 0.57 ? 0.94 : 0.76}
+					onClick={onClick}
+				/>
+				<ServiceSymbol
+					symbol={symbol}
+					color={color}
+					size={radius}
+					ghost
+					ghostOpacity={
+						entity.id === "context-recall" || entity.id === "context-search"
+							? 0.06
+							: 0.17
+					}
+				/>
+				<ParticleSymbol
+					shape={symbol}
+					emphasized={entity.id === "context-search"}
+					color={color}
+					size={radius / 0.43}
+					selected={selected}
+				/>
+			</group>
 		</group>
 	);
 }
@@ -850,14 +1116,14 @@ function Boundary({
 	return (
 		<group>
 			{fractions.map(([start, end]) => (
-				<OrbitSegment
+				<SynapseLink
 					key={`${start}-${end}`}
 					fromOrbit={fromOrbit}
 					toOrbit={toOrbit}
+					highlighted={selected}
 					start={start}
 					end={end}
 					color={color}
-					radius={selected ? 0.09 : 0.055}
 					onClick={onClick}
 				/>
 			))}
@@ -871,13 +1137,22 @@ function SceneContent({
 	onSelect,
 	active,
 }: Omit<Props, "onContextLost">) {
+	const inspection = useMemo(
+		() => inspectionDetails(model, selected),
+		[model, selected],
+	);
+	const choose = (target: NonNullable<Selection>) => {
+		const next = selectionFromClick(selected, target);
+		if (next !== selected) onSelect(next);
+	};
 	return (
 		<>
 			<color attach="background" args={["#080d1b"]} />
 			<ambientLight intensity={0.65} />
 			<directionalLight position={[3, 8, 5]} intensity={1.2} />
-			<TopologyField stages={model.stages} />
 			<OrbitSystem active={active}>
+				<SceneCamera model={model} selected={selected} />
+				<UniverseField />
 				{model.boundaries.map((boundary) => (
 					<Boundary
 						key={boundary.id}
@@ -887,7 +1162,7 @@ function SceneContent({
 						selected={
 							selected?.kind === "boundary" && selected.id === boundary.id
 						}
-						onClick={() => onSelect({ kind: "boundary", id: boundary.id })}
+						onClick={() => choose({ kind: "boundary", id: boundary.id })}
 					/>
 				))}
 				{model.entities.map((entity) => (
@@ -897,7 +1172,7 @@ function SceneContent({
 							selected={
 								selected?.kind === "entity" && selected.id === entity.id
 							}
-							onClick={() => onSelect({ kind: "entity", id: entity.id })}
+							onClick={() => choose({ kind: "entity", id: entity.id })}
 						/>
 					</OrbitAnchor>
 				))}
@@ -906,7 +1181,7 @@ function SceneContent({
 						<TaskGlyph
 							task={task}
 							selected={selected?.kind === "task" && selected.id === task.id}
-							onClick={() => onSelect({ kind: "task", id: task.id })}
+							onClick={() => choose({ kind: "task", id: task.id })}
 						/>
 					</OrbitAnchor>
 				))}
@@ -920,7 +1195,7 @@ function SceneContent({
 						selected={
 							selected?.kind === "pipeline" && selected.id === pipeline.id
 						}
-						onClick={() => onSelect({ kind: "pipeline", id: pipeline.id })}
+						onClick={() => choose({ kind: "pipeline", id: pipeline.id })}
 					/>
 				))}
 				{model.stages.map((stage) => (
@@ -937,7 +1212,7 @@ function SceneContent({
 								selected.pipelineId === stage.pipelineId
 							}
 							onClick={() =>
-								onSelect({
+								choose({
 									kind: "stage",
 									id: stage.id,
 									pipelineId: stage.pipelineId,
@@ -947,29 +1222,34 @@ function SceneContent({
 					</OrbitAnchor>
 				))}
 			</OrbitSystem>
+			{inspection ? (
+				<InspectionPanel
+					inspection={inspection}
+					onDismiss={() => onSelect(null)}
+				/>
+			) : null}
 		</>
 	);
 }
 
 export function SceneCanvas(props: Props) {
-	const command =
-		(name: string) => (event: ReactMouseEvent<HTMLButtonElement>) => {
-			event.currentTarget
-				.closest(".spatial-canvas")
-				?.dispatchEvent(
-					new CustomEvent("spatial-camera-command", { detail: name }),
-				);
-		};
+	const root = useRef<HTMLDivElement>(null);
+	const [fullscreen, setFullscreen] = useState(false);
+	useEffect(() => {
+		const sync = () =>
+			setFullscreen(document.fullscreenElement === root.current);
+		document.addEventListener("fullscreenchange", sync);
+		return () => document.removeEventListener("fullscreenchange", sync);
+	}, []);
 	return (
-		<div className="spatial-canvas" data-spatial-canvas="ready">
+		<div className="spatial-canvas" ref={root} data-spatial-canvas="ready">
 			<Canvas
 				orthographic
-				camera={{ position: [0, 12, 16], zoom: 46, near: 0.1, far: 100 }}
+				camera={{ position: [0, 16, 16], zoom: 46, near: 0.1, far: 100 }}
 				frameloop="demand"
 				dpr={[1, 1.5]}
 				onPointerMissed={() => props.onSelect(null)}
 			>
-				<SceneCamera model={props.model} />
 				<ContextMonitor onContextLost={props.onContextLost} />
 				<SceneContent
 					model={props.model}
@@ -978,38 +1258,29 @@ export function SceneCanvas(props: Props) {
 					active={props.active}
 				/>
 			</Canvas>
-			<fieldset className="spatial-camera-controls">
-				<legend className="sr-only">Scene navigation</legend>
-				<button type="button" onClick={command("zoom-in")} aria-label="Zoom in">
-					＋
-				</button>
-				<button
-					type="button"
-					onClick={command("zoom-out")}
-					aria-label="Zoom out"
-				>
-					−
-				</button>
-				<button type="button" onClick={command("left")} aria-label="Pan left">
-					←
-				</button>
-				<button type="button" onClick={command("right")} aria-label="Pan right">
-					→
-				</button>
-				<button type="button" onClick={command("up")} aria-label="Pan up">
-					↑
-				</button>
-				<button type="button" onClick={command("down")} aria-label="Pan down">
-					↓
-				</button>
-				<button
-					type="button"
-					onClick={command("reset")}
-					aria-label="Reset view"
-				>
-					◎
-				</button>
-			</fieldset>
+			<button
+				type="button"
+				className="spatial-fullscreen"
+				aria-pressed={fullscreen}
+				aria-label={fullscreen ? "Exit full screen" : "Full screen"}
+				onClick={() => {
+					const node = root.current;
+					if (!node) return;
+					if (document.fullscreenElement === node) {
+						void document.exitFullscreen();
+						return;
+					}
+					void node.requestFullscreen().catch(() => undefined);
+				}}
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					{fullscreen ? (
+						<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M16 21v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+					) : (
+						<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+					)}
+				</svg>
+			</button>
 		</div>
 	);
 }

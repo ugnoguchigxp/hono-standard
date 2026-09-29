@@ -4,6 +4,7 @@ import {
 	stateVisual,
 	type Selection,
 	selectionExists,
+	selectionFromClick,
 } from "./scene-model";
 import { formatResourceMetric } from "./resource-format";
 import { ScenarioSelect } from "./scenario-select";
@@ -17,6 +18,9 @@ const SceneHost = lazy(() =>
 export function SpatialSurface() {
 	const { data, status, retry } = useSpatialData();
 	const [selected, setSelected] = useState<Selection>(null);
+	const choose = (target: NonNullable<Selection>) => {
+		setSelected((current) => selectionFromClick(current, target));
+	};
 	const snapshot = data?.snapshot;
 	const model = useMemo(
 		() => (snapshot ? buildSceneModel(snapshot) : null),
@@ -112,7 +116,7 @@ export function SpatialSurface() {
 							</time>
 						</p>
 						<p>
-							Entities: {snapshot.entities.length}, tasks: {summary?.taskCount},
+							Entities: {model?.entities.length}, tasks: {summary?.taskCount},
 							pipelines: {summary?.pipelineCount}
 						</p>
 						<p>
@@ -136,9 +140,7 @@ export function SpatialSurface() {
 									<li key={item.id}>
 										<button
 											type="button"
-											onClick={() =>
-												setSelected({ kind: "entity", id: item.id })
-											}
+											onClick={() => choose({ kind: "entity", id: item.id })}
 										>
 											{item.label} — {stateVisual[item.visualState].label} (
 											{item.health})
@@ -163,9 +165,7 @@ export function SpatialSurface() {
 									<li key={item.id}>
 										<button
 											type="button"
-											onClick={() =>
-												setSelected({ kind: "boundary", id: item.id })
-											}
+											onClick={() => choose({ kind: "boundary", id: item.id })}
 										>
 											{item.source} → {item.target} — {item.health};{" "}
 											{item.latencyMs} ms
@@ -181,7 +181,7 @@ export function SpatialSurface() {
 									<li key={item.id}>
 										<button
 											type="button"
-											onClick={() => setSelected({ kind: "task", id: item.id })}
+											onClick={() => choose({ kind: "task", id: item.id })}
 										>
 											{item.label} — {item.state}
 										</button>
@@ -196,9 +196,7 @@ export function SpatialSurface() {
 									<li key={item.id}>
 										<button
 											type="button"
-											onClick={() =>
-												setSelected({ kind: "pipeline", id: item.id })
-											}
+											onClick={() => choose({ kind: "pipeline", id: item.id })}
 										>
 											{item.label} —{" "}
 											{item.stages
@@ -223,7 +221,7 @@ export function SpatialSurface() {
 													<button
 														type="button"
 														onClick={() =>
-															setSelected({
+															choose({
 																kind: "stage",
 																id: stage.id,
 																pipelineId: item.id,

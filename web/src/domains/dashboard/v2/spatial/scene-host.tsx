@@ -161,8 +161,7 @@ export function SceneHost({
 	return (
 		<section className="spatial-scene-section" aria-label="Spatial scene">
 			<div className="spatial-scene-heading">
-				<h2>System map</h2>
-				<p>Select a shape for details. Wheel to zoom; right-drag to pan.</p>
+				<h2>System Universe</h2>
 			</div>
 			{!supported || failure ? (
 				<div className="spatial-scene-fallback" role="status">
@@ -218,7 +217,9 @@ export function SceneHost({
 			)}
 			{identification ? (
 				<aside
-					className="spatial-scene-identification"
+					className={
+						supported && !failure ? "sr-only" : "spatial-scene-identification"
+					}
 					aria-label="Selected object"
 					aria-live="polite"
 				>
@@ -254,18 +255,6 @@ export function SceneHost({
 					</dl>
 				</aside>
 			) : null}
-			<p className="spatial-legend">
-				Symbols represent simulated SAAA diagnosis targets and one physical PC.
-				Select any object to see its meaning and diagnosis check. Node colors:
-				StartActive dark blue · Idle blue · Processing light to dark green ·
-				Heavy load yellow · Warn orange · Danger light red with a fast pulse ·
-				Dead red with an interrupted violet signal · Unknown violet. Motion
-				stops when reduced motion is preferred. Boundary: solid / dashed /
-				broken. Queue: amber animated shape means an active task; red means
-				stalled. Physical PC resources are separate selectable objects: PC → CPU
-				→ Load average, and PC → Memory / Disk. Each connection and resource has
-				its own health; exact measurements are in the details below.
-			</p>
 		</section>
 	);
 }

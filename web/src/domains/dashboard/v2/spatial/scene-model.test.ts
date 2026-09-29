@@ -1,8 +1,24 @@
 import { MockSignalSimulator } from "@api/modules/observatory/mock/simulator";
 import { describe, expect, it } from "vitest";
-import { buildSceneModel, entityVisualColor, entityVisualState, healthVisual, orbitalPosition, selectionExists, stateVisual } from "./scene-model";
+import { buildSceneModel, entityVisualColor, entityVisualState, healthVisual, orbitalPosition, selectionExists, selectionFromClick, stateVisual } from "./scene-model";
 
 const snapshot = () => new MockSignalSimulator({ seed: 42, initialTime: 1_700_000_000_000, instanceId: "00000000-0000-4000-8000-000000000001" }).snapshot();
+
+describe("selection clicks", () => {
+	it("returns to the overview when the focused object or another object is clicked", () => {
+		const current = { kind: "entity" as const, id: "agent-core" };
+		expect(selectionFromClick(null, current)).toEqual(current);
+		expect(selectionFromClick(current, current)).toBeNull();
+		expect(selectionFromClick(current, { kind: "entity", id: "memory" })).toBeNull();
+		expect(
+			selectionFromClick(current, {
+				kind: "stage",
+				id: "finding",
+				pipelineId: "context",
+			}),
+		).toBeNull();
+	});
+});
 
 describe("semantic scene model", () => {
 	it("maps operating pressure and failures to distinct visual states", () => {
@@ -53,7 +69,7 @@ describe("semantic scene model", () => {
 		source.entities[source.entities.indexOf(memory)] = { ...memory, symbol: undefined };
 		const model = buildSceneModel(source);
 		expect(model.entities.find((item) => item.id === "memory")?.symbol).toBe("brain");
-		expect(model.entities.find((item) => item.id === "llm")?.symbol).toBe("network");
+		expect(model.entities.find((item) => item.id === "llm")?.symbol).toBe("brain");
 		expect(model.entities.find((item) => item.id === "world-model")?.symbol).toBe("world");
 		expect(model.entities.find((item) => item.id === "asr")?.symbol).toBe("microphone");
 	});
@@ -94,6 +110,63 @@ describe("semantic scene model", () => {
 		}
 	});
 
+	it("keeps every orbit at a constant distance from the center", () => {
+		const model = buildSceneModel(snapshot());
+		for (const item of [...model.entities, ...model.tasks, ...model.stages]) {
+			for (const fraction of [0, 0.25, 0.5, 0.75]) {
+				const position = orbitalPosition(item.orbit, item.orbit.periodMs * fraction);
+				expect(Math.hypot(...position)).toBeCloseTo(item.orbit.radius, 6);
+			}
+		}
+	});
+
+	it("projects every satellite orbit clockwise from the overview camera", () => {
+		const model = buildSceneModel(snapshot());
+		for (const item of [...model.entities, ...model.tasks, ...model.stages]) {
+			if (item.orbit.radius === 0) continue;
+			const orbit = { ...item.orbit, phase: 0 };
+			const start = orbitalPosition(orbit, 0);
+			const quarter = orbitalPosition(orbit, orbit.periodMs / 4);
+			const startY = (start[1] - start[2]) / Math.sqrt(2);
+			const quarterY = (quarter[1] - quarter[2]) / Math.sqrt(2);
+			expect(start[0] * quarterY - startY * quarter[0]).toBeLessThan(0);
+		}
+	});
+
+	it("separates the initial objects in the 45-degree overview", () => {
+		const model = buildSceneModel(snapshot());
+		const nodes = [...model.entities, ...model.tasks, ...model.stages];
+		for (let first = 0; first < nodes.length; first++) {
+			for (let second = first + 1; second < nodes.length; second++) {
+				const a = nodes[first]!.position;
+				const b = nodes[second]!.position;
+				const vertical = (a[1] - a[2] - b[1] + b[2]) / Math.sqrt(2);
+				expect(Math.hypot(a[0] - b[0], vertical)).toBeGreaterThan(0.85);
+			}
+		}
+	});
+
+	it("limits projected overlaps during a full orbit", () => {
+		const model = buildSceneModel(snapshot());
+		const nodes = [...model.entities, ...model.tasks, ...model.stages];
+		let overlaps = 0;
+		const samples = 36;
+		for (let sample = 0; sample < samples; sample++) {
+			const projected = nodes.map((node) => {
+				const [x, y, z] = orbitalPosition(node.orbit, sample * 5_000);
+				return [x, (y - z) / Math.sqrt(2)] as const;
+			});
+			for (let first = 0; first < projected.length; first++) {
+				for (let second = first + 1; second < projected.length; second++) {
+					const a = projected[first]!;
+					const b = projected[second]!;
+					if (Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.8) overlaps++;
+				}
+			}
+		}
+		expect(overlaps / samples).toBeLessThan(6);
+	});
+
 	it("keeps independent queues outside the ordered ContextStill path", () => {
 		const model = buildSceneModel(snapshot());
 		const pipeline = model.pipelines[0]!;
@@ -105,12 +178,15 @@ describe("semantic scene model", () => {
 		const queues = model.stages.filter((stage) => stage.kind === "queue");
 		expect(steps.map((stage) => stage.id)).toEqual(["finding", "covering", "finalize"]);
 		expect(new Set(model.stages.map((stage) => stage.orbit.inclination)).size).toBe(5);
-		expect(new Set(model.stages.map((stage) => stage.orbit.nodeAngle)).size).toBe(5);
-		expect(model.stages.every((stage) => stage.orbit.radius > 5)).toBe(true);
-		expect(model.stages.every((stage) =>
+		expect(new Set(model.stages.map((stage) => stage.orbit.nodeAngle)).size).toBe(3);
+		expect(model.stages.every((stage) => stage.orbit.radius >= 3.35 && stage.orbit.radius <= 3.75)).toBe(true);
+		expect(model.stages.some((stage) =>
 			[0, 0.25, 0.5, 0.75].some((fraction) =>
 				Math.abs(orbitalPosition(stage.orbit, stage.orbit.periodMs * fraction)[1] - stage.orbit.yOffset) > 0.1,
 			),
+		)).toBe(true);
+		expect([...model.entities, ...model.tasks, ...model.stages].every(
+			(item) => Math.abs(item.orbit.inclination) <= Math.PI / 3,
 		)).toBe(true);
 		expect(pipeline.links.every((link) => !queues.some((queue) => queue.id === link.source || queue.id === link.target))).toBe(true);
 	});

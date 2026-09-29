@@ -9,20 +9,24 @@ test("direct Spatial URL avoids Grid queries and preserves search on return", as
 	});
 	await page.goto("/dashboard?surface=spatial&range=1h");
 	await expect(page.locator('[data-spatial-ready="true"]')).toBeVisible();
-	await expect(page.getByRole("heading", { name: "System map" })).toBeVisible();
+	await expect(page.getByRole("heading", { name: "System Universe" })).toBeVisible();
 	await expect(page.locator(".spatial-canvas canvas")).toBeVisible();
-	await page.getByRole("heading", { name: "Entities" }).locator("..").getByRole("button", { name: /Agent Core/ }).click();
+	const entities = page.getByRole("heading", { name: "Entities" }).locator("..");
+	const selectedObject = page.getByRole("complementary", { name: "Selected object" });
+	const openAnother = async (click: () => Promise<void>, text: string) => {
+		await click();
+		await expect(selectedObject).toHaveCount(0);
+		await click();
+		await expect(selectedObject).toContainText(text);
+	};
+	await entities.getByRole("button", { name: /Agent Core/ }).click();
 	await expect(page.getByRole("complementary", { name: "Selected signal details" })).toContainText("Agent Core");
-	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("ServiceSAAA Agent Core");
-	await page.getByRole("heading", { name: "Entities" }).locator("..").getByRole("button", { name: /Personal State Memory/ }).click();
-	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("Reads and maintains personal state");
-	await page.getByRole("heading", { name: "Entities" }).locator("..").getByRole("button", { name: /LLM Response/ }).click();
-	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("harness.llm");
-	await page.getByRole("heading", { name: "Entities" }).locator("..").getByRole("button", { name: /World Model/ }).click();
-	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("world.status");
-	await page.getByRole("button", { name: /Review queue queue/ }).click();
-	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("ContextStill");
-	await expect(page.getByRole("complementary", { name: "Selected object" })).toContainText("Independent queue");
+	await expect(selectedObject).toContainText("ServiceSAAA Agent Core");
+	await openAnother(() => entities.getByRole("button", { name: /Personal State Memory/ }).click(), "Reads and maintains personal state");
+	await openAnother(() => entities.getByRole("button", { name: /LLM Response/ }).click(), "harness.llm");
+	await openAnother(() => entities.getByRole("button", { name: /World Model/ }).click(), "world.status");
+	await openAnother(() => page.getByRole("button", { name: /Review queue queue/ }).click(), "ContextStill");
+	await expect(selectedObject).toContainText("Independent queue");
 	await expect(page.getByRole("status").filter({ hasText: "Connection: live" })).toBeVisible();
 	expect(panelRequests).toHaveLength(0);
 	await page.getByRole("button", { name: "Grid" }).click();
@@ -71,12 +75,13 @@ test("Spatial canvas zooms with the wheel and pans with right drag", async ({ pa
 	await page.mouse.up({ button: "right" });
 	await expect.poll(async () => canvas.getAttribute("data-camera-pan")).not.toBe(initialPan);
 	await expect(canvas).toHaveCSS("cursor", "auto");
-	const beforeButtonZoom = Number(await canvas.getAttribute("data-camera-zoom"));
-	await page.getByRole("button", { name: "Zoom in" }).click();
-	await expect.poll(async () => Number(await canvas.getAttribute("data-camera-zoom"))).toBeGreaterThan(beforeButtonZoom);
-	await page.getByRole("button", { name: "Reset view" }).click();
-	await expect.poll(async () => Number(await canvas.getAttribute("data-camera-zoom"))).toBeCloseTo(initialZoom, 2);
-	await expect(canvas).toHaveAttribute("data-camera-pan", "0.000,0.000,0.000");
+	await expect(page.getByRole("button", { name: "Zoom in" })).toHaveCount(0);
+	const fullscreen = page.getByRole("button", { name: "Full screen" });
+	await expect(fullscreen).toBeVisible();
+	await fullscreen.click();
+	await expect.poll(() => page.evaluate(() => document.fullscreenElement?.classList.contains("spatial-canvas") ?? false)).toBe(true);
+	await page.getByRole("button", { name: "Exit full screen" }).click();
+	await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull();
 });
 
 test("Spatial recovers its scene after graphics context loss", async ({ page }) => {
@@ -176,7 +181,7 @@ test("physical PC mock patterns and custom metrics update the live overview", as
 	try {
 		await page.getByRole("combobox", { name: "Mock scenario" }).selectOption("host-load-spike");
 		await expect(page.getByText("Scenario:")).toContainText("host-load-spike");
-		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Physical PC — Danger (fault)");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Laptop — Danger (fault)");
 		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Load average — Danger (fault)");
 		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("CPU — Processing (healthy)");
 		await expect(page.getByRole("heading", { name: "Boundaries" }).locator("..")).toContainText("physical-cpu → physical-load — healthy");
@@ -184,7 +189,7 @@ test("physical PC mock patterns and custom metrics update the live overview", as
 		await expect(page.getByLabel("Selected signal details")).toContainText("18.00 / 12.00 / 3.00");
 		const metrics = await page.evaluate(async () => (await (await fetch("/api/observatory/mock/host")).json()).metrics);
 		expect(await command("/mock/host", "POST", { ...metrics, cpuUsage: 0.12, load1: 0.5, load5: 0.5, load15: 0.5 })).toBe(200);
-		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Physical PC — Processing (healthy)");
+		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Laptop — Processing (healthy)");
 		await expect(page.getByRole("heading", { name: "Entities" }).locator("..")).toContainText("Load average — Processing (healthy)");
 	} finally {
 		await command("/mock/scenario", "POST", { scenario: "normal" });

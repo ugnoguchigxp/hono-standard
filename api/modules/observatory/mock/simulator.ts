@@ -31,7 +31,7 @@ const SAAA_TARGETS = [
 		kind: "service",
 		label: "LLM Response",
 		description: "Generates the primary response",
-		symbol: "network",
+		symbol: "brain",
 		diagnosisId: "harness.llm",
 	},
 	{
@@ -483,7 +483,7 @@ export class MockSignalSimulator {
 				{
 					id: "physical-host",
 					kind: "host",
-					label: "Physical PC",
+					label: "Laptop",
 					description:
 						"Mock physical computer resources; values are not read from this machine",
 					symbol: "computer",

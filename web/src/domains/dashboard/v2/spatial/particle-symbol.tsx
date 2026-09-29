@@ -3,6 +3,7 @@ import { useMemo, useRef } from "react";
 import {
 	AdditiveBlending,
 	BufferGeometry,
+	CanvasTexture,
 	Float32BufferAttribute,
 	type Group,
 } from "three";
@@ -10,6 +11,10 @@ import type { EntitySymbol } from "./scene-model";
 
 type Shape =
 	| EntitySymbol
+	| "harness"
+	| "laptop"
+	| "thermometer"
+	| "processor"
 	| "stage"
 	| "task-particle"
 	| "finding"
@@ -21,6 +26,26 @@ type Shape =
 function hash(value: number) {
 	const x = Math.sin(value * 127.1 + 78.233) * 43758.5453;
 	return x - Math.floor(x);
+}
+
+let glowTexture: CanvasTexture | null = null;
+
+function particleGlowTexture() {
+	if (glowTexture) return glowTexture;
+	const canvas = document.createElement("canvas");
+	canvas.width = 64;
+	canvas.height = 64;
+	const context = canvas.getContext("2d");
+	if (!context) throw new Error("Could not create particle glow texture");
+	const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+	gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+	gradient.addColorStop(0.18, "rgba(255, 255, 255, 0.65)");
+	gradient.addColorStop(0.55, "rgba(255, 255, 255, 0.15)");
+	gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+	context.fillStyle = gradient;
+	context.fillRect(0, 0, 64, 64);
+	glowTexture = new CanvasTexture(canvas);
+	return glowTexture;
 }
 
 function line(
@@ -44,6 +69,65 @@ function particlePosition(
 	const c = hash(index * 3 + 3);
 	const r = 0.43 + (c - 0.5) * 0.045;
 	switch (shape) {
+		case "processor": {
+			const edge = index % 4;
+			const x = edge < 2 ? (edge ? 0.31 : -0.31) : b * 0.31;
+			const z = edge < 2 ? b * 0.31 : edge === 2 ? -0.31 : 0.31;
+			const rotation = Math.PI / 4;
+			return [
+				x * Math.cos(rotation) + z * Math.sin(rotation),
+				index % 5 === 0 ? 0.04 : (c - 0.5) * 0.05,
+				-x * Math.sin(rotation) + z * Math.cos(rotation),
+			];
+		}
+		case "thermometer": {
+			const part = index % 5;
+			if (part === 0)
+				return [
+					Math.cos(a) * 0.115,
+					-0.34 + Math.sin(a) * 0.115,
+					0.04 + b * 0.03,
+				];
+			if (part === 1 || part === 2)
+				return [
+					Math.cos(a) * 0.055,
+					-0.02 + b * 0.295,
+					0.02 + Math.sin(a) * 0.055,
+				];
+			if (part === 3)
+				return [index % 2 ? -0.145 : 0.145, -0.4 + c * 0.83, -0.08];
+			return [0.09 + c * 0.08, [0.22, 0.1, -0.02, -0.14][index % 4] ?? 0, 0.04];
+		}
+		case "laptop": {
+			const edge = index % 8;
+			let x: number;
+			let y: number;
+			let z: number;
+			if (edge < 4) {
+				x = edge < 2 ? (edge ? 0.41 : -0.41) : (c - 0.5) * 0.82;
+				y = edge < 2 ? -0.05 + b * 0.26 : edge === 2 ? -0.31 : 0.21;
+				z = -0.22 - (y + 0.31) * 0.16;
+			} else {
+				x = edge < 6 ? (c - 0.5) * 0.86 : edge === 6 ? -0.43 : 0.43;
+				y = -0.34;
+				z = edge < 6 ? (edge === 4 ? -0.22 : 0.35) : -0.22 + c * 0.57;
+			}
+			const rotation = -Math.PI / 5;
+			return [
+				x * Math.cos(rotation) + z * Math.sin(rotation),
+				y,
+				-x * Math.sin(rotation) + z * Math.cos(rotation),
+			];
+		}
+		case "harness": {
+			if (index % 4 === 0)
+				return [-0.3 + Math.cos(a) * 0.16, 0.25 + Math.sin(a) * 0.16, b * 0.03];
+			if (index % 4 === 1)
+				return line([-0.17, 0.16, 0], [-0.03, -0.06, 0.03], c);
+			if (index % 4 === 2)
+				return line([-0.03, -0.06, 0.03], [0.17, -0.2, 0.06], c);
+			return line([0.17, -0.2, 0.06], [0.36, -0.28, 0], c);
+		}
 		case "computer": {
 			const edge = index % 4;
 			return edge < 2
@@ -206,25 +290,41 @@ export function ParticleSymbol({
 	color,
 	size = 1,
 	selected = false,
+	emphasized = false,
+	active = false,
 }: {
 	shape: Shape;
 	color: string;
 	size?: number;
 	selected?: boolean;
+	emphasized?: boolean;
+	active?: boolean;
 }) {
 	const group = useRef<Group>(null);
+	const glowMap = useMemo(particleGlowTexture, []);
+	const contextStill =
+		emphasized ||
+		shape === "recall" ||
+		shape === "search" ||
+		shape === "finding" ||
+		shape === "covering" ||
+		shape === "finalize" ||
+		shape === "review-queue" ||
+		shape === "knowledge-queue" ||
+		shape === "stage";
 	const geometry = useMemo(() => {
 		const positions: number[] = [];
-		for (let i = 0; i < 440; i++) positions.push(...particlePosition(shape, i));
+		for (let i = 0; i < (contextStill ? 760 : 440); i++)
+			positions.push(...particlePosition(shape, i));
 		const result = new BufferGeometry();
 		result.setAttribute("position", new Float32BufferAttribute(positions, 3));
 		return result;
-	}, [shape]);
+	}, [shape, contextStill]);
 	const fieldGeometry = useMemo(() => {
 		const positions: number[] = [];
-		for (let i = 0; i < 900; i++) {
+		for (let i = 0; i < (contextStill ? 1050 : 650); i++) {
 			const [x, y, z] = particlePosition(shape, i + 1000);
-			const spread = 1.6 + hash(i * 7 + 37) * 1.65;
+			const spread = 1.25 + hash(i * 7 + 37) * 0.9;
 			const drift = hash(i * 11 + 83) - 0.5;
 			positions.push(
 				x * spread + drift * 0.24,
@@ -235,7 +335,24 @@ export function ParticleSymbol({
 		const result = new BufferGeometry();
 		result.setAttribute("position", new Float32BufferAttribute(positions, 3));
 		return result;
-	}, [shape]);
+	}, [shape, contextStill]);
+	const galaxyGeometry = useMemo(() => {
+		const positions: number[] = [];
+		for (let index = 0; index < (contextStill ? 2300 : 1300); index++) {
+			const [sourceX, sourceY] = particlePosition(shape, index + 2400);
+			const radius = 0.42 + hash(index * 5 + 71) * 1.1;
+			const arm = (index % 3) * ((Math.PI * 2) / 3);
+			const angle = arm + radius * 1.8 + (hash(index * 5 + 83) - 0.5) * 0.8;
+			positions.push(
+				Math.cos(angle) * radius + sourceX * 0.18,
+				Math.sin(angle) * radius * 0.72 + sourceY * 0.18,
+				(hash(index * 5 + 109) - 0.5) * (0.55 + radius * 0.48),
+			);
+		}
+		const result = new BufferGeometry();
+		result.setAttribute("position", new Float32BufferAttribute(positions, 3));
+		return result;
+	}, [shape, contextStill]);
 	useFrame(({ clock }) => {
 		if (!group.current) return;
 		group.current.rotation.y = Math.sin(clock.elapsedTime * 0.23) * 0.12;
@@ -245,13 +362,38 @@ export function ParticleSymbol({
 	});
 	return (
 		<group ref={group} scale={size}>
+			<points geometry={galaxyGeometry} raycast={() => {}}>
+				<pointsMaterial
+					color={color}
+					map={glowMap}
+					size={0.23}
+					sizeAttenuation
+					transparent
+					opacity={contextStill ? 0.34 : 0.27}
+					depthWrite={false}
+					blending={AdditiveBlending}
+					toneMapped={false}
+				/>
+			</points>
+			<points geometry={galaxyGeometry} raycast={() => {}}>
+				<pointsMaterial
+					color={color}
+					size={0.05}
+					sizeAttenuation
+					transparent
+					opacity={contextStill ? 0.32 : 0.25}
+					depthWrite={false}
+					blending={AdditiveBlending}
+					toneMapped={false}
+				/>
+			</points>
 			<points geometry={fieldGeometry} raycast={() => {}}>
 				<pointsMaterial
 					color={color}
-					size={selected ? 0.034 : 0.025}
+					size={selected ? 0.048 : 0.025}
 					sizeAttenuation
 					transparent
-					opacity={selected ? 0.56 : 0.36}
+					opacity={selected ? 0.82 : 0.36}
 					depthWrite={false}
 					blending={AdditiveBlending}
 					toneMapped={false}
@@ -260,10 +402,11 @@ export function ParticleSymbol({
 			<points geometry={geometry}>
 				<pointsMaterial
 					color={color}
-					size={selected ? 0.067 : 0.054}
+					map={glowMap}
+					size={0.38}
 					sizeAttenuation
 					transparent
-					opacity={0.17}
+					opacity={active ? 0.85 : 0.5}
 					depthWrite={false}
 					blending={AdditiveBlending}
 					toneMapped={false}
@@ -272,10 +415,22 @@ export function ParticleSymbol({
 			<points geometry={geometry}>
 				<pointsMaterial
 					color={color}
-					size={selected ? 0.022 : 0.016}
+					size={selected ? 0.12 : active ? 0.085 : 0.054}
 					sizeAttenuation
 					transparent
-					opacity={0.9}
+					opacity={selected ? 0.42 : active ? 0.32 : 0.17}
+					depthWrite={false}
+					blending={AdditiveBlending}
+					toneMapped={false}
+				/>
+			</points>
+			<points geometry={geometry}>
+				<pointsMaterial
+					color={color}
+					size={selected ? 0.032 : 0.016}
+					sizeAttenuation
+					transparent
+					opacity={selected ? 1 : 0.9}
 					depthWrite={false}
 					blending={AdditiveBlending}
 					toneMapped={false}

@@ -42,11 +42,13 @@ export function ServiceSymbol({
 	color,
 	size,
 	ghost = false,
+	ghostOpacity = 0.17,
 }: {
-	symbol: EntitySymbol;
+	symbol: EntitySymbol | "harness" | "laptop" | "thermometer" | "processor";
 	color: string;
 	size: number;
 	ghost?: boolean;
+	ghostOpacity?: number;
 }) {
 	const group = useRef<Group>(null);
 	useEffect(() => {
@@ -59,15 +61,128 @@ export function ServiceSymbol({
 			for (const material of materials) {
 				if (!(material instanceof MeshBasicMaterial)) continue;
 				material.transparent = true;
-				material.opacity = Math.min(material.opacity, 0.17);
+				material.opacity = Math.min(material.opacity, ghostOpacity);
 				material.depthWrite = false;
 				material.needsUpdate = true;
 			}
 		});
-	}, [ghost]);
+	}, [ghost, ghostOpacity]);
 	return (
 		<group ref={group} scale={size / 0.43}>
-			{symbol === "computer" ? (
+			{symbol === "processor" ? (
+				<group rotation={[0, Math.PI / 4, 0]}>
+					<mesh>
+						<boxGeometry args={[0.62, 0.05, 0.62]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[0, 0.034, 0]}>
+						<boxGeometry args={[0.4, 0.012, 0.4]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					{[-0.22, 0, 0.22].flatMap((offset) =>
+						[-1, 1].flatMap((side) => [
+							<mesh
+								key={`x:${side}:${offset}`}
+								position={[side * 0.35, 0, offset]}
+							>
+								<boxGeometry args={[0.09, 0.025, 0.045]} />
+								<meshBasicMaterial color={color} toneMapped={false} />
+							</mesh>,
+							<mesh
+								key={`z:${side}:${offset}`}
+								position={[offset, 0, side * 0.35]}
+							>
+								<boxGeometry args={[0.045, 0.025, 0.09]} />
+								<meshBasicMaterial color={color} toneMapped={false} />
+							</mesh>,
+						]),
+					)}
+				</group>
+			) : symbol === "thermometer" ? (
+				<>
+					<mesh position={[0, 0.02, -0.08]}>
+						<boxGeometry args={[0.29, 0.83, 0.035]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[0, -0.02, 0.02]}>
+						<cylinderGeometry args={[0.055, 0.055, 0.59, 6]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[0, -0.34, 0.04]}>
+						<sphereGeometry args={[0.12, 8, 6]} />
+						<meshBasicMaterial color={color} toneMapped={false} />
+					</mesh>
+					{[0.22, 0.1, -0.02, -0.14].map((height) => (
+						<Rod
+							key={height}
+							from={[0.09, height, 0.04]}
+							to={[0.17, height, 0.04]}
+							color={color}
+							radius={0.009}
+						/>
+					))}
+				</>
+			) : symbol === "laptop" ? (
+				<group rotation={[0, -Math.PI / 5, 0]}>
+					<mesh position={[0, -0.05, -0.22]} rotation={[-0.16, 0, 0]}>
+						<boxGeometry args={[0.82, 0.53, 0.025]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[0, -0.34, 0.065]}>
+						<boxGeometry args={[0.86, 0.025, 0.58]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[0, -0.324, 0.005]} rotation={[-Math.PI / 2, 0, 0]}>
+						<planeGeometry args={[0.67, 0.25]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<mesh position={[0, -0.324, 0.25]} rotation={[-Math.PI / 2, 0, 0]}>
+						<planeGeometry args={[0.23, 0.1]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+					<Rod
+						from={[-0.4, -0.32, -0.22]}
+						to={[0.4, -0.32, -0.22]}
+						color={color}
+						radius={0.012}
+					/>
+				</group>
+			) : symbol === "harness" ? (
+				<>
+					<mesh position={[-0.3, 0.25, 0]}>
+						<torusGeometry args={[0.16, 0.027, 4, 16]} />
+						<meshBasicMaterial color={color} toneMapped={false} />
+					</mesh>
+					{(
+						[
+							[
+								[-0.17, 0.16, 0],
+								[-0.03, -0.06, 0.03],
+							],
+							[
+								[-0.03, -0.06, 0.03],
+								[0.17, -0.2, 0.06],
+							],
+							[
+								[0.17, -0.2, 0.06],
+								[0.36, -0.28, 0],
+							],
+						] as [Point, Point][]
+					).map(([from, to]) => (
+						<Rod
+							key={from.join(":")}
+							from={from}
+							to={to}
+							color={color}
+							radius={0.023}
+						/>
+					))}
+					<mesh position={[0.36, -0.28, 0]}>
+						<octahedronGeometry args={[0.075]} />
+						<meshBasicMaterial color={color} wireframe toneMapped={false} />
+					</mesh>
+				</>
+			) : symbol === "computer" ? (
 				<>
 					<mesh position={[0, 0.08, 0]}>
 						<boxGeometry args={[0.62, 0.42, 0.08]} />

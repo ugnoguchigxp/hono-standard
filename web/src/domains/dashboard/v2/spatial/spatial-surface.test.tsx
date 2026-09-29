@@ -101,21 +101,38 @@ describe("SpatialSurface", () => {
 		const section = (name: string) => screen.getByRole("region", { name });
 
 		const entity = current.entities[0]!;
-		fireEvent.click(
-			within(section("Entities")).getAllByRole("button")[0]!,
-		);
+		const entityButton = within(section("Entities")).getAllByRole("button")[0]!;
+		const closed = () =>
+			expect(
+				screen.queryByRole("complementary", {
+					name: "Selected signal details",
+				}),
+			).toBeNull();
+		fireEvent.click(entityButton);
 		expect(details()).toHaveTextContent(entity.label);
 		expect(details()).toHaveTextContent("Health");
+		fireEvent.click(entityButton);
+		closed();
 
-		fireEvent.click(within(section("Boundaries")).getAllByRole("button")[0]!);
+		const boundaryButton = within(section("Boundaries")).getAllByRole(
+			"button",
+		)[0]!;
+		fireEvent.click(boundaryButton);
 		expect(details()).toHaveTextContent("Latency");
+		fireEvent.click(boundaryButton);
+		closed();
 
-		fireEvent.click(within(section("Tasks")).getAllByRole("button")[0]!);
+		const taskButton = within(section("Tasks")).getAllByRole("button")[0]!;
+		fireEvent.click(taskButton);
 		expect(details()).toHaveTextContent("Task state");
+		fireEvent.click(taskButton);
+		closed();
 
 		const pipelineButtons = within(section("Pipelines")).getAllByRole("button");
 		fireEvent.click(pipelineButtons[0]!);
 		expect(details()).toHaveTextContent("Stages");
+		fireEvent.click(pipelineButtons[0]!);
+		closed();
 		fireEvent.click(pipelineButtons[1]!);
 		expect(details()).toHaveTextContent("Queue depth");
 
