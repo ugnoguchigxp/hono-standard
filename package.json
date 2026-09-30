@@ -53,13 +53,16 @@
 	},
 	"dependencies": {
 		"@hono/zod-validator": "0.8.0",
+		"@platejs/basic-nodes": "53.0.0",
+		"@platejs/slash-command": "53.0.0",
 		"@tanstack/react-query": "5.101.0",
 		"@tanstack/react-router": "1.170.15",
 		"@tanstack/react-table": "8.21.3",
 		"drizzle-orm": "0.45.2",
-		"hono": "4.12.34",
+		"hono": "4.13.5",
 		"jose": "6.2.3",
 		"lucide-react": "1.18.0",
+		"platejs": "53.3.14",
 		"react": "19.2.7",
 		"react-dom": "19.2.7",
 		"react-hook-form": "7.79.0",
@@ -79,21 +82,22 @@
 		"@types/react": "19.2.17",
 		"@types/react-dom": "19.2.3",
 		"@vitejs/plugin-react": "6.0.2",
-		"@vitest/coverage-v8": "4.1.8",
+		"@vitest/coverage-v8": "4.1.11",
 		"drizzle-kit": "0.31.10",
 		"jsdom": "29.1.1",
 		"tailwindcss": "4.3.1",
 		"typescript": "5.9.3",
 		"vite": "8.0.16",
-		"vitest": "4.1.8"
+		"vitest": "4.1.11"
 	},
 	"overrides": {
 		"@hono/node-server": "1.19.15",
-		"brace-expansion": "2.1.4",
+		"brace-expansion": "2.1.7",
 		"esbuild": "0.28.1",
 		"nanoid": "3.3.18",
 		"picomatch": "4.0.4",
 		"postcss": "8.5.26",
-		"vite": "8.0.16"
+		"vite": "8.0.16",
+		"undici": "7.29.1"
 	}
 }

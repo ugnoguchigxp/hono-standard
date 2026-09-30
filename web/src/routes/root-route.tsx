@@ -4,14 +4,44 @@ import {
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
-import { Database, Home, LayoutGrid, LogOut, Shield } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+	Database,
+	FileText,
+	Home,
+	LayoutGrid,
+	LogOut,
+	Shield,
+} from "lucide-react";
 import { AuthProvider, useAuth } from "../auth-context";
 import { DevErrorPanel } from "../components/dev-error-panel";
+import {
+	PageEditGuardProvider,
+	PageLeaveDialog,
+	usePageEditGuard,
+	usePublishPageAutosaveHold,
+} from "../page-edit-guard";
 import { defaultShowcaseTableSearch } from "../showcase-table-search";
 import { requiresSessionCheck } from "./route-access";
 
 function AppLayout() {
 	const { authUser, busy, errorText, logoutCurrentUser } = useAuth();
+	const { unsaved, saving } = usePageEditGuard();
+	const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+	usePublishPageAutosaveHold(Boolean(authUser) && logoutConfirmOpen);
+
+	useEffect(() => {
+		if (!authUser) setLogoutConfirmOpen(false);
+	}, [authUser]);
+
+	const requestLogout = () => {
+		if (saving) return;
+		if (unsaved) {
+			setLogoutConfirmOpen(true);
+			return;
+		}
+		void logoutCurrentUser();
+	};
 
 	return (
 		<div className="app-root min-h-screen">
@@ -39,6 +69,17 @@ function AppLayout() {
 							<LayoutGrid className="icon" />
 							Showcase
 						</Link>
+						{authUser ? (
+							<Link
+								to="/pages"
+								className="menu-link"
+								activeOptions={{ exact: false }}
+								activeProps={{ className: "menu-link active" }}
+							>
+								<FileText className="icon" />
+								Pages
+							</Link>
+						) : null}
 						<Link
 							to="/login"
 							className="menu-link"
@@ -58,8 +99,8 @@ function AppLayout() {
 							<button
 								type="button"
 								className="icon-button"
-								onClick={() => void logoutCurrentUser()}
-								disabled={busy}
+								onClick={requestLogout}
+								disabled={busy || saving}
 								aria-label="Logout"
 								title="Logout"
 							>
@@ -73,6 +114,20 @@ function AppLayout() {
 			{errorText ? <div className="status error">{errorText}</div> : null}
 
 			<Outlet />
+			{logoutConfirmOpen ? (
+				<PageLeaveDialog
+					confirmDisabled={saving || busy}
+					confirmLabel="破棄してログアウト"
+					message={saving ? "保存が終わるまでログアウトできません" : null}
+					onCancel={() => setLogoutConfirmOpen(false)}
+					onConfirm={() => {
+						if (saving) return;
+						void logoutCurrentUser();
+					}}
+					title="未保存の変更を破棄してログアウトしますか"
+					titleId="logout-leave-title"
+				/>
+			) : null}
 		</div>
 	);
 }
@@ -84,7 +139,9 @@ function AppShell() {
 
 	return (
 		<AuthProvider sessionCheckEnabled={requiresSessionCheck(pathname)}>
-			<AppLayout />
+			<PageEditGuardProvider>
+				<AppLayout />
+			</PageEditGuardProvider>
 		</AuthProvider>
 	);
 }

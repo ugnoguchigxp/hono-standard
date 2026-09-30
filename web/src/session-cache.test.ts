@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
 	authMeQueryKey,
 	fetchMe,
+	fetchPages,
 	fetchProtectedProfile,
 	protectedProfileQueryKey,
 	setSessionUser,
@@ -22,8 +23,18 @@ it("removes the old user's private data and cancels responses that arrive after 
 	};
 	const bob = { ...alice, id: "bob", email: "bob@example.com" };
 	const profileKey = [...protectedProfileQueryKey, alice.id];
+	const pagesKey = ["pages", alice.id, "list"] as const;
 	client.setQueryData(authMeQueryKey, alice);
 	client.setQueryData(profileKey, { email: alice.email, role: alice.role });
+	client.setQueryData(pagesKey, [
+		{
+			id: "page-1",
+			parentId: null,
+			title: "Alice Page",
+			createdAt: "2026-09-30T00:00:00.000Z",
+			updatedAt: "2026-09-30T00:00:00.000Z",
+		},
+	]);
 	const releases: Array<(response: Response) => void> = [];
 	const signals: AbortSignal[] = [];
 	vi.stubGlobal(
@@ -36,9 +47,13 @@ it("removes the old user's private data and cancels responses that arrive after 
 	const requests = [
 		client.fetchQuery({ queryKey: authMeQueryKey, queryFn: fetchMe }),
 		client.fetchQuery({ queryKey: profileKey, queryFn: fetchProtectedProfile }),
+		client.fetchQuery({
+			queryKey: pagesKey,
+			queryFn: ({ signal }) => fetchPages({ signal }),
+		}),
 	].map((request) => request.catch(() => undefined));
 	await setSessionUser(client, bob);
-	expect(signals).toHaveLength(2);
+	expect(signals).toHaveLength(3);
 	expect(signals.every((signal) => signal.aborted)).toBe(true);
 	for (const release of releases)
 		release(
@@ -50,6 +65,7 @@ it("removes the old user's private data and cancels responses that arrive after 
 	await Promise.all(requests);
 	expect(client.getQueryData(authMeQueryKey)).toEqual(bob);
 	expect(client.getQueryData(profileKey)).toBeUndefined();
+	expect(client.getQueryData(pagesKey)).toBeUndefined();
 	expect(
 		client.getQueryData([...protectedProfileQueryKey, bob.id]),
 	).toBeUndefined();

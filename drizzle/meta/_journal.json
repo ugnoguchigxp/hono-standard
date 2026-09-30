@@ -15,6 +15,20 @@
       "when": 1788657480302,
       "tag": "0002_refresh_token_reuse_detection",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790730023436,
+      "tag": "0003_curly_obadiah_stane",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790763587915,
+      "tag": "0004_short_venus",
+      "breakpoints": true
     }
   ]
 }

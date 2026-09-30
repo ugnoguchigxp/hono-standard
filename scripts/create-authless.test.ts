@@ -24,7 +24,29 @@ describe("createAuthlessTemplate", () => {
 		});
 
 		expect(fs.existsSync(path.join(target, "api/modules/auth"))).toBe(false);
+		expect(fs.existsSync(path.join(target, "api/modules/pages"))).toBe(false);
+		expect(fs.existsSync(path.join(target, "api/routes/pages.route.ts"))).toBe(
+			false,
+		);
 		expect(fs.existsSync(path.join(target, "drizzle/meta"))).toBe(false);
+		expect(
+			fs.existsSync(path.join(target, "drizzle/0003_curly_obadiah_stane.sql")),
+		).toBe(false);
+		for (const pagePath of [
+			"shared/schemas/pages.schema.ts",
+			"shared/schemas/page-content.schema.ts",
+			"web/src/components/page-editor.tsx",
+			"web/src/components/page-title-editor.tsx",
+			"web/src/components/page-tree.tsx",
+			"web/src/hooks/use-page-autosave.ts",
+			"web/src/page-draft-recovery.ts",
+			"web/src/page-edit-guard.tsx",
+			"web/src/routes/pages-route.tsx",
+			"web/src/routes/page-detail-route.tsx",
+			"web/src/views/pages-view.tsx",
+		]) {
+			expect(fs.existsSync(path.join(target, pagePath)), pagePath).toBe(false);
+		}
 		expect(
 			fs.existsSync(path.join(target, "web/src/views/showcase-view.tsx")),
 		).toBe(false);
@@ -39,6 +61,9 @@ describe("createAuthlessTemplate", () => {
 		};
 		expect(manifest.scripts["auth:create-admin"]).toBeUndefined();
 		expect(manifest.dependencies.jose).toBeUndefined();
+		expect(manifest.dependencies.platejs).toBeUndefined();
+		expect(manifest.dependencies["@platejs/basic-nodes"]).toBeUndefined();
+		expect(manifest.dependencies["@platejs/slash-command"]).toBeUndefined();
 		expect(
 			fs.existsSync(path.join(target, "api/cli/auth-create-admin.test.ts")),
 		).toBe(false);

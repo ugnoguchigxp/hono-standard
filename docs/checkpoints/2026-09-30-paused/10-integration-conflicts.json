@@ -1,0 +1,13 @@
+[
+  "api/modules/pages/pages.service.ts",
+  "api/routes/pages.route.test.ts",
+  "api/routes/pages.route.ts",
+  "shared/schemas/pages.schema.test.ts",
+  "shared/schemas/pages.schema.ts",
+  "web/src/api-hooks.test.ts",
+  "web/src/api.test.ts",
+  "web/src/api.ts",
+  "web/src/components/page-title-editor.tsx",
+  "web/src/views/pages-view.test.tsx",
+  "web/src/views/pages-view.tsx"
+]

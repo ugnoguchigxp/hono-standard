@@ -142,6 +142,14 @@ describe("hono app entry", () => {
 		);
 	});
 
+	it("should protect page API routes", async () => {
+		expect((await app.request("/api/pages")).status).toBe(401);
+		expect(
+			(await app.request("/api/pages/a1a1a1a1-a1a1-41a1-a1a1-a1a1a1a1a1a1"))
+				.status,
+		).toBe(401);
+	});
+
 	it("applies the admin role middleware in the composed API router", async () => {
 		const runtime = await getAppRuntime();
 		const { generateAccessToken } = await import(

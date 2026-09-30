@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const e2ePort = process.env.E2E_PORT ?? "5174";
+const e2eUrl = `http://127.0.0.1:${e2ePort}`;
+
 export default defineConfig({
 	testDir: "tests/e2e",
 	timeout: 30_000,
@@ -11,7 +14,7 @@ export default defineConfig({
 	retries: 0,
 	reporter: [["list"], ["html", { open: "never" }]],
 	use: {
-		baseURL: "http://127.0.0.1:5174",
+		baseURL: e2eUrl,
 		trace: "retain-on-failure",
 	},
 	projects: [
@@ -26,7 +29,7 @@ export default defineConfig({
 	],
 	webServer: {
 		command: "bun scripts/e2e-server.ts",
-		url: "http://127.0.0.1:5174",
+		url: e2eUrl,
 		reuseExistingServer: false,
 		timeout: 60_000,
 	},

@@ -1,11 +1,27 @@
 import { spawnSync } from "node:child_process";
-import { rmSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { mkdtempSync } from "node:fs";
 
-const databaseUrl = "data/e2e.sqlite";
-const appUrl = "http://127.0.0.1:5174";
+const port = process.env.E2E_PORT ?? "5174";
+const appUrl = `http://127.0.0.1:${port}`;
+const databaseUrl =
+	process.env.E2E_DATABASE_URL ??
+	path.join(
+		mkdtempSync(path.join(tmpdir(), "hono-standard-e2e-")),
+		"e2e.sqlite",
+	);
+
+if (existsSync(databaseUrl)) {
+	throw new Error(
+		`Refusing to overwrite the existing E2E database at ${databaseUrl}.`,
+	);
+}
+mkdirSync(path.dirname(databaseUrl), { recursive: true });
 
 process.env.NODE_ENV = "development";
-process.env.PORT = "5174";
+process.env.PORT = port;
 process.env.DATABASE_URL = databaseUrl;
 process.env.JWT_SECRET = "hono-standard-e2e-jwt-secret-change-this";
 process.env.APP_URL = appUrl;
@@ -24,10 +40,6 @@ function run(command: string, args: string[]) {
 		throw new Error(`${command} ${args.join(" ")} failed.`);
 	}
 }
-
-rmSync(databaseUrl, { force: true });
-rmSync(`${databaseUrl}-shm`, { force: true });
-rmSync(`${databaseUrl}-wal`, { force: true });
 
 run("bun", ["run", "build"]);
 

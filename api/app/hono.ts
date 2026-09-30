@@ -11,10 +11,12 @@ import { createDbRuntime } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { createRequestLogger } from "../middleware/request-logger";
 import { AuthService } from "../modules/auth/auth.service";
+import { createPagesService } from "../modules/pages/pages.service";
 import { createAuthRoute } from "../routes/auth.route";
 import { createHealthRoute } from "../routes/health.route";
-import { createReadyRoute } from "../routes/ready.route";
+import { createPagesRoute } from "../routes/pages.route";
 import { createProtectedRoute } from "../routes/protected.route";
+import { createReadyRoute } from "../routes/ready.route";
 import { type AppEnv, readAppEnv } from "./env";
 import { HttpError } from "./http-error";
 import { appContentSecurityPolicy } from "./security-headers";
@@ -85,6 +87,26 @@ export function createApiRoutes(deps: AppDeps) {
 				authService: deps.authService,
 				env: deps.env,
 			}),
+		)
+		.use(
+			"/pages/*",
+			requireAuth({
+				env: deps.env,
+				authService: deps.authService,
+			}),
+		)
+		.use(
+			"/pages",
+			requireAuth({
+				env: deps.env,
+				authService: deps.authService,
+			}),
+		)
+		.route(
+			"/pages",
+			createPagesRoute({
+				pagesService: createPagesService(deps.dbRuntime.client),
+			}),
 		);
 }
 
@@ -113,7 +135,7 @@ export function createApp(deps: AppDeps) {
 				return null;
 			},
 			credentials: true,
-			allowMethods: ["GET", "POST", "OPTIONS"],
+			allowMethods: ["GET", "POST", "PUT", "PATCH", "OPTIONS"],
 			allowHeaders: ["Content-Type", "Authorization"],
 		}),
 	);

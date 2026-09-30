@@ -53,6 +53,9 @@ describe("app shell and routes", () => {
 		expect(
 			await screen.findByRole("heading", { name: "Welcome to Hono Standard" }),
 		).toBeVisible();
+		expect(
+			screen.queryByRole("link", { name: "Pages" }),
+		).not.toBeInTheDocument();
 
 		await view.click(screen.getByRole("link", { name: "Login" }));
 		expect(
@@ -95,6 +98,9 @@ describe("app shell and routes", () => {
 		expect(
 			within(screen.getByRole("banner")).getByText("Test User (member)"),
 		).toBeVisible();
+		expect(
+			within(screen.getByRole("banner")).getByRole("link", { name: "Pages" }),
+		).toBeVisible();
 
 		await view.click(screen.getByRole("button", { name: "Logout" }));
 		await waitFor(() => {
@@ -102,6 +108,9 @@ describe("app shell and routes", () => {
 				screen.getByRole("heading", { name: "Login required" }),
 			).toBeVisible();
 		});
+		expect(
+			screen.queryByRole("link", { name: "Pages" }),
+		).not.toBeInTheDocument();
 	});
 
 	it("surfaces session load errors in the shell", async () => {
